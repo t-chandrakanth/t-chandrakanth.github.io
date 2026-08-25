@@ -1,0 +1,404 @@
+---
+title: "Reconciliation Is a Graph Problem, Not a Matching Problem"
+description: "Pairwise matching assumes every obligation is settled by exactly one movement. Real settlement splits, aggregates and lags, so the assumption fails on precisely the population that costs money."
+date: "2026-08-25"
+pillar: "P1"
+order: 2
+quotable: "Pairwise matching is not a bad solution to reconciliation; it is an exact solution to the special case where one obligation is settled by one movement."
+tags:
+  - reconciliation
+  - assignment problems
+  - min-cost flow
+  - temporal graphs
+  - financial data quality
+---
+
+A customer account closes the month with five items in the exception queue and
+nothing whatsoever wrong with it.
+
+The customer owed 81,000 across four invoices. The customer paid 81,000 across
+three transfers. Every unit arrived, from the right account, inside the
+settlement window, with a remittance advice attached. The matching engine
+cleared one item and queued the other five.
+
+What happened is ordinary. One invoice of 40,000 was paid in two transfers,
+25,000 and 15,000, because the payer's approval limit sits below the invoice
+value. Three smaller invoices — 25,000, 9,400 and 6,600 — were paid in a single
+remittance of 41,000, because the payer's treasury nets weekly before it wires.
+The engine has no way to say *this movement settles part of that obligation* or
+*this movement settles those three*, so it did the only thing it can do: it
+looked for a movement whose amount equalled an obligation's amount.
+
+It found one. The 25,000 transfer, which was half of the 40,000 invoice, exactly
+equalled the 25,000 invoice, which was in fact paid inside the 41,000
+remittance. The engine cleared that pair with the highest confidence it assigned
+all month.
+
+The ledger after the run shows 56,000 of open receivables and 56,000 of
+unapplied cash against a customer who is square. Somebody will spend a morning
+undoing it, and if they are tired they will force-match the 41,000 remittance to
+the 40,000 invoice and write off a 1,000 variance that never existed.
+
+## Why better matching does not fix it
+
+The instinct is that the scoring is too crude. Widen the tolerance band. Add
+fuzzy comparison on the remittance reference. Put a learned model over the pair
+features — amount ratio, day lag, counterparty, currency, string overlap — and
+let it discover that this payer part-pays. Each is a real improvement to
+pairwise evidence. None of them changes the outcome above.
+
+The reason is structural rather than statistical. A matching engine, however it
+scores, emits one decision per pair and accepts a pair only if the pair is
+self-justifying. But the evidence that the 25,000 transfer belongs to the 40,000
+invoice does not exist inside that pair. It exists in the fact that a second
+transfer of 15,000 completes it, and that the 25,000 invoice is accounted for
+elsewhere. That is a property of the whole period. No amount of feature
+engineering puts a global property inside a local decision.
+
+The second instinct is to add grouping: enumerate subsets of open items and look
+for subset sums that equal a movement. This is closer to right and fails for two
+reasons. The search is exponential in the open items, so it needs aggressive
+pruning, and pruning is where the correct group gets discarded. Worse, a
+subset-sum matcher with any tolerance at all is a machine for manufacturing
+coincidences: with a few hundred open items and round-numbered invoices, some
+subset sums to almost any target you name. Each group is still chosen in
+isolation, and consuming an invoice in one group silently removes it from every
+other group that needed it. More expressive power, no more coordination.
+
+Underneath both is an assumption nobody wrote down. Pairwise matching presumes a
+bijection between two sets of records: each obligation has one movement, each
+movement has one obligation, and reconciliation is the job of finding the
+pairing. Splits, aggregations, fees and cross-period timing all violate it. They
+are also, in every ledger I have looked at, where the money and the effort are.
+I have written elsewhere about
+[the ways record matching breaks](/writing/seven-ways-record-matching-breaks);
+this one survives every fix applied to the others.
+
+## The reframe
+
+Stop asking which movement corresponds to which obligation. Ask instead for the
+assignment of value across the whole account and period that is most consistent
+with the evidence and still obeys the arithmetic.
+
+That is a different mathematical object. The candidates form a heterogeneous
+temporal graph — several kinds of node, several kinds of edge, every edge
+time-bounded — and the answer is not a set of independent pairs but a single
+allocation over that graph, chosen to maximise total evidence subject to a hard
+conservation identity. Reconciliation stops being a search over pairs and
+becomes an optimisation over assignments.
+
+<KeyLine>
+  Pairwise matching is not a bad solution to reconciliation; it is an exact
+  solution to the special case where one obligation is settled by one movement.
+</KeyLine>
+
+The special case is not a simplification anyone chose. It is what falls out of a
+per-pair acceptance rule, and once you write the general problem down it becomes
+visible as a corner of it.
+
+## The mechanism
+
+### Four kinds of node
+
+An **obligation** is a claim with a value and a date: an invoice, a coupon, an
+expected settlement leg, an accrual. A **movement** is value that actually
+changed hands: a bank credit, a wire, a card capture, an internal transfer. An
+**adjustment** is a signed correction the business is entitled to make: a credit
+note, a rebate, a short-payment allowance, a rounding difference. A **fee** is
+value that left the system with no obligation behind it: a wire charge, an
+intermediary deduction, an FX spread.
+
+Rule engines model the first two and treat the last two as *reasons for a
+variance* rather than as objects that exist. That is the whole failure in
+miniature. An unmodelled 12.50 correspondent-bank charge turns a clean
+three-invoice remittance into a five-item exception, because the group no longer
+sums and nothing in the system is allowed to say why.
+
+### Edges are candidates, not decisions
+
+An edge is a candidate correspondence. It carries a score $s_{ij}$ built from
+pairwise evidence — reference-token overlap, counterparty identity, amount
+compatibility, currency, day lag — and a type, because *settles*, *offsets*,
+*reverses* and *absorbs* are different relations obeying different constraints.
+A reversal must pair with its original, never with an obligation, and that is an
+edge-type constraint rather than a score.
+
+Every edge is time-bounded: $x_{ij}$ is forced to zero when the interval between
+the obligation date and the movement date falls outside the window
+$[-\tau^{-}, \tau^{+}]$. The window is deliberately asymmetric. Payers arrive a
+little early and a lot late.
+
+The scoring model, however good, only builds the graph. It decides nothing.
+
+### The assignment is a matrix, and its row sums are not one
+
+Index obligations by $i$ with values $a_i$, movements by $j$ with values $b_j$.
+Let $X \in \{0,1\}^{m \times n}$ select correspondences, and let
+$Y \in \mathbb{R}_{\ge 0}^{m \times n}$ record how much of movement $j$ is
+applied to obligation $i$. The problem is
+
+$$
+\max_{X,\,Y} \; \sum_{(i,j) \in E} s_{ij} \, y_{ij}
+$$
+
+subject to
+
+$$
+\sum_{j} y_{ij} = a_i \;\; \forall i, \qquad
+\sum_{i} y_{ij} = b_j \;\; \forall j, \qquad
+0 \le y_{ij} \le b_j \, x_{ij} .
+$$
+
+Two things are worth noticing. The objective is value-weighted, so misallocating
+25,000 costs a hundred times what misallocating 250 costs, which is the right
+economics and not merely a modelling convenience. And there is no constraint on
+$\sum_j x_{ij}$ or on $\sum_i x_{ij}$. A row may carry several ones — that is a
+split. A column may carry several ones — that is an aggregation. Both at once is
+a netted remittance against part-paid invoices, which is the case that currently
+goes to a human.
+
+### Conservation is the constraint that does the work
+
+The equality constraints are only satisfiable when
+
+$$
+\sum_{i} a_i \;=\; \sum_{j} b_j
+$$
+
+per account, per currency, per period. Value is conserved. This is the fact that
+makes the problem solvable at all, and it is emphatically global: no pair
+possesses it, no pairwise score can approximate it, and it is exactly the
+information a per-pair acceptance rule discards. It is the same species of hard
+identity I have argued elsewhere that
+[learned models must satisfy rather than approximate](/writing/neural-models-and-accounting-identities).
+
+To be usable on a real period, the formulation needs an exception node: a column
+$\varnothing$ with score zero and unbounded capacity that absorbs anything which
+cannot be settled. The queue then becomes an *output* of the optimisation with a
+stated cost, rather than the residue of everything the matcher declined.
+Adjustments and fees enter as bounded nodes with a penalty, so the solver may
+create a 12.50 fee node to close a group at a small cost instead of surrendering
+five items.
+
+### Greedy pairwise matching, stated precisely
+
+Now impose the two constraints a rule engine imposes:
+
+$$
+\sum_{j} x_{ij} \le 1 \;\; \forall i, \qquad \sum_{i} x_{ij} \le 1 \;\; \forall j .
+$$
+
+Take any selected edge with $a_i > 0$ and $b_j > 0$. The row constraint means
+obligation $i$ is served by exactly one movement, so $y_{ij} = a_i$. The column
+constraint means movement $j$ serves exactly one obligation, so $y_{ij} = b_j$.
+Therefore $a_i = b_j$.
+
+The restriction to one-to-one does not merely make the solution worse. It forces
+the matched set to be a partial bijection between items of *equal value*. Relax
+the equality to a tolerance band and you have the acceptance rule of every rule
+engine in production. Everything outside that bijection becomes an exception by
+construction rather than by evidence, which is why exception queues are full of
+items nobody disputes.
+
+### Why the general problem is tractable
+
+Drop $X$ and keep $Y$, and what remains is a transportation problem: min-cost
+flow on a bipartite network with supplies $b_j$, demands $a_i$ and arc costs
+$1 - s_{ij}$. That is the Hitchcock–Koopmans formulation from the 1940s, the
+constraint matrix is totally unimodular, the linear relaxation is integral at
+the optimum, and network simplex solves instances with hundreds of thousands of
+arcs. Keeping $X$ with a per-edge charge gives the fixed-charge transportation
+problem, which is NP-hard, and in practice is approximated by penalising edge
+count in the objective and accepting a good solution rather than a proven one.
+
+## A worked example
+
+<Synthetic />
+
+One account, one currency, one weekly period. Four obligations and three
+movements, all inside a ten-day window. The candidate generator kept eight edges
+scoring above a floor of 0.15.
+
+<Figure
+  n={1}
+  caption="Solid accent edges are the globally optimal allocation, labelled with the value assigned along each one: OBL-1 is settled by two movements (25.0k + 15.0k = 40.0k) and MOV-3 settles three obligations (25.0k + 9.4k + 6.6k = 41.0k). The dashed struck edge is the pairing a one-to-one engine takes first because the amounts agree to the penny; it is feasible but ten per cent below the optimum, and it consumes the value that belonged to OBL-1. Faint edges are candidates the optimiser rejected."
+>
+  <svg viewBox="0 0 800 300" className="w-full h-auto" role="img" aria-label="Bipartite graph of four obligations and three movements. Eight scored candidate edges are drawn. Five solid edges form the globally optimal allocation, in which one obligation is split across two movements and one movement is aggregated across three obligations. One dashed edge, struck through, is the exact-amount pairing a greedy one-to-one engine selects first, which scores ten per cent below the optimum.">
+    <g fontFamily="var(--font-mono)" fontSize="9.5">
+
+      <g fill="var(--ink-faint)" letterSpacing="1.2">
+        <text x="40" y="22">OBLIGATIONS  a</text>
+        <text x="276" y="22">CANDIDATE CORRESPONDENCES  s</text>
+        <text x="590" y="22">MOVEMENTS  b</text>
+      </g>
+
+      <g stroke="var(--ink-faint)" strokeWidth="1" fill="none" opacity="0.5">
+        <path d="M190 57 L590 189" />
+        <path d="M190 107 L590 123" />
+      </g>
+
+      <g stroke="var(--accent)" strokeWidth="1.8" fill="none" strokeLinecap="round">
+        <path d="M190 57 L590 57" />
+        <path d="M190 57 L590 123" />
+        <path d="M190 107 L590 189" />
+        <path d="M190 157 L590 189" />
+        <path d="M190 207 L590 189" />
+      </g>
+
+      <path d="M190 107 L590 57" stroke="var(--variance)" strokeWidth="1.4" strokeDasharray="4 3" fill="none" />
+      <g stroke="var(--variance)" strokeWidth="1.4" fill="none" strokeLinecap="round">
+        <path d="M285 89.5 L295 99.5" />
+        <path d="M285 99.5 L295 89.5" />
+      </g>
+
+      <g fill="var(--paper)" stroke="var(--rule-strong)" strokeWidth="1">
+        <rect x="40" y="44" width="150" height="26" />
+        <rect x="40" y="94" width="150" height="26" />
+        <rect x="40" y="144" width="150" height="26" />
+        <rect x="40" y="194" width="150" height="26" />
+        <rect x="590" y="44" width="150" height="26" />
+        <rect x="590" y="110" width="150" height="26" />
+        <rect x="590" y="176" width="150" height="26" />
+      </g>
+
+      <g fill="var(--ink)">
+        <text x="48" y="61">OBL-1</text>
+        <text x="48" y="111">OBL-2</text>
+        <text x="48" y="161">OBL-3</text>
+        <text x="48" y="211">OBL-4</text>
+        <text x="598" y="61">MOV-1</text>
+        <text x="598" y="127">MOV-2</text>
+        <text x="598" y="193">MOV-3</text>
+      </g>
+      <g fill="var(--ink-muted)" textAnchor="end">
+        <text x="141" y="61">40,000</text>
+        <text x="141" y="111">25,000</text>
+        <text x="141" y="161">9,400</text>
+        <text x="141" y="211">6,600</text>
+        <text x="691" y="61">25,000</text>
+        <text x="691" y="127">15,000</text>
+        <text x="691" y="193">41,000</text>
+      </g>
+      <g fill="var(--ink-faint)" textAnchor="end" fontSize="9">
+        <text x="182" y="61">d0</text>
+        <text x="182" y="111">d0</text>
+        <text x="182" y="161">d+1</text>
+        <text x="182" y="211">d+1</text>
+        <text x="732" y="61">d+2</text>
+        <text x="732" y="127">d+5</text>
+        <text x="732" y="193">d+3</text>
+      </g>
+      <g fill="var(--ink-faint)" fontSize="9">
+        <text x="748" y="61">PART 1/2</text>
+        <text x="748" y="127">PART 2/2</text>
+        <text x="748" y="193">3-IN-1</text>
+      </g>
+
+      <g fill="var(--accent)">
+        <text x="210" y="51">25.0k · .52</text>
+        <text x="496" y="106">15.0k · .74</text>
+        <text x="276" y="124">25.0k · .77</text>
+        <text x="276" y="181">9.4k · .75</text>
+        <text x="276" y="218">6.6k · .68</text>
+      </g>
+      <text x="205" y="92" fill="var(--variance)">GREEDY .88</text>
+      <g fill="var(--ink-faint)">
+        <text x="530" y="167">s .19</text>
+        <text x="420" y="129">s .21</text>
+      </g>
+
+      <path d="M40 238 H790" stroke="var(--rule)" strokeWidth="1" fill="none" />
+      <text x="40" y="256" fill="var(--ink-muted)">CONSERVATION  Σ a = Σ b = 81,000    ROW SUMS  40.0  25.0  9.4  6.6    COL SUMS  25.0  15.0  41.0</text>
+
+      <g fill="none" strokeLinecap="round">
+        <path d="M40 277 h24" stroke="var(--accent)" strokeWidth="1.8" />
+        <path d="M300 277 h24" stroke="var(--variance)" strokeWidth="1.4" strokeDasharray="4 3" />
+        <path d="M580 277 h24" stroke="var(--ink-faint)" strokeWidth="1" opacity="0.5" />
+      </g>
+      <g fill="var(--ink-faint)" fontSize="9">
+        <text x="70" y="281">GLOBAL ASSIGNMENT · Σ s·y = 54.89</text>
+        <text x="330" y="281">GREEDY 1:1 PICK · 10% BELOW OPTIMUM</text>
+        <text x="610" y="281">UNSELECTED CANDIDATE</text>
+      </g>
+
+    </g>
+  </svg>
+</Figure>
+
+The rule engine takes each movement in turn, scores its candidates, and accepts
+the best one if the score clears 0.80 and the amounts agree within the lesser of
+half a per cent or 250. MOV-1 finds OBL-2 at 0.88 with the amounts equal to the
+penny, and clears it. MOV-2's best candidate is OBL-1 at 0.74, on the strength
+of the invoice number in the remittance reference, but 15,000 is not 40,000, so
+it is queued. MOV-3's best candidate, OBL-2, has already been consumed, and the
+next is OBL-3 at 0.75, where 41,000 is not 9,400, so that is queued too. One
+match, five exceptions, and the one match is wrong.
+
+Now score whole assignments instead. The globally optimal allocation is the five
+solid edges in the figure:
+
+$$
+25.0(0.52) + 15.0(0.74) + 25.0(0.77) + 9.4(0.75) + 6.6(0.68) \;=\; 54.89
+$$
+
+in units of thousands of currency times score. Every obligation is settled,
+every movement is fully applied, and the exception node is empty. The best
+feasible assignment that *keeps* the engine's exact-amount pairing has to push
+the leftover 25,000 of MOV-3 onto OBL-1, an edge scoring only 0.19 because no
+reference token supports it, and totals
+
+$$
+25.0(0.88) + 15.0(0.74) + 25.0(0.19) + 9.4(0.75) + 6.6(0.68) \;=\; 49.39
+$$
+
+which is ten per cent worse. The engine's own accepted set — one edge, five
+exceptions — is worth 22.00, or forty per cent of the recoverable objective.
+
+The coincidence that traps the engine is not exotic. Round-numbered invoices,
+approval limits at round thresholds and weekly netting make exact amount
+collisions common on any account with real volume. A pairwise scorer is most
+confident exactly where it is most likely to be wrong, because amount equality
+is its strongest single feature and amount equality is what a split
+manufactures.
+
+## Limits
+
+Three honest ones.
+
+The mathematics is neither mine nor new. Transportation and assignment problems
+date to Hitchcock and Koopmans in the 1940s and the Hungarian algorithm to Kuhn
+in 1955; the case for resolving entities jointly rather than one pair at a time
+belongs to Bhattacharya and Getoor's collective entity resolution, and back to
+Fellegi and Sunter. Only the framing is mine: reconciliation as a fixed-charge
+transportation problem whose one-to-one restriction is what rule engines
+implement.
+
+A global optimiser is only as good as $s_{ij}$, and it fails differently from a
+greedy one. A bad pairwise score gives a locally wrong match that looks odd on
+its own; a bad score inside a global objective gives an allocation that is
+consistent, arithmetically perfect and wrong, and harder to spot because
+everything sums.
+
+Conservation rarely holds exactly at a real period boundary. Fees, FX
+revaluation, disputes and cash in transit break the equality, so the formulation
+needs slack, and slack with a badly chosen penalty reintroduces the phantom
+variance it was meant to eliminate. None of this is demonstrated at ledger
+scale; candidate generation, not the solver, is where I expect it to hurt, and
+that remains a hypothesis.
+
+## Where this goes
+
+The next piece in this pillar takes apart the edge, not the assignment: the
+seven distinct ways a candidate correspondence goes wrong, and why five of them
+are invisible to any similarity function computed on a pair. After that, the
+uncomfortable corollary — the same graph that makes reconciliation solvable is
+also a
+[map of who transacts with whom](/writing/relationship-privacy-supplier-networks),
+which is a confidentiality problem the moment a model is trained on it. Where
+each of these sits relative to the others is on the
+[research page](/research).
+
+The question I would hold onto is the one the conservation constraint forces.
+If your reconciliation engine cannot tell you which items it left in the queue
+*because the evidence was weak* and which it left *because its own structure
+forbade the answer*, it does not know either.

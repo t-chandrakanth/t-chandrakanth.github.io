@@ -1,0 +1,387 @@
+---
+title: "Relationship Privacy: When Anonymised Data Still Leaks Your Supplier Network"
+description: "Consistent pseudonymisation is structure preservation by another name. A supplier graph with surrogate labels still carries its degree sequence, and a degree sequence is close to an identifier."
+date: "2026-08-25"
+pillar: "P3"
+order: 5
+quotable: "You can rename every node in a graph, but you cannot pseudonymise its degree."
+tags:
+  - graph de-anonymisation
+  - relationship disclosure
+  - supplier networks
+  - k-anonymity
+  - enterprise AI privacy
+---
+
+The [previous piece in this pillar](/writing/why-data-masking-is-not-enough)
+argued that masking is a control on the representation of data, and that most of
+what an enterprise needs to protect does not live in the representation. The
+clearest of the three leaks was relationship disclosure, and I left it there as
+an assertion. This piece takes it on its own terms.
+
+Here is the scene. A procurement organisation contracts an AI vendor to build a
+spend-analytics assistant. Before anything leaves the building the extract goes
+through the privacy programme. Supplier names become surrogate keys. Legal
+entity names become surrogate keys. Contract values are bucketed, addresses are
+dropped, contact fields are removed. What ships is a table of edges: surrogate
+supplier, surrogate entity, month, bucketed amount. A reviewer signs it off,
+correctly, as containing no personal data and no named counterparty.
+
+Four months later an analyst who has a copy of that file sits down with a
+browser and the public record. Trade registries. Customs manifests. The buying
+organisation's own award announcements. Job postings that name a site, a
+category and a partner in the same paragraph. Inside a working day they can say
+which surrogate is the sole-source supplier to the largest business unit, which
+two entities depend on the same critical vendor, and how much of the spend rests
+on one relationship.
+
+No field in that file identified anyone. The file did.
+
+## Consistency is the vulnerability
+
+The first instinct is to break the consistency. If `ACME-4471` maps to a
+different surrogate in every row, no adjacency survives the transformation. That
+is true, and it is also the end of the dataset. A spend-analytics engagement is
+entirely about aggregating rows that refer to the same supplier. Consistent
+surrogates are not an implementation shortcut that a stricter privacy team could
+negotiate away. They are the deliverable.
+
+Which states the problem in one line: joinability and structure preservation are
+the same property described from two directions. A consistent pseudonym is by
+construction an isomorphism from the real graph onto the released one — same
+nodes, same edges, same everything except the labels. Anonymisation of this kind
+does not perturb the object. It renames it.
+
+The second instinct is k-anonymity. Generalise the quasi-identifiers until every
+record is indistinguishable from at least k−1 others. Sweeney's formulation and
+the work built on it, l-diversity and t-closeness, operate on a table of records
+with attribute columns. Degree is not a column. Neighbourhood is not a column.
+Co-supply overlap is not a column. You can k-anonymise a supplier master to
+k = 50 on every attribute it holds and change nothing at all about the
+adjacency in the transaction table, because the adjacency lives in a different
+file and was never one of the attributes being generalised. The guarantee is
+real. It is about the wrong object.
+
+The third instinct is to aggregate: release totals by entity and category and
+nothing at the relationship level. That does work. It also converts the
+engagement from spend analytics into a spreadsheet, which is why nobody agrees
+to it once the statement of work is signed.
+
+## The reframe: the identifier you cannot replace
+
+A surrogate replaces the contents of a field. It cannot replace a property that
+is computed from the rest of the file. Degree is such a property. So is the
+neighbourhood, the co-supply pattern, the position in the k-core, the rhythm of
+the edges over time. None of these is a field. Each is a function of the edge
+set, and every one of them is invariant under relabelling — which is precisely
+what a pseudonymisation scheme is. The masking function and the identifying
+signal do not operate on the same object at all: one rewrites cells, the other
+reads topology.
+
+<KeyLine>
+  You can rename every node in a graph, but you cannot pseudonymise its degree.
+</KeyLine>
+
+That changes the question the release review is asking. Not *which columns did
+we mask*, but *which structural functions of this graph are near-injective on
+the real population*. The second question has an answer, it is arithmetic, and
+it can be computed before the file leaves the building.
+
+## How the graph gives itself up
+
+### Degree as a fingerprint
+
+Fix a bipartite graph with $n$ suppliers on one side and $m$ buying entities on
+the other, an edge wherever a supplier invoices an entity. Write $d(s)$ for the
+number of entities supplier $s$ serves.
+
+Supplier degrees are heavy-tailed in essentially every procurement estate I have
+seen described. Most suppliers touch one entity. A small number touch nearly all
+of them. Model it as a Zipf distribution truncated at $m$, so that
+$\Pr[d = k] = p_k = k^{-\alpha}/Z$ with $Z = \sum_{j=1}^{m} j^{-\alpha}$ and
+$\alpha$ somewhere between 2 and 3.
+
+Now ask the only question re-identification cares about: given a supplier of
+degree $k$, how many other suppliers look the same? The expected collision count
+is
+
+$$
+\kappa(k) \;=\; (n-1)\,p_k \;=\; \frac{(n-1)\,k^{-\alpha}}{\sum_{j=1}^{m} j^{-\alpha}}
+$$
+
+This quantity is the anonymity set size minus one. It is the k that k-anonymity
+would have reported, had degree been treated as a quasi-identifier. Under a
+Poisson approximation the probability that a degree-$k$ supplier is structurally
+unique is about $\exp(-\kappa(k))$.
+
+The shape of $\kappa$ is the whole argument. It falls like $k^{-\alpha}$, so it
+crosses one at
+
+$$
+k^{*} \;=\; \left( \frac{n-1}{Z} \right)^{1/\alpha}
+$$
+
+and every supplier with degree above $k^{*}$ sits in an equivalence class
+expected to hold fewer than one other member. A heavy tail is not a nuisance
+here. It is the mechanism.
+
+Degree is also a coarse summary of what the attacker actually observes, which is
+*which* entities, not how many. There are $\binom{m}{k}$ distinguishable
+neighbourhoods of size $k$, so under a uniform null the expected collision count
+in neighbourhood space is
+
+$$
+\kappa_{N}(k) \;=\; \frac{\kappa(k)}{\binom{m}{k}}
+$$
+
+Because $\kappa$ decays polynomially in $k$ while $\binom{m}{k}$ grows
+super-polynomially up to $m/2$, $\kappa_N$ collapses far faster than $\kappa$
+does. The uniqueness threshold moves from "serves about eight entities" to
+"serves more than one".
+
+### Seed and extend
+
+Uniqueness says the released graph contains the information. It does not hand
+anyone a name. The bridge is an attack pattern that has been in the literature
+since the late 2000s and has not needed much improving since.
+
+Narayanan and Shmatikov, in their work on de-anonymising social networks, set
+out the shape of it. Take a released graph with surrogate labels. Take an
+auxiliary graph over an overlapping population where the names are known. Match
+a small seed set of nodes between the two, by hand or by degree. Then propagate:
+score every unmapped node in the released graph against candidates in the
+auxiliary graph by counting how many of their already-mapped neighbours
+coincide, and accept a match only when the best candidate beats the runner-up by
+a margin. That eccentricity test is what stops the cascade from running away on
+ambiguous nodes and poisoning everything downstream. They demonstrated it on
+large public social graphs seeded with a small number of nodes, and re-identified
+a substantial share of the overlap. I am describing the shape of their result
+rather than quoting a figure, because the figure belongs to their data and not
+to mine.
+
+Backstrom, Dwork and Kleinberg approached the same target from the other end
+with active attacks. An adversary who can insert a handful of nodes before
+publication can plant a subgraph that is unique with high probability, then find
+it in the release and use it as a seed. In a social network that means creating
+accounts. In a supplier graph the analogue is uncomfortably cheap: become a
+supplier.
+
+Neither result is mine and neither is new. What I think is under-examined is the
+auxiliary side of the enterprise case.
+
+### The seed set is free
+
+In the social-network setting, obtaining an auxiliary graph over the same
+population is the expensive part of the attack. In the supplier setting it is a
+morning's desk research, because a buying organisation's structure is public by
+regulation and its relationships are public by marketing.
+
+Corporate registries and statutory filings give you the entity side of the
+bipartite graph outright — names, jurisdictions, group structure, sometimes
+turnover. That is one whole side of the graph, complete, for nothing. Customs
+and bill-of-lading records, published in several jurisdictions, give
+shipper-to-consignee pairs, which are edges named on both ends. Award
+announcements and supplier-of-the-year pages name individual relationships and
+are written specifically to be found. Job postings name a site, a category and
+often a named counterparty in the same advertisement.
+
+None of this is exotic tradecraft. It is the standard research pack any
+competitive-intelligence function assembles before a category review, and it
+maps cleanly onto the seed set the propagation step needs.
+
+### Why the top of the graph goes first
+
+The nodes easiest to re-identify are the high-degree nodes, because $\kappa$
+falls as degree rises. The nodes worth re-identifying are also the high-degree
+nodes, because those are the strategic relationships, the concentration risks
+and the single points of failure. Those two orderings coincide exactly, and that
+coincidence is the part worth sitting with.
+
+There is no version of this attack that lands harmlessly on the parts of the
+graph nobody cares about. A defence that protects the long tail of single-entity
+suppliers and leaves the top forty exposed has protected the part with no
+commercial content and released the part a competitor would pay for. This is the
+same inversion I keep meeting when
+[reconciliation is treated as a graph problem](/writing/reconciliation-is-a-graph-problem):
+the structurally distinctive object and the operationally important object are
+the same object, and treatments that key on distinctiveness end up keyed on
+importance.
+
+## A worked example
+
+<Synthetic />
+
+Take a synthetic bipartite graph: 400 suppliers, 12 buying entities, supplier
+degrees drawn from a Zipf distribution truncated at 12 with $\alpha = 2.8$, so
+that $Z \approx 1.241$. Mean supplier degree is 1.38 and the graph carries about
+553 edges. Nothing here is measured; it is a construction chosen so the
+arithmetic is checkable.
+
+| Degree | Suppliers expected | Collisions by degree | Collisions by neighbourhood |
+|---|---|---|---|
+| 1 | 322 | 321.5 | 26.8 |
+| 2 | 46 | 46.2 | 0.70 |
+| 3 | 15 | 14.9 | 0.067 |
+| 4 | 6.6 | 6.6 | 0.013 |
+| 8 | 0.95 | 0.95 | 0.0019 |
+| 12 | 0.31 | 0.31 | 0.31 |
+
+Read the third column first. Degree alone crosses the uniqueness threshold at
+$k^{*} \approx 7.9$: a supplier serving eight or more of the twelve entities is
+expected to have fewer than one structural twin in the entire file. Read the
+fourth column next. Once the attacker knows which entities rather than how many,
+the threshold falls to two, and by degree three a supplier's neighbourhood is
+unique roughly fourteen times over. The last row is the honest wrinkle — a
+supplier serving all twelve entities has the full set as its neighbourhood, so
+there is nothing left to refine and $\kappa_N$ collapses back onto $\kappa$.
+
+Now run the seed. Round zero costs a filing search: all twelve entities, named
+and mapped, because a group's legal-entity footprint is a matter of public
+record. Every edge in the file is now labelled on one end.
+
+Round one takes the 31 suppliers with degree three or more. Each has an
+effectively unique entity neighbourhood, so a single public fact naming that
+supplier alongside two of its buyers pins it. Thirty-one suppliers is 7.9% of
+the nodes and 138 of the 553 edges — a quarter of the edge mass.
+
+Round two adds one weak non-structural attribute that survives masking, say a
+settlement-rhythm signature coarsened to four buckets. The distinguishable
+classes at degree two go from 66 to 264 and $\kappa_N(2)$ falls from 0.70 to
+0.18, bringing the 46 degree-two suppliers into range. Cumulative: 78 suppliers,
+19% of the nodes, 231 edges, 42% of the edge mass.
+
+<Figure
+  n={1}
+  caption="Seed-and-extend on a bipartite supplier graph. The twelve buying entities on the right are recovered from public filings at no cost and form the seed. The wavefront moves left: suppliers touching three or more entities have effectively unique neighbourhoods (expected collisions 0.07) and resolve first; degree-two suppliers resolve once one coarse non-structural attribute is added; the single-entity tail stays interchangeable. Horizontal position encodes the round in which a supplier is pinned, not its position in the graph."
+>
+  <svg viewBox="0 0 760 300" className="w-full h-auto" role="img" aria-label="Diagram: a bipartite supplier-to-entity graph in which a public seed of twelve buying entities propagates leftward in rounds, resolving high-degree suppliers first and leaving single-entity suppliers unresolved">
+    <g fontFamily="var(--font-mono)" fontSize="9.5">
+      <text x="8" y="14" fill="var(--ink-faint)" letterSpacing="1.4">SUPPLIER SIDE — n = 400</text>
+      <text x="596" y="14" fill="var(--ink-faint)" letterSpacing="1.4">ENTITIES m = 12</text>
+
+      <g stroke="var(--rule-strong)" strokeWidth="0.8" fill="none" opacity="0.22">
+        <path d="M214 34 636 47" /><path d="M214 88 636 91" /><path d="M214 142 636 135" />
+        <path d="M214 196 636 179" /><path d="M214 248 636 223" />
+      </g>
+
+      <g stroke="var(--rule-strong)" strokeWidth="1" fill="none" opacity="0.6">
+        <path d="M356 40 636 47" /><path d="M356 40 636 91" />
+        <path d="M356 104 636 91" /><path d="M356 104 636 135" />
+        <path d="M356 172 636 135" /><path d="M356 172 636 179" />
+        <path d="M356 236 636 179" /><path d="M356 236 636 223" />
+      </g>
+
+      <g stroke="var(--accent)" strokeWidth="1.1" fill="none" opacity="0.75">
+        <path d="M470 62 636 47" /><path d="M470 62 636 91" /><path d="M470 62 636 135" />
+        <path d="M470 62 636 179" /><path d="M470 62 636 223" />
+        <path d="M470 134 636 47" /><path d="M470 134 636 91" />
+        <path d="M470 134 636 179" /><path d="M470 134 636 223" />
+        <path d="M470 208 636 91" /><path d="M470 208 636 135" /><path d="M470 208 636 223" />
+      </g>
+
+      <g stroke="var(--accent)" strokeWidth="1" fill="none" strokeDasharray="3 4" opacity="0.55">
+        <path d="M560 16 Q 530 136 560 256" />
+        <path d="M418 16 Q 388 136 418 256" />
+      </g>
+      <path d="M300 16 Q 270 136 300 256" stroke="var(--pending)" strokeWidth="1" fill="none" strokeDasharray="3 4" opacity="0.55" />
+
+      <g fill="var(--accent)">
+        <rect x="636" y="40" width="14" height="14" /><rect x="636" y="84" width="14" height="14" />
+        <rect x="636" y="128" width="14" height="14" /><rect x="636" y="172" width="14" height="14" />
+        <rect x="636" y="216" width="14" height="14" />
+      </g>
+      <g fill="var(--ink-faint)" fontSize="9">
+        <text x="656" y="51">E1</text><text x="656" y="95">E2</text><text x="656" y="139">E3</text>
+        <text x="656" y="183">E4</text><text x="656" y="227">E5</text>
+      </g>
+
+      <g fill="var(--accent)">
+        <circle cx="470" cy="62" r="6.5" /><circle cx="470" cy="134" r="6" /><circle cx="470" cy="208" r="5.5" />
+      </g>
+      <g fill="var(--pending)">
+        <circle cx="356" cy="40" r="4.5" /><circle cx="356" cy="104" r="4.5" />
+        <circle cx="356" cy="172" r="4.5" /><circle cx="356" cy="236" r="4.5" />
+      </g>
+      <g fill="var(--ink-faint)">
+        <circle cx="214" cy="34" r="3" /><circle cx="214" cy="88" r="3" /><circle cx="214" cy="142" r="3" />
+        <circle cx="214" cy="196" r="3" /><circle cx="214" cy="248" r="3" />
+      </g>
+
+      <g fill="var(--ink-muted)" fontSize="9" textAnchor="end">
+        <text x="452" y="65">d = 5</text><text x="452" y="137">d = 4</text><text x="452" y="211">d = 3</text>
+        <text x="340" y="43">d = 2</text><text x="196" y="37">d = 1</text>
+      </g>
+
+      <g stroke="var(--ink-faint)" strokeWidth="0.9" fill="none" opacity="0.6" strokeLinecap="round">
+        <path d="M580 266 250 266" />
+        <path d="M257 262.5 250 266 257 269.5" />
+      </g>
+
+      <g textAnchor="middle" letterSpacing="1.2">
+        <text x="214" y="282" fill="var(--ink-faint)">TAIL</text>
+        <text x="356" y="282" fill="var(--pending)">ROUND 2</text>
+        <text x="470" y="282" fill="var(--accent)">ROUND 1</text>
+        <text x="608" y="282" fill="var(--accent)">SEED — FILINGS</text>
+      </g>
+      <g textAnchor="middle" fontSize="9" fill="var(--ink-faint)">
+        <text x="214" y="295">COLLISIONS 26.8</text>
+        <text x="356" y="295">COLLISIONS 0.18</text>
+        <text x="470" y="295">COLLISIONS 0.07</text>
+        <text x="608" y="295">12 OF 12 MAPPED</text>
+      </g>
+      <text x="8" y="295" fill="var(--variance)" fontSize="9" letterSpacing="1.2">42% OF EDGES</text>
+    </g>
+  </svg>
+</Figure>
+
+Nineteen percent of the nodes does not sound like a successful attack.
+Forty-two percent of the edges sounds better. Neither is the number that
+matters. What matters is that the resolved set is not a random 19% — it is
+precisely the concentrated end, selected by the same property that makes those
+relationships worth knowing about. If spend correlates with the number of
+entities served, which it usually does, the resolved fraction of the money is
+larger still, though that is an assumption about the synthetic graph and not
+something I measured on it.
+
+<Callout label="What this example is and is not" tone="neutral">
+  Everything above is arithmetic on a constructed distribution. It shows that a
+  degree sequence can be near-injective at the top and that a public seed is
+  sufficient to exploit that. It is not a re-identification rate, and it is not
+  evidence about any real supplier estate.
+</Callout>
+
+## Limits
+
+Three honest ones.
+
+The framing is mine and the attack is not. Graph de-anonymisation belongs to
+Narayanan and Shmatikov, active seeding to Backstrom, Dwork and Kleinberg, and
+the anonymity-set arithmetic to the statistical disclosure control tradition
+running through Sweeney and back to Dalenius. My claim is a reading of that
+literature for the case where the protected asset is a commercial relationship
+rather than a person — the case no privacy regulation funds.
+
+The uniform-neighbourhood null flatters the attacker. Real neighbourhoods
+concentrate on the large entities rather than spreading evenly over subsets, so
+$\binom{m}{k}$ is a ceiling on distinguishable classes, not an estimate of the
+effective count. Treat $\kappa_N$ as a lower bound on collisions.
+
+And I have not run the propagation attack on a real procurement graph. Whether
+real supplier degrees are Zipf-like with $\alpha$ in that range is an empirical
+question I have not answered, so this is a hypothesis about real estates rather
+than a measurement of one. The piece also offers no defence. Edge-level and
+node-level differential privacy on graphs are the serious answers, and they cost
+utility on exactly the high-degree nodes the attack targets.
+
+## Where this goes
+
+Next in this pillar is the leak with no control at all: rule confidentiality,
+where the asset is not a relationship but the accumulated operating logic that
+an assistant has to recite in order to be useful. The pillar map is on
+[the research page](/research).
+
+The question to hold onto is a release-review question, and it is not the one
+most review boards ask. Not *what did we remove from this file*. Rather: *if
+somebody joined this file to the public record tomorrow, which rows stop being
+anonymous first, and are they the rows we most needed to protect?* In a
+heavy-tailed graph the answer to the second half is yes, by construction.

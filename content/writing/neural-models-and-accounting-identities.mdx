@@ -1,0 +1,389 @@
+---
+title: "Neural Models Do Not Respect Accounting Identities"
+description: "A model can fit every component of an allocation and still fail the only test that matters — whether the parts sum to the whole. Four places to enforce that, and what each one costs."
+date: "2026-08-25"
+pillar: "P2"
+order: 4
+quotable: "A constraint in the loss function is a preference. A constraint in the parameterisation is a fact."
+tags:
+  - constrained machine learning
+  - accounting identities
+  - forecast reconciliation
+  - neuro-symbolic
+  - model architecture
+---
+
+An allocation model splits a shared cost pool across five business units. By
+every measure anyone asked for, it is a good model. Each unit's allocation lands
+within a tenth of a percent of the held-out target. The residuals are unbiased.
+The error distribution is boring in the way you want error distributions to be.
+
+Then it goes to a reviewer, who adds up the five numbers. The pool was
+4,812,600.00. The allocations come to 4,812,617.31.
+
+Seventeen point three one, against four point eight million. As a percentage
+that is 0.00036, which is well inside every tolerance in the model's own
+evaluation report. As an accounting statement it is not a small error, because
+the sum of the parts here is not approximately the whole — it is definitionally
+the whole. There is no line on the statement called *difference*. The reviewer's
+first question is not how large the error is. It is which of the five numbers is
+wrong, and the model has no answer to that, because from the model's point of
+view nothing went wrong.
+
+Run it again on next month's pool and it misses by a different amount in a
+different direction. This is not a bug in the sense of something that can be
+found and removed. It is the absence of a property the model was never built to
+have.
+
+## Why the penalty term does not fix it
+
+The obvious response is to tell the model about the constraint. Write the
+identity in matrix form: for an output vector $x \in \mathbb{R}^{n}$ and a set
+of $m$ linear identities, the requirement is $Ax = b$ with
+$A \in \mathbb{R}^{m \times n}$ and $m < n$. Then add a term to the loss:
+
+$$
+\mathcal{L}(x) \;=\; \ell(x) \;+\; \lambda \lVert Ax - b \rVert_2^2
+$$
+
+This works, in the sense that the measured violation falls as $\lambda$ rises.
+It never reaches zero, and the reason is structural rather than a matter of
+tuning. At a stationary point of the penalised objective,
+$\nabla \ell(x) + 2\lambda A^{\top}(Ax - b) = 0$. Left-multiply by $A$, assume
+$A$ has full row rank, and solve for the residual:
+
+$$
+Ax - b \;=\; -\frac{1}{2\lambda}\,(AA^{\top})^{-1} A \, \nabla \ell(x)
+$$
+
+The violation shrinks as $1/\lambda$ and vanishes only when
+$A\nabla \ell(x) = 0$ — that is, only when the unconstrained fit already
+satisfies the identity, which is exactly the case where the penalty was
+unnecessary. For any finite $\lambda$ and any objective that is still pulling
+somewhere, there is a residual, and it is the model's own gradient that puts it
+there.
+
+Two practical problems sit underneath the algebra. Raising $\lambda$ starves the
+accuracy term, so the components get worse in order to make the total slightly
+better. And whatever residual you measure is an average over the evaluation set;
+nothing in the construction bounds the violation on the next input. A penalty is
+a statement about the expected behaviour of a fitted function. It is not a
+property of the function.
+
+That distinction is the whole problem, because the acceptance test on the other
+side is binary. A control tester does not grade a balance on a curve, and the
+evidence that satisfies one is
+[not the evidence a model card provides](/writing/ai-agents-in-sox-controlled-environments).
+"It usually balances" is not a mitigating detail. It is the finding.
+
+## The reframe
+
+So stop asking how small the violation can be made, and start asking where the
+violation can be made impossible. Those are different questions with different
+answers, and the second one has only four candidate sites: the training
+objective, the forward pass, the raw output vector, and whatever happens
+downstream of the model before a number reaches the ledger. Each site yields a
+different *kind* of guarantee — statistical, structural, algebraic, procedural —
+and the kinds are not interchangeable.
+
+<KeyLine>
+  A constraint in the loss function is a preference. A constraint in the
+  parameterisation is a fact.
+</KeyLine>
+
+Nothing in that sentence is original as mathematics. What I think is
+under-appreciated in applied work is how often the choice between the four sites
+is made implicitly, by whoever wrote the training loop, and then discovered by a
+reviewer six months later at the point where a statement fails to tie and nobody
+in the room can say which of the four was meant to be holding the line.
+
+## Four places to put a constraint
+
+### The identity, written properly
+
+Almost every hard identity in a financial system is affine. Components summing
+to a total, debits equalling credits, opening balance plus movements equalling
+closing balance, a cross-foot across a grid of subtotals — all of them are rows
+of $Ax = b$. Some are hierarchies rather than a single sum, and the same algebra
+covers those too; the structure of $A$ is a
+[graph of correspondences](/writing/reconciliation-is-a-graph-problem) rather
+than a flat constraint list. What follows applies wherever the identity is
+affine and known at inference time.
+
+### 1. The training objective
+
+Discussed above: a penalty buys a small violation and no guarantee. The honest
+upgrade is an augmented Lagrangian, which adds an explicit multiplier estimate
+alongside the quadratic term and drives the residual to zero without sending
+$\lambda$ to infinity — the method of Hestenes and Powell, and the standard
+answer to this exact deficiency in the optimisation literature. It helps. It
+also only helps at convergence, on the training distribution, for a stationary
+point you have no way of certifying you reached. What the objective can enforce
+is a tendency.
+
+### 2. Inference-time projection
+
+Take the raw output and project it onto the affine set $\{x : Ax = b\}$. The
+Euclidean projection has a closed form:
+
+$$
+x' \;=\; x - A^{\top}(AA^{\top})^{-1}(Ax - b)
+$$
+
+Check it: $Ax' = Ax - AA^{\top}(AA^{\top})^{-1}(Ax - b) = b$. Exactly, for every
+input, whatever the model did. $A$ is fixed, so you factor $AA^{\top}$ once and
+each inference costs a matrix-vector product.
+
+The cost is not compute. It is that the correction lands on every component. For
+a single sum constraint, $A = \mathbf{1}^{\top}$, and the formula collapses to
+subtracting $\frac{1}{n}(\mathbf{1}^{\top}x - b)$ from each line. If one
+component carried all the error and the other four were exactly right, the
+projection makes four correct numbers wrong to make one wrong number less wrong.
+Total absolute error, in that case, is multiplied by $2(n-1)/n$ — it goes up,
+not down, while the statement starts balancing.
+
+There is a fix, and it is not mine. The weighted projection
+
+$$
+x' \;=\; x - W A^{\top}(A W A^{\top})^{-1}(Ax - b)
+$$
+
+minimises $(x'-x)^{\top}W^{-1}(x'-x)$ subject to $Ax' = b$, so choosing $W$ as
+the component-wise error covariance sends the correction to the components you
+trust least. This is precisely the hierarchical forecast reconciliation problem,
+and the covariance-weighted solution is the MinT estimator of Wickramasuriya,
+Athanasopoulos and Hyndman. The catch travels with it: you now need an error
+covariance, estimated from data, and a badly estimated $W$ redistributes the
+correction confidently in the wrong direction.
+
+### 3. Post-processing repair
+
+Let the model produce whatever it produces, compute the residual, and put it
+somewhere: a designated line, the largest line, a rounding-differences account.
+This is exact, trivially cheap, deterministic, and by far the most common
+approach in practice — usually undocumented, often in a spreadsheet downstream
+of everything anyone reviewed.
+
+What it costs is auditability, in a specific and literal sense. The number in
+the repaired line was not produced by the model. It is a plug: the amount
+required to make the other numbers tie. If a reviewer asks for the provenance of
+that figure, the honest answer is that it is a residual, and a residual is not an
+allocation. Repair converts a model error into an accounting entry, which is
+either the most defensible option or the least, depending entirely on whether
+the plug is labelled as one.
+
+### 4. Architectural guarantee
+
+Parameterise the output so it cannot violate the identity. For a single total,
+emit shares through a softmax and multiply by the known total,
+$x = b \cdot \sigma(z)$, and $\mathbf{1}^{\top}x = b$ holds by construction. In
+general, take any particular solution $x_p$ with $Ax_p = b$ and a basis $N$ for
+the null space of $A$, and emit
+
+$$
+x \;=\; x_p + N u, \qquad Ax = Ax_p + ANu = b
+$$
+
+for every $u$ the network can produce. This is the only one of the four where
+the guarantee is a property of the function class rather than of the training
+run, the data, or a downstream step. It costs nothing at inference and it is
+differentiable, so the model trains against the constraint rather than around
+it.
+
+What it costs is expressiveness, and the cost is exactly measurable: the output
+is confined to an affine subspace of dimension $n - m$. The model cannot
+represent the hypothesis "line 3 is high and the other four are right", because
+that hypothesis is off the subspace. Errors become zero-sum by construction —
+every overstatement is somebody else's understatement. Whether that is a feature
+depends on whether the identity is true of the world or merely true of the
+report. The softmax version smuggles in a second constraint as well, since every
+component comes out positive, which is wrong the moment a legitimate allocation
+can be a credit.
+
+### The arithmetic the guarantee holds in
+
+One more thing, which the four-way framing tends to hide. Projection and
+architecture are exact over the reals. A ledger is not over the reals; it is
+over a lattice of cents. Round a vector that sums exactly to the total, and the
+rounded vector generally does not. The set of representable outputs is not a
+subspace, and no continuous parameterisation lands on it by construction. The
+final rounding step is where an exact guarantee quietly becomes an approximate
+one — which is why the last operation before posting has to be a lattice-aware
+allocation such as the largest-remainder method, with the same apportionment
+paradoxes Balinski and Young catalogued for legislative seats.
+
+## A worked example
+
+<Synthetic />
+
+A pool of 4,812,600.00 is allocated across five units. The true allocation is
+known by construction. The raw model reproduces four components exactly and
+overstates the third by 17.31 — an error deliberately concentrated in one line,
+so that the distributional side-effects are visible rather than smeared.
+
+<Figure
+  n={1}
+  caption="The four injection points as a pipeline. Rows are stages a prediction passes through; each column intervenes at exactly one of them, and the thin rules mark the stages it leaves untouched. The lower block reports what each intervention actually guarantees and the residual it leaves on the synthetic allocation below — first in exact arithmetic, then after rounding to cents, which is the only arithmetic the ledger has."
+>
+  <svg viewBox="0 0 760 296" className="w-full h-auto" role="img" aria-label="Diagram: four columns for objective, projection, repair and architecture, showing which pipeline stage each one acts on and the residual violation each one leaves">
+    <g fontFamily="var(--font-mono)" fontSize="9">
+
+      <g fill="var(--ink-muted)" fontSize="9.5" letterSpacing="1.3">
+        <text x="128" y="16">1 · OBJECTIVE</text>
+        <text x="286" y="16">2 · PROJECTION</text>
+        <text x="444" y="16">3 · REPAIR</text>
+        <text x="602" y="16">4 · ARCHITECTURE</text>
+      </g>
+      <g stroke="var(--rule-strong)" strokeWidth="1">
+        <path d="M128 23h148" /><path d="M286 23h148" />
+        <path d="M444 23h148" /><path d="M602 23h148" />
+      </g>
+
+      <path d="M6 36v130m0 0-3.5-6m3.5 6 3.5-6" stroke="var(--rule-strong)" strokeWidth="1" fill="none" />
+      <g fill="var(--ink-faint)" letterSpacing="1.2">
+        <text x="18" y="47">TRAIN LOSS</text>
+        <text x="18" y="77">OUTPUT LAYER</text>
+        <text x="18" y="107">RAW VECTOR</text>
+        <text x="18" y="137">POST-PROCESS</text>
+        <text x="18" y="167">LEDGER</text>
+      </g>
+
+      <g stroke="var(--rule)" strokeWidth="1">
+        <path d="M128 74h148" /><path d="M128 104h148" /><path d="M128 134h148" /><path d="M128 164h148" />
+        <path d="M286 44h148" /><path d="M286 74h148" /><path d="M286 134h148" /><path d="M286 164h148" />
+        <path d="M444 44h148" /><path d="M444 74h148" /><path d="M444 104h148" /><path d="M444 164h148" />
+        <path d="M602 44h148" /><path d="M602 104h148" /><path d="M602 134h148" /><path d="M602 164h148" />
+      </g>
+
+      <rect x="128" y="33" width="148" height="22" fill="none" stroke="var(--variance)" strokeWidth="1.2" />
+      <text x="202" y="47.5" textAnchor="middle" fontSize="8.5" fill="var(--variance)">+ λ ||Ax - b||^2</text>
+
+      <rect x="286" y="93" width="148" height="22" fill="none" stroke="var(--accent)" strokeWidth="1.2" />
+      <text x="360" y="107.5" textAnchor="middle" fontSize="8.5" fill="var(--accent)">x - A^T(AA^T)^-1(Ax - b)</text>
+
+      <rect x="444" y="123" width="148" height="22" fill="none" stroke="var(--pending)" strokeWidth="1.2" />
+      <text x="518" y="137.5" textAnchor="middle" fontSize="8.5" fill="var(--pending)">plug into one line</text>
+
+      <rect x="602" y="63" width="148" height="22" fill="none" stroke="var(--accent)" strokeWidth="1.2" />
+      <text x="676" y="77.5" textAnchor="middle" fontSize="8.5" fill="var(--accent)">b · softmax(z)</text>
+
+      <path d="M0 186h750" stroke="var(--rule-strong)" strokeWidth="1" />
+
+      <g fill="var(--ink-faint)" letterSpacing="1.2">
+        <text x="18" y="207">GUARANTEES</text>
+        <text x="18" y="241">PRICE</text>
+        <text x="18" y="265">RESIDUAL, REAL</text>
+        <text x="18" y="285">RESIDUAL, CENTS</text>
+      </g>
+
+      <g fill="var(--ink-muted)" fontSize="8.5">
+        <text x="128" y="207">violation small, never 0</text>
+        <text x="128" y="218">no bound at test time</text>
+        <text x="286" y="207">exact in real arithmetic</text>
+        <text x="286" y="218">every line is moved</text>
+        <text x="444" y="207">exact in the ledger itself</text>
+        <text x="444" y="218">one line absorbs the rest</text>
+        <text x="602" y="207">exact by construction</text>
+        <text x="602" y="218">holds for every input</text>
+      </g>
+
+      <g fill="var(--ink-faint)" fontSize="8.5">
+        <text x="128" y="241">correctness</text>
+        <text x="286" y="241">a solve, and distortion</text>
+        <text x="444" y="241">auditability</text>
+        <text x="602" y="241">expressiveness</text>
+      </g>
+
+      <g fontSize="10">
+        <text x="128" y="265" fill="var(--variance)">2.14</text>
+        <text x="286" y="265" fill="var(--accent)">0.000</text>
+        <text x="444" y="265" fill="var(--accent)">0.00</text>
+        <text x="602" y="265" fill="var(--accent)">0.000</text>
+        <text x="128" y="285" fill="var(--variance)">2.14</text>
+        <text x="286" y="285" fill="var(--variance)">+0.01</text>
+        <text x="444" y="285" fill="var(--accent)">0.00</text>
+        <text x="602" y="285" fill="var(--variance)">-0.01</text>
+      </g>
+    </g>
+  </svg>
+</Figure>
+
+The penalty column is stipulated rather than trained: assume a penalised model
+that leaves a residual of 2.14 on this pool. I have not run the training, and
+the size of that number is illustrative — the only claim being made is that it
+is not zero and that nothing in the method makes it zero. Every other column is
+arithmetic, and it is exact.
+
+| Line | True | Raw model | Projected | Repaired | Architecture |
+|---|---|---|---|---|---|
+| BU-1 | 1,204,300.00 | 1,204,300.00 | 1,204,296.54 | 1,204,300.00 | 1,204,293.81 |
+| BU-2 | 962,540.00 | 962,540.00 | 962,536.54 | 962,540.00 | 962,535.05 |
+| BU-3 | 1,443,760.00 | 1,443,777.31 | 1,443,773.85 | 1,443,777.31 | 1,443,777.31 |
+| BU-4 | 721,900.00 | 721,900.00 | 721,896.54 | 721,900.00 | 721,896.29 |
+| BU-5 | 480,100.00 | 480,100.00 | 480,096.54 | 480,082.69 | 480,097.53 |
+| **Sum** | 4,812,600.00 | 4,812,617.31 | 4,812,600.01 | 4,812,600.00 | 4,812,599.99 |
+
+Three things in that table are worth pausing on.
+
+The projection worked and made the answer worse. Before it, one line was wrong
+by 17.31 and four were exactly right; after it, all five are wrong, and total
+absolute error has gone from 17.31 to 27.69. The statement now balances, and the
+number of defensible lines on it has dropped from four to zero. A weighted
+projection with a well-estimated covariance would have sent most of the
+correction to BU-3 and left the others alone, which is the entire argument for
+bothering with $W$.
+
+The repaired column has two wrong lines instead of one. BU-3 keeps its 17.31
+overstatement and BU-5 absorbs the offset, so the pool ties, one line is
+overstated, one is understated, and neither figure is a model output any more.
+The books are correct and the allocation is fiction in two places.
+
+The architecture column shows what zero-sum error looks like. The share head
+holds the same view of BU-3, so the softmax has no way to express it except by
+taking the 17.31 out of the other four in proportion to their size. The
+constraint did not remove the error. It reshaped it into something that balances.
+
+And then the last row. The unrounded projection sums to exactly 4,812,600.000;
+rounded to cents it sums to 4,812,600.01. The architecture output sums exactly
+in the reals and to 4,812,599.99 in cents. Only the repaired column ties in the
+arithmetic the ledger actually uses, because it is the only one that was
+computed in that arithmetic. A guarantee proved over $\mathbb{R}$ and applied
+after a rounding step is not a guarantee.
+
+## Limits
+
+Three honest ones.
+
+Most of this is not new. The projection is standard constrained least squares,
+the weighted version is hierarchical forecast reconciliation and the
+covariance-weighted solution is MinT. Soft penalties for physical constraints
+are the core of the physics-informed neural network literature of Raissi,
+Perdikaris and Karniadakis; differentiable constrained layers belong to Amos and
+Kolter and the deep declarative networks line, and their logical analogue to the
+semantic loss and DeepProbLog work. What I claim is the mapping onto ledger
+arithmetic, not the methods.
+
+The framing only covers affine, known-at-inference constraints. A tolerance that
+applies to one class of item and not another is conditional, not affine. An
+inequality is a cone, not a subspace. A total that is itself predicted rather
+than given breaks the architectural option, which needs $b$ to construct the
+output. Real close processes have all three.
+
+And I have not measured the accuracy cost of the architectural option. The
+hypothesis is that confining the output to an $(n-m)$-dimensional subspace costs
+less held-out accuracy than the penalty costs in violations you cannot ship, and
+that the trade improves as $m/n$ falls. It is a hypothesis with a clean
+experimental design and no experiment behind it.
+
+## Where this goes
+
+The next piece in this pillar takes on the constraints that are not affine —
+conditional rules, tolerances, and inequalities — where the four-site map still
+applies but only one of the sites survives. After that, the harder question:
+what a control tester should be shown to accept a structural guarantee, which is
+a problem in [evidence rather than modelling](/writing/evaluating-agents-without-ground-truth),
+and the reason the rest of this pillar exists on the [research page](/research).
+
+The question worth holding onto is not whether your model satisfies the
+identity. It is where the satisfaction is enforced, and in which arithmetic the
+proof holds.

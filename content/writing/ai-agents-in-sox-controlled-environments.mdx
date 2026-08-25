@@ -1,0 +1,424 @@
+---
+title: "AI Agents in SOX-Controlled Environments: What Auditors Will Actually Ask"
+description: "A control an agent performs well can still fail testing, because operating effectiveness is not a claim you make — it is a residue you leave. What a tester actually asks for."
+date: "2026-08-25"
+pillar: "P4"
+order: 6
+quotable: "An auditor cannot test what your agent decided. They can only test what your agent left behind."
+tags:
+  - sox controls
+  - control testing
+  - agentic ai governance
+  - audit evidence
+---
+
+A team ships an agent into the quarterly close. It reads unmatched items out of
+the exception queue, pulls the supporting documents, works out why each break
+happened, and proposes a disposition. Six weeks later the queue is a third of
+its old size, the reviewers who used to work Saturdays no longer do, and the
+team's own quality checks agree with the agent on the overwhelming majority of
+items it has touched. By every measure the team owns, it works.
+
+In October a control tester picks it up. She asks five questions, none of them
+about the model. What is the population this control operated on during the
+period. How was the sample selected from that population. Take this one item —
+reproduce the decision. Who authorised it, and what did they see when they did.
+And what happened to the ones that failed.
+
+The team cannot answer any of them. The agent's dispositions sit in the queue's
+history as actions by a service account. The context is gone: retrieval was
+live, the documents have since been superseded, the model has been upgraded
+twice. The reviewer's approval is a timestamp and a user id. The only list of
+what the agent touched is a list the agent produced.
+
+The control is rated ineffective. Not one disposition in it was wrong. Not one
+of them was testable.
+
+## A policy is not evidence
+
+The instinct after a finding like that is to write something. An AI usage
+standard, a model governance policy, a responsible-AI framework with roles,
+escalation paths and an approval matrix. That is not a bad thing to have. It is
+the wrong instrument for this finding.
+
+Testing a control has two halves, and they fail differently. Design
+effectiveness asks whether the control, operating exactly as described, would
+prevent or detect a misstatement of the size that matters. Operating
+effectiveness asks whether it *did* operate that way — on every item in scope,
+throughout the period, and not only on the day of the walkthrough. A policy is
+an assertion about the first half. It produces nothing that speaks to the
+second, because operating effectiveness is not a claim you make. It is a residue
+you leave, and testers are trained to set the claim aside and inspect the
+residue.
+
+The second instinct is to point at the evaluation. We benchmarked the agent
+against a labelled set, agreement was high, here is the report. An evaluation is
+evidence about a model. A tester is asking what happened on a Tuesday in August,
+to one named item, and who signed for it. The control stands on the second
+question.
+
+The third instinct is to put a person in front of it — a reviewer who approves
+what the agent proposes. This is closer to right, and it is also how a cheaply
+testable automated control turns into an expensively untestable manual one. A
+human approval step converts the control into a management review control, which
+is the class the profession has spent a decade criticising, for the reason that
+bites here: the reviewer's judgement is real, and the record of it is a click.
+
+## The reframe: the record is the control
+
+The question worth asking before deployment is not whether the agent is good
+enough to be trusted with a control activity. It is what the agent leaves behind
+when it acts.
+
+<KeyLine>
+  An auditor cannot test what your agent decided. They can only test what your
+  agent left behind.
+</KeyLine>
+
+That is narrower than it sounds, and it is not a complaint about auditors.
+Inspection, reperformance, sampling, reconciliation of a population — every
+procedure a tester has operates on artefacts, not on cognition. This was always
+true of human controls. Nobody tests the preparer's reasoning; they test the
+reconciliation the preparer signed. Agents feel different because their
+reasoning is legible and voluminous, and legible reasoning is easy to mistake
+for evidence. A chain of thought is not evidence. It is a story about a
+decision, produced by the same process that produced the decision, at the same
+moment, with no independent standing.
+
+So the engineering problem is not how to make the model behave. It is where to
+put the determinism. The agent proposes. Something deterministic, recorded and
+replayable disposes.
+
+## What a tester actually asks
+
+### The five questions
+
+Strip the vocabulary away and a controls test is five questions, asked of one
+sampled item at a time.
+
+**Who authorised this?** Not who built it — who is accountable for the decision
+this control made on this item. A named person, or a rule set that a named
+person approved and that change management can pin to a version.
+
+**What is the population?** The complete set of items the control was supposed
+to operate on in the period, defined before anyone knows which ones the system
+handled successfully.
+
+**Can you reproduce this specific decision?** Given the same inputs, does the
+same disposition come back out — now, in front of the tester?
+
+**What evidence exists that the control operated on every item in the
+population?** Not on the sample. On all of it.
+
+**What happened to the exceptions?** The items the control caught, and the
+occasions the control itself failed — who owned them, what was done, and whether
+it happened inside the period.
+
+None of these questions were invented for AI. They are the same questions asked
+of a three-way match in 2004. The agent does not change the questions; it makes
+the answers much harder to produce.
+
+### Why "the model decided" is not a control
+
+Two reasons, and the second is the expensive one.
+
+The first is accountability. "The model decided" names nobody. A control has an
+owner who can be asked why, and a model has an author who can only be asked how.
+
+The second is the economics of testing. Automated controls are cheap to test
+because they are deterministic: a tester examines the configured logic, tests a
+sample of one, and then relies on IT general controls — change management,
+logical access, computer operations — to conclude that the same logic applied to
+every item all period. That argument rests entirely on the machine doing the
+same thing every time. A component that samples from a distribution has no such
+baseline: same input, different output, nothing to benchmark against. Put a
+non-deterministic component where the control assertion lives and you have not
+made the control risky so much as made it expensive — you now owe manual-control
+sample sizes on something that runs thousands of times a quarter.
+
+The resolution is not to make the model deterministic. It is to stop asserting
+the control over the model.
+
+### Propose, dispose, record
+
+Let $P$ be the population for a period. For item $i$ the agent is a stochastic
+map producing a proposal $p_i$ from the inputs $x_i$ it was given. The gate is a
+function
+
+$$
+d_i \;=\; g(x_i,\, p_i,\, \theta)
+$$
+
+where $\theta$ is a versioned rule set that a human approved: tolerance bands,
+authority limits, conditions that require supporting evidence, actions that are
+never permitted, and the routing that sends anything outside the bands to a
+person. $g$ is deterministic. Given the recorded $(x_i, p_i, \theta)$ a tester
+recomputes $d_i$ exactly, in the room, twelve months later. That is
+reperformance, and it is the procedure the whole test-of-one argument depends
+on.
+
+The control is asserted over $g$ and the record $r_i$ it emits, not over the
+agent. The agent's proposal is an *input* to the control, the way a
+subject-matter expert's recommendation is an input to a reviewer's approval.
+Nobody audits the expert; they audit what the approver did with the
+recommendation. This is the argument from
+[the agent harness](/writing/the-agent-harness) applied to compliance rather
+than to reliability.
+
+### Population completeness is the hard part
+
+Every other question has an engineering answer. This one has a trap.
+
+The population must come from a source upstream of the agent and independent of
+it — the sub-ledger, the queue generator, the interface that creates the items —
+and it must tie to a control total nobody in the pipeline can adjust. A listing
+produced by the component under test is the weakest form of information produced
+by the entity: it can only contain items the component knows about. If routing
+silently dropped a class of item, the agent's log shows a smaller number and
+calls it the population. A tester who accepts that has sampled a population
+defined by the failure being tested.
+
+The arithmetic is unforgiving. Let $R \subseteq P$ be the recorded set and
+$c = |R| / |P|$ the coverage. Suppose testing a sample from $R$ yields an upper
+bound $\hat{\varepsilon}$ on the deviation rate within $R$. Since every item in
+$P \setminus R$ is untested, and untested means unsupported, the bound over the
+real population is
+
+$$
+\varepsilon_P \;\le\; c\,\hat{\varepsilon} \;+\; (1 - c)
+$$
+
+A sample drawn from $R$ only ever shrinks the first term. The second term is
+fixed by the completeness gap and no amount of testing touches it.
+
+### Gates that are theatre
+
+A human approval step is either a control or a costume, and one test tells them
+apart: does the approver ever say no, and is there evidence of what they saw
+when they said yes.
+
+<Ledger
+  leftLabel="What the control narrative says"
+  rightLabel="What the record supports"
+  left={
+    <ul>
+      <li>The reviewer examines each escalated item</li>
+      <li>The reviewer challenges the proposed disposition</li>
+      <li>The reviewer declines where the evidence is thin</li>
+    </ul>
+  }
+  right={
+    <ul>
+      <li>An approval event, a user id and a timestamp</li>
+      <li>No record of what was displayed at the moment of approval</li>
+      <li>Not one decline in the period, and no defined condition that would produce one</li>
+    </ul>
+  }
+/>
+
+Declines are the only positive evidence that the approver has authority and used
+it. An approval rate of one hundred percent over a quarter is not comfort; it is
+the first thing a tester will notice, and the second thing they will ask is what
+would have to be true for a decline to occur. If nobody on the team can answer
+that from the rule set, the gate is decoration.
+
+The other half of the test is precision. A reviewer clearing six hundred
+escalations in an afternoon asserts a level of scrutiny the arithmetic does not
+support. This is the standing criticism of management review controls; agents
+merely supply the volume that makes it obvious.
+
+### Evidence that has to outlive the model
+
+Reproduction and re-running are not the same thing. Running today's model on
+last quarter's inputs produces a new decision that may agree with the old one;
+it does not reconstruct it. Model versions are deprecated on vendor timelines,
+not on retention schedules, so anything recoverable only by inference is not
+evidence — it is a re-enactment. What the record has to carry is the decision as
+taken and the inputs as seen, held for as long as the period is open to
+inspection, which is routinely longer than any default logging retention in the
+stack.
+
+<Callout label="Deliberately out of scope" tone="neutral">
+  How that evidence is structured, packaged and attested is the part I am not
+  writing about yet. This piece stops where a tester's questions stop. Naming
+  what has to exist is the useful half in public; the schema is a separate
+  problem and, for now, a private one.
+</Callout>
+
+## A worked example
+
+<Synthetic />
+
+Take an agent-assisted exception review over one quarter. Exceptions arrive from
+the matching layer, so the shape of the queue is set by
+[the ways matching breaks](/writing/seven-ways-record-matching-breaks) rather
+than by anything the agent does. The control objective: open exceptions are
+investigated and dispositioned in the period, with dispositions outside defined
+tolerance approved by an authorised reviewer.
+
+<Figure
+  n={1}
+  caption="The loop. The agent proposes and is allowed to be non-deterministic; the gate disposes deterministically against a versioned rule set and can escalate to a reviewer; each boundary emits a record onto the rail at the bottom. The tester samples the rail, never the model. Items that never enter the flow (top left) emit nothing, and no sample drawn from the rail can reach them."
+>
+  <svg viewBox="0 0 760 272" className="w-full h-auto" role="img" aria-label="Diagram: a population feeds an agent that proposes dispositions, a deterministic gate disposes of them and escalates some to a reviewer, and each boundary emits a record onto an evidence rail that a control tester samples; unrouted items leave no record and cannot be tested">
+    <g fontFamily="var(--font-mono)" fontSize="9.5">
+      <text x="8" y="20" fill="var(--ink-faint)" letterSpacing="1.4">PROPOSE · DISPOSE · RECORD</text>
+
+      <rect x="286" y="8" width="184" height="40" fill="none" stroke="var(--rule-strong)" strokeWidth="1" />
+      <text x="298" y="28" fill="var(--ink-muted)" letterSpacing="1.2">REVIEWER</text>
+      <text x="298" y="41" fontSize="8" fill="var(--ink-faint)">approve / decline</text>
+
+      <text x="490" y="24" fontSize="8.5" fill="var(--variance)" letterSpacing="1.2">A GATE NOBODY EVER</text>
+      <text x="490" y="37" fontSize="8.5" fill="var(--variance)" letterSpacing="1.2">DECLINES IS THEATRE</text>
+
+      <path d="M330 88V54m-4 6 4-6 4 6" stroke="var(--pending)" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <text x="338" y="72" fontSize="8" fill="var(--ink-faint)">ESCALATE</text>
+      <path d="M412 48V82m-4-6 4 6 4-6" stroke="var(--pending)" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <text x="420" y="72" fontSize="8" fill="var(--ink-faint)">DECISION</text>
+
+      <path d="M60 88V62H186m-6-4 6 4-6 4" stroke="var(--variance)" strokeWidth="1" strokeDasharray="3 3" fill="none" />
+      <rect x="188" y="58" width="8" height="8" fill="none" stroke="var(--variance)" strokeWidth="1" />
+      <text x="204" y="58" fontSize="8.5" fill="var(--variance)" letterSpacing="1.2">UNROUTED ITEMS</text>
+      <text x="204" y="70" fontSize="8" fill="var(--ink-faint)">no record · no test</text>
+
+      <rect x="8" y="88" width="110" height="56" fill="none" stroke="var(--rule-strong)" strokeWidth="1" />
+      <text x="18" y="112" fill="var(--ink-muted)" letterSpacing="1.2">POPULATION</text>
+      <text x="18" y="126" fontSize="8" fill="var(--ink-faint)">source of record</text>
+
+      <path d="M118 116H136m-5-4 5 4-5 4" stroke="var(--ink-faint)" strokeWidth="1" fill="none" />
+
+      <rect x="140" y="88" width="132" height="56" fill="none" stroke="var(--pending)" strokeWidth="1" strokeDasharray="4 3" />
+      <text x="150" y="112" fill="var(--ink-muted)" letterSpacing="1.2">AGENT</text>
+      <text x="150" y="126" fontSize="8" fill="var(--ink-faint)">proposes disposition</text>
+      <text x="150" y="138" fontSize="8" fill="var(--pending)">non-deterministic</text>
+
+      <path d="M272 116H290m-5-4 5 4-5 4" stroke="var(--ink-faint)" strokeWidth="1" fill="none" />
+
+      <rect x="294" y="88" width="136" height="56" fill="none" stroke="var(--accent)" strokeWidth="1.5" />
+      <text x="304" y="112" fill="var(--ink-muted)" letterSpacing="1.2">GATE</text>
+      <text x="304" y="126" fontSize="8" fill="var(--ink-faint)">checks · disposes</text>
+      <text x="304" y="138" fontSize="8" fill="var(--accent)">deterministic · versioned</text>
+
+      <path d="M430 116H444" stroke="var(--ink-faint)" strokeWidth="1" fill="none" />
+      <path d="M444 116V98H454m-5-4 5 4-5 4" stroke="var(--ink-faint)" strokeWidth="1" fill="none" />
+      <path d="M444 116V134H454m-5-4 5 4-5 4" stroke="var(--ink-faint)" strokeWidth="1" fill="none" />
+
+      <rect x="458" y="94" width="8" height="8" fill="var(--ink-muted)" />
+      <text x="472" y="102" fill="var(--ink-muted)">ACCEPTED</text>
+      <rect x="458" y="130" width="8" height="8" fill="var(--variance)" />
+      <text x="472" y="138" fill="var(--ink-muted)">REJECTED</text>
+
+      <g fontSize="8" fill="var(--ink-faint)" letterSpacing="1.2">
+        <text x="556" y="102">THE POPULATION IS</text>
+        <text x="556" y="114">DEFINED UPSTREAM OF</text>
+        <text x="556" y="126">THE AGENT, NOT BY</text>
+        <text x="556" y="138">WHAT IT TOUCHED</text>
+      </g>
+
+      <g stroke="var(--ink-faint)" strokeWidth="1" strokeDasharray="2 3" fill="none">
+        <path d="M129 148V166H100V182" />
+        <path d="M283 148V182" />
+        <path d="M362 148V172H430V182" />
+        <path d="M444 148V166H620V182" />
+      </g>
+
+      <path d="M40 182H700" stroke="var(--rule-strong)" strokeWidth="1" fill="none" />
+      <g fill="var(--accent)">
+        <circle cx="100" cy="182" r="2.5" />
+        <circle cx="283" cy="182" r="2.5" />
+        <circle cx="430" cy="182" r="2.5" />
+        <circle cx="620" cy="182" r="2.5" />
+      </g>
+
+      <g textAnchor="middle">
+        <text x="100" y="200" fontSize="9" fill="var(--ink-muted)" letterSpacing="1.2">ADMISSION RECORD</text>
+        <text x="100" y="213" fontSize="8" fill="var(--ink-faint)">item, period, source</text>
+        <text x="283" y="200" fontSize="9" fill="var(--ink-muted)" letterSpacing="1.2">PROPOSAL RECORD</text>
+        <text x="283" y="213" fontSize="8" fill="var(--ink-faint)">inputs the agent saw</text>
+        <text x="430" y="200" fontSize="9" fill="var(--ink-muted)" letterSpacing="1.2">REVIEWER RECORD</text>
+        <text x="430" y="213" fontSize="8" fill="var(--ink-faint)">what was shown, when</text>
+        <text x="620" y="200" fontSize="9" fill="var(--ink-muted)" letterSpacing="1.2">DISPOSITION RECORD</text>
+        <text x="620" y="213" fontSize="8" fill="var(--ink-faint)">verdict, rule version</text>
+      </g>
+
+      <path d="M45 230V238H675V230" stroke="var(--rule-strong)" strokeWidth="1" fill="none" />
+      <text x="360" y="256" textAnchor="middle" fontSize="9" fill="var(--accent)" letterSpacing="1.2">A TESTER SAMPLES THE RAIL, NOT THE MODEL</text>
+    </g>
+  </svg>
+</Figure>
+
+The control matrix, one row per step:
+
+| Step | What happens | What a tester can inspect |
+|---|---|---|
+| Population | Open exceptions listed from the sub-ledger, before routing | A listing whose control total ties to the sub-ledger |
+| Admission | Each item is routed to the agent or to the manual queue | An admission record per item; unrouted items show as a reconciling difference |
+| Proposal | The agent investigates and proposes a disposition | The proposal, and the inputs as the agent saw them |
+| Disposal | The gate applies the approved rule set and accepts, rejects or escalates | The verdict, the reason, and the rule-set version in force |
+| Escalation | Out-of-band items go to a named reviewer | What the reviewer was shown, what they decided, and why on a decline |
+| Exceptions | Rejected items return to the queue with an owner | The resolution, and whether it landed inside the period |
+
+Now the synthetic numbers. The sub-ledger reports 4,120 open exceptions for the
+quarter. Routing admitted 3,880 of them to the agent, so coverage is
+$c = 3880/4120 = 0.942$. The gate auto-accepted 3,102, rejected 160 outright and
+escalated 618. The reviewer approved 611 escalations and declined 7 — a decline
+rate of 1.1%, small but not zero, and each decline carries a recorded reason.
+That is a gate doing something.
+
+The tester samples 25 items from the recorded set, replays the gate on each from
+the recorded inputs, and finds no deviations. With $n = 25$ and zero deviations,
+the one-sided 95% bound on the deviation rate is $1 - 0.05^{1/25} \approx 0.113$.
+Substituting into the coverage bound:
+
+$$
+\varepsilon_P \;\le\; 0.942 \times 0.113 \;+\; 0.058 \;\approx\; 0.164
+$$
+
+The control still fails, and not because of the 25. It fails because of the 240
+items that never reached the agent. Test a hundred items instead of 25 and the
+first term shrinks; test all 3,880 and it goes to zero; those 5.8 percentage
+points do not move.
+
+Then the question that makes the finding worse. Why were 240 items unrouted? In
+this synthetic case the routing rule skipped items whose supporting document was
+missing — the hardest exceptions in the quarter, the ones most likely to be
+misstated, were exactly the ones excluded from the control. A missing population
+is rarely a random sample of it. It is usually the residue of a rule that avoided
+difficulty, and difficulty and risk are the same variable.
+
+## Limits
+
+Three honest ones.
+
+Almost none of the machinery here is mine. The split between design and
+operating effectiveness is standard internal-control material — COSO's framework
+and the PCAOB's integrated-audit standard both turn on it — and
+propose-and-dispose is a reference monitor with a ledger attached, which is
+Anderson's 1972 formulation and Saltzer and Schroeder's complete mediation in an
+accountant's coat. What I think is under-served is the mapping: a stochastic
+component in the control path destroys the benchmarking argument that makes
+automated-control testing affordable at all.
+
+A testable control is not a correct control. The gate makes the boundary
+inspectable; it does nothing about an agent proposing plausible, wrong
+dispositions that satisfy every rule in $\theta$. Whether the proposals are any
+good is a separate problem, and one where the labels do not exist —
+[evaluating agents without ground truth](/writing/evaluating-agents-without-ground-truth).
+
+The third is a hypothesis and I want it labelled as one. I expect testers to
+accept deterministic replay of a recorded gate as reperformance even though the
+upstream proposal is stochastic, because it is the argument already accepted for
+automated controls fed by human recommendations. I have not put it through an
+external audit, and a tester is entitled to disagree.
+
+## Where this goes
+
+Next in this pillar: the evaluation problem the gate cannot solve, and what it
+means to measure an agent's judgement when nobody has labelled the right answer.
+The rest of the sequence sits under [research](/research).
+
+If you are about to put an agent inside a control, the useful exercise is not a
+risk assessment. Sit with the control matrix, pick the row the agent will take
+over, and write down what the tester will sample twelve months from now. If the
+answer is a service-account entry and a timestamp, you have not built a control.
+You have built a very fast way to fail one.

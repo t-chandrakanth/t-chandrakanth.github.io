@@ -1,0 +1,365 @@
+---
+title: "AI Search Architecture for Retail: Retrieval, Rewriting, Ranking, Reranking"
+description: "A search stack measured only at the end tunes the one stage that cannot help. The recall ceiling, the four-stage latency budget, and why rewriting beats the reranker."
+date: "2026-08-25"
+pillar: "P6"
+order: 9
+quotable: "Retrieval decides what is possible. Everything downstream is a permutation, and a permutation cannot add a document."
+tags:
+  - retail search
+  - retrieval
+  - query rewriting
+  - ranking
+  - latency budget
+---
+
+A retail search team spends a quarter on the ranker. They add eleven features,
+move from a linear model to gradient-boosted trees, retune to a pairwise
+objective, and ship behind a flag. Offline $\text{nDCG}@10$ moves by fourteen
+thousandths. The online conversion metric does not move at all.
+
+Then a merchandiser types *boys navy school jumper age 7* into the production
+box and gets back a men's navy quarter-zip, three girls' cardigans and a car
+seat. The item she wanted is in the catalogue. Its title is "Junior Crew-Neck
+Sweatshirt — Navy — 6-7Y", its department is Schoolwear, and its attribute block
+carries `age_band: 6-7`. Nothing about the record is broken.
+
+The team's relevance dashboard measures the final ten results. Every experiment
+they ran that quarter changed the order of a candidate set nobody had looked at.
+When someone finally instrumented the retriever, the sweatshirt was not in the
+top four hundred candidates for that query. It was not in the top four thousand.
+The word *jumper* appears nowhere in the record, and the dense encoder had
+learned *jumper* mostly from a corpus where it means a pinafore dress.
+
+They had spent a quarter tuning a stage that had never seen the answer.
+
+## The ranker cannot rank what it never saw
+
+The instinct is reasonable and worth taking seriously: if the ordering is wrong,
+improve the thing that produces the ordering. Cross-encoders really are better
+relevance models than feature-based rankers. Pairwise and listwise objectives
+really do beat pointwise regression. None of that is in dispute.
+
+The problem is structural. A search stack is a cascade, and every stage after
+retrieval emits an ordering of a *subset* of the candidate set the retriever
+handed it. Let $C_q$ be that candidate set, $\lvert C_q \rvert = k$, and let $R_q$ be the set
+of relevant items for query $q$. With graded gain and a top-ten cut, the best any
+downstream stage can do is place every candidate it holds that is also relevant
+at the front of the list. So with
+
+$$
+D(m) \;=\; \sum_{i=1}^{m} \frac{1}{\log_2(i+1)}, \qquad
+m_q = \min\!\left(10,\, \lvert R_q \cap C_q \rvert\right), \qquad
+n_q = \min\!\left(10,\, \lvert R_q \rvert\right)
+$$
+
+the achievable score is bounded above by
+
+$$
+\text{nDCG}@10 \;\le\; \frac{D(m_q)}{D(n_q)}
+$$
+
+This is the concrete form of $\text{nDCG}_{\text{final}} \le f(\text{recall}@k)$.
+The function $f$ is increasing and concave in $m$, so by Jensen's inequality the
+query-averaged score is bounded by $f$ evaluated at the average recall — the
+ceiling survives aggregation.
+
+Put numbers on it. Take a query with five relevant items. If the retriever
+returns three of them, a *perfect* ranker scores $D(3)/D(5) = 0.723$. Four, and
+the ceiling is $0.869$. Miss all five and the ceiling is zero, and the reranker's
+cross-attention, the pairwise loss and the eleven new features are all bidding
+for a share of nothing.
+
+The measurement pathology follows directly. In an end-of-pipeline metric, a
+retrieval miss and a ranking mistake look identical: a relevant item that is not
+in the top ten. The number the team stares at every morning cannot distinguish
+the failure it can fix cheaply from the failure it cannot fix at all.
+
+## Measure the stage, not the stack
+
+The change of frame is to stop reporting one number and start reporting two per
+stage: the **ceiling** that stage inherits, and the **utilisation** — how much of
+its own headroom it actually captured. A reranker at 0.90 utilisation under a
+ceiling of 0.55 is doing excellent work in a bad seat. The same reranker reported
+as "nDCG 0.495" looks like an underperforming model, and the next quarter of
+engineering goes to replacing it.
+
+<KeyLine>
+  Retrieval decides what is possible. Everything downstream is a permutation,
+  and a permutation cannot add a document.
+</KeyLine>
+
+Ranker work moves utilisation. Rewriting and retrieval work move the ceiling. A
+team that only reports the product of the two cannot tell which one it moved,
+and will keep spending on the stage that is cheapest to iterate on rather than
+the stage where the loss lives. Cheap to change and worth changing are different
+properties, and in a retail search stack they sit at opposite ends of the
+pipeline.
+
+## Four stages and the budget each one deserves
+
+A retail search backend gets somewhere near 120 ms at p99, because the page has
+a budget too and search is one call inside it. Four stages compete for that
+budget, and the allocation is the design decision — not the model choice.
+
+### 1. Query understanding and rewriting
+
+Four jobs, none glamorous. Spelling correction, conditioned on the catalogue
+rather than on a dictionary, because *sonos* is not a typo and *nappys* is.
+Synonymy. Attribute extraction, which turns "age 7" from a term to be matched
+into a filter to be applied, "navy" into a colour facet, "boys" into a
+department. Intent classification, separating a navigational query for a brand
+or a model number from a category browse from an attribute-constrained search,
+because each deserves a different retrieval policy.
+
+Synonymy is where retail is genuinely peculiar. The shopper's vocabulary and the
+catalogue taxonomy are two different languages. Merchants write titles for the
+merchandising system; suppliers write them for their own catalogues; shoppers
+type what they say at home. *Jumper* and *sweatshirt*. *Pram* and *stroller*.
+*Trainers* and *athletic footwear*. *Hob* and *cooktop*. The mapping is regional,
+generational and seasonal, it changes when a supplier changes, and it is not a
+thesaurus problem. It is a translation problem between two controlled
+vocabularies, one of which — the shopper's — is not controlled at all. The same
+mismatch shows up whenever two systems name the same object differently, which
+is [most of why record matching breaks](/writing/seven-ways-record-matching-breaks).
+
+This stage is cheap and cacheable. Head and torso queries repeat relentlessly, so
+a rewrite cache with a day-scale expiry turns most traffic into a hash lookup.
+Ten percent of the budget is enough. It is also the only stage that can raise the
+ceiling at no cost to the stages after it, because it changes what the retriever
+is asked for rather than how much work the retriever does.
+
+### 2. Retrieval
+
+Lexical retrieval over titles, attribute blocks, category paths and curated
+synonym lists is exact on the tokens that must be exact: brand names, model
+numbers, sizes. Dense retrieval over a bi-encoder index handles paraphrase and
+some of the vocabulary gap, wherever the training data covered it.
+
+Hybrid usually beats either, and the reason is not that two models are better
+than one. It is that their error profiles are only partly correlated. Lexical
+retrieval fails on paraphrase; dense retrieval fails on rare tokens and on
+precise numerals, and will cheerfully put *size 7* next to *size 9* because the
+embedding space has no arithmetic in it. Fuse by rank rather than by score:
+the score distributions of a BM25 index and an approximate-nearest-neighbour
+index are not on a common scale, and rank fusion needs no calibration to
+maintain.
+
+Setting $k$ is an economic decision, not a configuration value. Plot recall@k per
+query segment, and choose the point where one more millisecond of retrieval buys
+less than that millisecond buys anywhere else in the pipeline. On a retail
+catalogue the curve rises steeply to a few hundred candidates and then flattens,
+and the flat region is where a lot of money gets spent.
+
+### 3. Ranking
+
+The features that survive contact with a live catalogue are mostly not semantic.
+Availability, resolved at the shopper's size and delivery postcode rather than at
+SKU level. Fulfilment promise, because a school jumper on 28 August and the same
+jumper on 12 October are different products. Freshness and season. Price,
+promotion, margin and contract commitments. Return rate, review volume, image
+quality.
+
+The honest note belongs here, in the design document, in writing. A commercial
+ranker is not a relevance model. It optimises a business objective subject to a
+relevance constraint, and the moment margin enters the feature set, offline nDCG
+stops being the quantity anyone is actually maximising. Teams that leave this
+implicit end up unable to explain why the offline metric and the online metric
+drift apart, and eventually stop trusting both. Say which objective is real, and
+[measure the thing you cannot label directly](/writing/evaluating-agents-without-ground-truth)
+deliberately rather than by accident.
+
+Ranking is computationally cheap — a gradient-boosted tree ensemble over a few
+hundred candidates and sixty features is single-digit milliseconds. That
+cheapness is exactly why it attracts disproportionate attention.
+
+### 4. Reranking
+
+A cross-encoder scores a query and a document jointly, with attention running
+across the concatenated pair. That is what makes it accurate and what makes it
+expensive: nothing can be precomputed, because the document's representation
+depends on the query. Cost is linear in the shortlist length and does not
+amortise across traffic the way an index does.
+
+So the shortlist lives in the tens, and the reranker inherits two truncations
+rather than one. It sees only what retrieval returned, and only the head of what
+ranking ordered. Its ceiling is the ranker's recall at the shortlist depth, which
+is bounded in turn by the retriever's recall@k. Ceilings compose downward and
+never recover.
+
+### The budget is the design
+
+Write the allocation as what it is. With per-stage latencies $t_1,\dots,t_4$,
+total budget $L$, and end-to-end quality $Q$:
+
+$$
+\max_{t_1,\dots,t_4} \; Q(t_1,\dots,t_4)
+\quad \text{subject to} \quad \sum_{i=1}^{4} t_i \;\le\; L
+$$
+
+At an interior optimum the marginal returns are equal across stages,
+$\partial Q/\partial t_i = \lambda$ for every $i$. Nobody computes this. The
+shortlist gets set to 100 because a paper used 100, and the remaining budget is
+distributed by whatever fits. The honest version of the exercise is a small table
+of marginal nDCG per millisecond per stage, recomputed whenever any stage
+changes, and it usually says something uncomfortable about the reranker.
+
+## A worked example
+
+<Synthetic />
+
+The catalogue below is synthetic: 180,000 SKUs across eleven departments, with
+titles generated to imitate supplier-written naming, and 4,000 queries split into
+head, torso and tail and weighted 40/35/25 by volume. Relevance judgements are
+graded 0–3 and generated by a rule over attribute overlap, averaging five
+relevant items per query. These numbers are illustrative arithmetic, not a
+benchmark result.
+
+Recall at $k = 400$, by query segment:
+
+| Retrieval configuration | Head | Torso | Tail | Weighted |
+|---|---|---|---|---|
+| Lexical only | 0.91 | 0.72 | 0.49 | 0.74 |
+| Dense only | 0.88 | 0.79 | 0.63 | 0.79 |
+| Hybrid, rank fusion | 0.94 | 0.84 | 0.66 | 0.84 |
+| Hybrid, with rewriting | 0.95 | 0.90 | 0.84 | 0.90 |
+
+Hybrid beats both single retrievers, and beats them by more on the tail, which is
+the decorrelated-errors argument showing up as a number. But the largest single
+movement in the table is rewriting on the tail: 0.66 to 0.84.
+
+<Figure
+  n={1}
+  caption="The cascade drawn twice on one axis. Above: candidate counts, tapering from the full catalogue to the ten results shown. Below: the latency budget, drawn to the same horizontal scale, so each stage's width is the milliseconds it costs. A relevant item outside the k = 400 cut leaves the pipeline at stage 2 and cannot be recovered by anything to its right — which is where 52% of the budget is spent."
+>
+  <svg viewBox="0 0 760 282" className="w-full h-auto" role="img" aria-label="Diagram: a four-stage retail search funnel showing candidate counts falling from 180,000 to 400 to 100 to 10, with the retrieval recall ceiling marked and a latency budget bar drawn to the same horizontal scale showing the reranker consuming 58 of 111 milliseconds">
+    <g fontFamily="var(--font-mono)" fontSize="9">
+
+      <g fill="var(--ink-faint)" letterSpacing="1.2" textAnchor="middle">
+        <text x="94" y="14">1 REWRITE</text>
+        <text x="198" y="14">2 RETRIEVE</text>
+        <text x="294" y="14">3 RANK</text>
+        <text x="487" y="14">4 RERANK</text>
+        <text x="677" y="14">I/O</text>
+      </g>
+
+      <path d="M268 34H700" stroke="var(--variance)" strokeWidth="1" strokeDasharray="4 3" fill="none" />
+      <path d="M268 34V82" stroke="var(--variance)" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" fill="none" />
+      <text x="274" y="29" fill="var(--variance)" letterSpacing="1.1">CEILING · RECALL@400 = 0.84 · NOTHING RIGHT OF HERE RAISES IT</text>
+
+      <path
+        d="M60 48 H129 L268 82 H320 V90 L654 103 H700 V129 H654 L320 142 V150 H268 L129 184 H60 Z"
+        fill="var(--rule)"
+        stroke="var(--rule-strong)"
+        strokeWidth="1"
+      />
+
+      <path d="M268 82V150" stroke="var(--accent)" strokeWidth="1.4" fill="none" />
+      <path d="M320 82V150M654 103V129" stroke="var(--rule-strong)" strokeWidth="1" fill="none" />
+
+      <text x="94" y="119" fill="var(--ink-faint)" letterSpacing="1.2" textAnchor="middle">CATALOGUE</text>
+
+      <g fill="var(--ink-muted)">
+        <circle cx="232" cy="92" r="3.4" />
+        <circle cx="232" cy="112" r="3.4" />
+        <circle cx="232" cy="132" r="3.4" />
+        <circle cx="232" cy="150" r="3.4" />
+      </g>
+      <circle cx="232" cy="60" r="3.4" fill="none" stroke="var(--variance)" strokeWidth="1.4" />
+      <path d="M239 58 288 48" stroke="var(--variance)" strokeWidth="1" strokeDasharray="3 3" fill="none" />
+      <path d="M295 41 305 51M305 41 295 51" stroke="var(--variance)" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+      <text x="313" y="50" fill="var(--variance)" letterSpacing="1.1">MISSED AT k — UNRECOVERABLE</text>
+
+      <g stroke="var(--rule-strong)" strokeWidth="1" opacity="0.55" fill="none">
+        <path d="M268 154V190" />
+        <path d="M345 145V190" />
+        <path d="M600 135V190" />
+      </g>
+      <g fill="var(--ink-faint)" textAnchor="middle" letterSpacing="1.1">
+        <text x="94" y="200">180,000 SKU</text>
+        <text x="268" y="200">k = 400</text>
+        <text x="345" y="200">TOP 100</text>
+        <text x="600" y="200">TOP 10</text>
+      </g>
+
+      <rect x="60" y="212" width="69" height="22" fill="var(--rule-strong)" />
+      <rect x="129" y="212" width="139" height="22" fill="var(--accent)" />
+      <rect x="268" y="212" width="52" height="22" fill="var(--rule-strong)" />
+      <rect x="320" y="212" width="334" height="22" fill="var(--pending)" />
+      <rect x="654" y="212" width="46" height="22" fill="var(--rule)" stroke="var(--rule-strong)" strokeWidth="1" />
+
+      <g fill="var(--ink-faint)" textAnchor="middle" letterSpacing="1.1">
+        <text x="94" y="248">12 ms</text>
+        <text x="198" y="248">24 ms</text>
+        <text x="294" y="248">9 ms</text>
+        <text x="487" y="248">58 ms</text>
+        <text x="677" y="248">8 ms</text>
+      </g>
+
+      <text x="60" y="270" fill="var(--ink-faint)" letterSpacing="0.8">LATENCY BUDGET 111 MS OF A 120 MS p99 · STAGE 4 TAKES 52% OF IT TO REORDER 100</text>
+
+    </g>
+  </svg>
+</Figure>
+
+Now the end-to-end metric, with the ranker held fixed across all four rows:
+
+| Stack | Head | Torso | Tail | Weighted |
+|---|---|---|---|---|
+| Hybrid + ranker | 0.463 | 0.401 | 0.338 | 0.410 |
+| + cross-encoder rerank, top 100 | 0.507 | 0.455 | 0.388 | 0.459 |
+| + rewriting, no reranker | 0.478 | 0.464 | 0.488 | 0.476 |
+| Full stack | 0.519 | 0.507 | 0.514 | 0.514 |
+
+The reranker is worth $+0.049$ weighted. Rewriting is worth $+0.066$, and the two
+together are worth $+0.104$ rather than $+0.115$, because they partly rescue the
+same queries. The segment split is the interesting part: the reranker contributes
+$+0.044$ on the head and $+0.050$ on the tail — roughly flat, because reordering
+a shortlist is worth about the same everywhere. Rewriting contributes $+0.015$ on
+the head and $+0.150$ on the tail, because the vocabulary gap is a tail
+phenomenon and the head was already covered by curated synonyms.
+
+The hard part of the ceiling shows up in a statistic the aggregate metric hides.
+Without rewriting, 21% of tail queries had *no* relevant item anywhere in the 400
+candidates. Those queries score exactly zero, and a better reranker moves them by
+exactly nothing. With rewriting the figure falls to 7%.
+
+The budget trade follows. Cutting the reranker shortlist from 100 to 40 frees
+35 ms and costs $0.013$. Spending 18 ms of that on retrieving against both the
+raw and the rewritten query and fusing the two lists returns $0.019$; spending
+the remaining 15 ms on $k = 800$ returns $0.008$. Same p99, net $+0.014$.
+
+## Limits
+
+Three honest ones.
+
+The bound is loose in level. At tail recall of 0.66 it permits
+$\text{nDCG}@10 \approx 0.77$ against an observed 0.388, so the ceiling is not
+what is binding here. It constrains what is possible and says nothing about where
+the loss sits; finding that needs a segment-level ablation, and the segments need
+judgements many teams do not have.
+
+None of the architecture is novel and the literature is not obscure. Multi-stage
+cascades were formalised by Wang, Lin and Metzler; BM25 is Robertson and
+Zaragoza's probabilistic relevance framework; dense bi-encoder retrieval follows
+the Dense Passage Retrieval line from Karpukhin and colleagues; calibration-free
+list fusion is Cormack, Clarke and Buettcher's reciprocal rank fusion; the
+cross-encoder reranker is Nogueira and Cho. My claim is one of emphasis, and an
+observation about engineering practice is not a research contribution.
+
+The worked result is synthetic and its ordering is a hypothesis. The judgements
+came from a rule over attribute overlap, and attribute extraction is what the
+rewriter does, so the ablation is biased in rewriting's favour by an amount I
+cannot quantify from inside the simulation. On a catalogue whose titles are
+already written in shopper language, the ordering could reverse.
+
+## Where this goes
+
+The next piece in this pillar is about the objective itself: what happens when
+the thing being ranked has a margin attached, the relevance judgements are thin,
+and the offline metric and the trading metric disagree — which is the normal
+condition, not the pathological one. The rest of the applied work sits under
+[/research](/research).
+
+If you run a search stack, the number I would ask for first is not nDCG. It is
+the fraction of queries whose candidate set contained nothing worth ranking.

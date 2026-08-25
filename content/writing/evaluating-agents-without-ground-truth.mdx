@@ -1,0 +1,442 @@
+---
+title: "Evaluating Agents When There Is No Ground Truth"
+description: "When two experienced reviewers disagree, accuracy is undefined and a gold set only elects one of them. Five things you can still measure, and the one thing none of them reaches."
+date: "2026-08-25"
+pillar: "P5"
+order: 8
+quotable: "Without ground truth you cannot measure how often the agent is right, only how many ways of being wrong you have ruled out."
+tags:
+  - agent evaluation
+  - inter-rater reliability
+  - metamorphic testing
+  - llm-as-judge
+  - ground truth
+---
+
+An agent is put on the exception queue. Not to clear it — to propose a
+disposition for each item, with a reason, which a reviewer then accepts or
+overrides. Six weeks into the pilot the acceptance rate is 92%, the queue is
+shorter than it has been in a year, and someone asks the question that should
+have been asked first. How accurate is it?
+
+Nobody can answer, so a small experiment gets run. Fifty items are pulled from
+the accepted pile and given to two reviewers, independently, cold. Both have
+done this work for years. They agree on thirty-one of them.
+
+That result is worse than a bad accuracy number, because it dissolves the
+question rather than answering it. The 92% measured how often a reviewer,
+looking at a proposal with a plausible reason already attached, decided not to
+fight it. It did not measure correctness, because on this class of work
+correctness is not a fixed property of the item waiting to be discovered. It is
+a judgement, and the judgement is contested.
+
+At that point most teams do one of two things. They ship anyway and quietly
+promote the acceptance rate to a quality metric. Or they commission a gold set.
+
+Both are mistakes. The second is the expensive one.
+
+## Why the gold set does not rescue you
+
+The instinct is reasonable: take your most senior reviewer, have them label a
+thousand items carefully, freeze that as the reference. You now have accuracy,
+precision, a confusion matrix, and a number for the steering pack.
+
+What you actually have is one reviewer's opinion with a budget attached, and an
+instrument whose ceiling you have not computed.
+
+Take the binary case, because the arithmetic is transparent. Let $a$ be the
+agent's true accuracy and $\alpha$ the reference labeller's true accuracy, and
+assume for a moment that their errors are independent. The agent's *measured*
+accuracy against that reference is
+
+$$
+\hat{a} \;=\; a\alpha + (1-a)(1-\alpha)
+$$
+
+because you score a hit both when both are right and when both are wrong in the
+same direction. Two things follow. The ceiling is $\alpha$: an agent that is
+right every single time measures at exactly the labeller's accuracy and no
+higher. And the sensitivity is
+
+$$
+\frac{\partial \hat{a}}{\partial a} \;=\; 2\alpha - 1
+$$
+
+so with a labeller who is right 80% of the time, a genuine ten-point
+improvement in the agent shows up as six points on your chart. As $\alpha$
+approaches $0.5$ the instrument stops responding to the thing you are trying to
+measure at all.
+
+Majority vote across three labellers does not manufacture truth either. It
+produces a modal opinion, and on the items where the work is hard the mode is
+thin — two-to-one, decided by whichever reviewer trained whom. Reviewers in the
+same function also share a house style, so their errors correlate, which is
+exactly the independence the arithmetic above needed and does not get.
+
+Then the failure that costs money. Once the gold set is the target, the agent
+gets tuned against it, and prompt changes that move the number get kept. Some of
+those changes improve the agent; some teach it the reference labeller's
+idiosyncrasies. The measurement cannot tell them apart. Goodhart's law arrives
+on schedule: the number goes up, the agent gets worse, and no instrument left in
+the room would notice.
+
+## The reframe
+
+Stop trying to buy a truth you cannot afford. The question is not *how often is
+the agent right*, because on contested work that question has no
+determinate answer for any actor, human or otherwise. The question is *which
+ways of being wrong have I eliminated, and at what coverage*.
+
+That is a weaker claim and it is the honest one. It also turns out to be
+operationally sufficient, because most agent failures in production are not
+subtle disagreements about a contested call. They are structural: an amount
+that does not sum, an evidence citation that does not resolve, a decision that
+flips when you reorder two lines of input, a systematic drift shared with the
+process the agent replaced. Every one of those is detectable without knowing
+the right answer.
+
+<KeyLine>
+  Without ground truth you cannot measure how often the agent is right, only
+  how many ways of being wrong you have ruled out.
+</KeyLine>
+
+## Five things you can measure when correctness is unavailable
+
+### 1. Invariants
+
+An invariant is a property every correct answer satisfies, checkable without
+knowing which answer is correct. In the exception-disposition class: allocated
+amounts must sum to the item amount; a reason code must exist in the code set;
+a disposition of *duplicate* must name a sibling item, and that sibling must
+exist, be unresolved, and fall inside the stated window; every quantity the
+agent cites must resolve to a source it had access to, and match it.
+
+Invariants are the cheapest control on this list and the only one that runs on
+100% of traffic at production latency. They are the agent-harness counterpart of
+the hard-identity enforcement I have written about for
+[models that must respect double entry](/writing/neural-models-and-accounting-identities),
+except that the constraint sits on the output of a tool-using loop rather than
+inside a loss function.
+
+What they cannot do is locate a right answer. An invariant bounds the feasible
+set. Every wrong answer inside that set passes.
+
+### 2. Differential testing
+
+Run the agent alongside something independent — the rule-based process it is
+replacing, a second agent on a different model with a different tool
+ordering, or the historical human decision on a replayed backlog — and partition
+the traffic into *agreed* and *diverged*.
+
+The diverged set is where scarce review capacity should go. That is the whole
+value, and it is considerable.
+
+The caveat has to be stated hard, because this is where teams talk themselves
+into a result they did not earn. Agreement is not accuracy. Two systems that
+read the same retrieval index, inherit the same prompt lineage, or consume the
+same upstream normalisation share their failure modes, and correlated errors
+inflate agreement without touching correctness. With two raters and a binary
+outcome you cannot even identify the two accuracies from the agreement rate
+alone; the latent-truth model needs a third conditionally independent rater
+before it becomes identifiable, which is the observation Dawid and Skene made in
+1979 and which every team rediscovers.
+
+### 3. Metamorphic relations
+
+The strongest oracle available when correctness is unknown is a statement about
+how the output *must change* when the input changes in a specified way. You do
+not need to know either output to check the relation between them.
+
+Four that generalise across this class of work:
+
+- **Permutation.** Reorder the supporting documents in the evidence bundle. The
+  disposition must not change. If it does, you have measured prompt-position
+  sensitivity rather than judgement.
+- **Consistent renaming.** Substitute every entity identifier for a fresh
+  surrogate, consistently. The disposition must not change. This is the same
+  structure-preserving map I argued elsewhere is
+  [why masking does not protect a relationship](/writing/why-data-masking-is-not-enough);
+  here the fact that structure survives renaming is the useful property rather
+  than the dangerous one.
+- **Irrelevant addition.** Add a document that bears on nothing. Output
+  unchanged.
+- **Monotonicity.** Push an item one day past the tolerance window. The
+  disposition must move in one direction only, and it must move.
+
+A violated metamorphic relation is an unambiguous defect. No expert has to
+adjudicate it, no gold label is implicated, and the failure reproduces. The idea
+is old — metamorphic testing goes back to Chen and colleagues in the late 1990s,
+property-based testing to Claessen and Hughes's QuickCheck — but it is
+under-used on agents, where the input space is enormous and the space of
+*relations between* inputs is small enough to enumerate by hand.
+
+### 4. Adjudication, with the statistics attached
+
+When you do spend human effort, spend it on measuring the disagreement rather
+than pretending to resolve it. For two raters over the same items, Cohen's
+$\kappa$ is
+
+$$
+\kappa \;=\; \frac{p_o - p_e}{1 - p_e}
+$$
+
+where $p_o$ is the proportion of items the two raters assigned the same
+category, and $p_e = \sum_k \hat{p}_{1k}\,\hat{p}_{2k}$ is the agreement
+expected from their marginal category frequencies alone. The numerator is
+agreement above chance; the denominator is the agreement that was available
+above chance.
+
+Two consequences get missed.
+
+First, every agreement figure has to be read against the human $\kappa$
+ceiling. An agent that reaches human-level agreement with a reviewer has not
+demonstrated parity. It has hit the measurement floor — the least informative
+reading the instrument can return, because at that point "as good as a second
+human" and "differently wrong by coincidentally the same distance" produce
+identical numbers.
+
+Second, $\kappa$ is never a number to report alone. Its chance correction
+depends on the marginals, so a skewed disposition distribution drags it down
+even when raw agreement is high — the paradox Feinstein and Cicchetti documented
+in 1990. Report $p_o$, $p_e$, both marginals and $\kappa$ together; use weighted
+$\kappa$ for ordered categories and Krippendorff's $\alpha$ beyond two raters.
+
+There is a third measurement here that I find more useful than any agreement
+coefficient, and I flag it as a hypothesis rather than a validated method: the
+*locus* of disagreement. Split the sample into items the two humans agreed on
+and items they did not. On the contested stratum, agent disagreement carries
+almost no information. On the consensus stratum it carries a great deal, because
+two independent reviewers converging is the closest this task comes to a label.
+An agent whose errors concentrate on the consensus stratum has a real defect,
+visible without resolving a single contested item.
+
+### 5. Downstream outcome proxies
+
+The only measurement that touches reality: was the disposition reversed at
+quarter-end, did the item reappear in a later cycle, did a control tester sample
+it and raise a finding, was the write-off clawed back.
+
+It is also the worst-behaved. The lag is weeks to quarters. The confounding is
+self-inflicted — reviewers who come to trust the agent check less carefully, so
+reversal rates fall for reasons unrelated to correctness. And the selection is
+brutal: only items the harness allowed through generate outcomes at all, so you
+are estimating one policy's value from data produced under another. That is
+off-policy evaluation, it has a large literature, and the price of admission is
+logging the acceptance propensity at decision time. If your
+[agent harness](/writing/the-agent-harness) does not record why an action was
+permitted, this measurement is unavailable to you later at any price.
+
+### The trap: the judge that agrees for the wrong reason
+
+The obvious shortcut is to put a model in the reviewer's seat, calibrate it
+against human ratings, and scale. The calibration usually looks excellent. It is
+usually measuring the wrong thing.
+
+Two effects compound. The first is documented: LLM judges track human
+*preference* — fluency, structure, confident phrasing, length — far more
+faithfully than they track correctness, and the judge literature has catalogued
+position bias, verbosity bias and self-preference for years. A wrong disposition
+with a well-organised rationale outscores a right one expressed tersely.
+
+The second is structural and worse. Your calibration set is, by construction,
+the sub-population where humans agreed — those were the items you could label.
+Agreement measured there is an estimate on the easy stratum. You then deploy the
+judge on the contested stratum, the only place you needed it, and the
+calibration transports nothing.
+
+<Callout label="What the judge score is actually estimating" tone="warning">
+  A judge validated on items with clean labels has been validated on the
+  sub-population where the task has ground truth. Applying it where ground truth
+  is absent is an extrapolation, not a measurement, and no amount of calibration
+  data drawn from the easy stratum licenses it.
+</Callout>
+
+## A worked example
+
+<Synthetic />
+
+Two reviewers, A and B, independently disposition 200 synthetic exception items
+into three categories: *accept*, *reroute*, *write-off*. An agent dispositions
+the same 200. All figures below are fabricated for illustration.
+
+Marginals. Reviewer A: 120 / 50 / 30. Reviewer B: 128 / 44 / 28. Agent:
+132 / 42 / 26. The three look interchangeable.
+
+The two humans agree on 148 items, so $p_o = 0.74$. Chance agreement from their
+marginals is
+
+$$
+p_e = (0.60)(0.64) + (0.25)(0.22) + (0.15)(0.14) = 0.460
+$$
+
+giving $\kappa_{AB} = (0.74 - 0.46)/(1 - 0.46) = 0.52$.
+
+The agent agrees with A on 150 items ($p_o = 0.75$, $p_e = 0.468$,
+$\kappa = 0.53$) and with B on 152 ($p_o = 0.76$, $p_e = 0.487$,
+$\kappa = 0.53$).
+
+Here is the naive reading, and it is the one that gets written into the
+sign-off pack: *the agent matches expert dispositions 75% of the time, against
+an inter-reviewer baseline of 74%. The agent is at human parity.* Both
+sentences are arithmetically true. The conclusion is unsupported.
+
+It is unsupported for two reasons. The standard error on a $\kappa$ estimated
+from 200 items in this range is roughly 0.06, so 0.53 and 0.52 are the same
+number — the instrument has no resolution at this sample size and would not
+distinguish a good agent from a mediocre one. And 75% was never accuracy. It is
+agreement with one reviewer, whose own agreement with a peer is 74%.
+
+Now split by locus. Of the 200 items, 148 are consensus and 52 are contested.
+On the 52 contested items the agent sides with A 22 times, with B 24 times, and
+with neither 6 times — noise, as expected, and uninformative. But on the 148
+consensus items the agent diverges from the agreed answer 20 times. That is a
+13.5% error rate on the stratum where two independent professionals found the
+call easy, and no human in this sample exhibits anything like it.
+
+Twenty of the agent's fifty disagreements with reviewer A come from that easy
+stratum — two in five. The headline number cannot see them, because it averages
+the stratum where the measurement has resolution together with the stratum where
+it has none.
+
+<Figure
+  n={1}
+  caption="What each evaluation strategy can and cannot detect, and how long you wait for the signal. Filled = detects, half = partial, open = blind. Two columns carry the argument: shared bias with the reference is reachable only by downstream outcomes, the slowest instrument on the board, and the contested-call column contains no filled cell at all. Nothing on this list resolves a judgement two experts disagree about."
+>
+  <svg viewBox="0 0 760 300" className="w-full h-auto" role="img" aria-label="Matrix of five agent evaluation strategies against five failure classes, showing that no strategy detects genuinely contested judgements and only downstream outcome proxies detect bias shared with the reference">
+    <g fontFamily="var(--font-mono)">
+      <text x="8" y="26" fill="var(--ink-faint)" fontSize="9" letterSpacing="1.4">STRATEGY</text>
+      <text x="160" y="26" fill="var(--ink-faint)" fontSize="9" letterSpacing="1.4">FAILURE CLASS DETECTED</text>
+
+      <g fontSize="8" letterSpacing="0.6" fill="var(--ink-faint)" textAnchor="middle">
+        <text x="204" y="46">STRUCTURALLY</text><text x="204" y="57">INVALID</text>
+        <text x="292" y="46">UNSTABLE UNDER</text><text x="292" y="57">PERTURBATION</text>
+        <text x="380" y="46">BIAS SHARED</text><text x="380" y="57">WITH REFERENCE</text>
+        <text x="468" y="46">GENUINELY</text><text x="468" y="57">CONTESTED CALL</text>
+        <text x="556" y="46">HARM VISIBLE</text><text x="556" y="57">ONLY DOWNSTREAM</text>
+      </g>
+      <text x="616" y="46" fill="var(--ink-faint)" fontSize="8" letterSpacing="0.6">LAG BEFORE</text>
+      <text x="616" y="57" fill="var(--ink-faint)" fontSize="8" letterSpacing="0.6">SIGNAL</text>
+
+      <g stroke="var(--rule)" strokeWidth="1">
+        <path d="M8 64h744" /><path d="M8 104h744" /><path d="M8 144h744" />
+        <path d="M8 184h744" /><path d="M8 224h744" /><path d="M8 264h744" />
+      </g>
+      <g stroke="var(--rule)" strokeWidth="1" opacity="0.6">
+        <path d="M160 64v200" /><path d="M248 64v200" /><path d="M336 64v200" />
+        <path d="M424 64v200" /><path d="M512 64v200" /><path d="M600 64v200" />
+      </g>
+
+      <g fontSize="9.5" letterSpacing="1.2" fill="var(--ink-muted)">
+        <text x="8" y="86">INVARIANTS</text>
+        <text x="8" y="126">DIFFERENTIAL</text>
+        <text x="8" y="166">METAMORPHIC</text>
+        <text x="8" y="206">ADJUDICATION</text>
+        <text x="8" y="246">OUTCOMES</text>
+      </g>
+
+      <g fill="var(--accent)">
+        <circle cx="204" cy="82" r="5.5" />
+        <circle cx="292" cy="162" r="5.5" />
+        <circle cx="380" cy="242" r="5.5" />
+        <circle cx="556" cy="242" r="5.5" />
+      </g>
+
+      <g fill="none" stroke="var(--ink-muted)" strokeWidth="1">
+        <circle cx="204" cy="122" r="5.5" /><circle cx="292" cy="122" r="5.5" />
+        <circle cx="468" cy="122" r="5.5" /><circle cx="204" cy="162" r="5.5" />
+        <circle cx="380" cy="162" r="5.5" /><circle cx="204" cy="202" r="5.5" />
+        <circle cx="380" cy="202" r="5.5" /><circle cx="468" cy="202" r="5.5" />
+        <circle cx="204" cy="242" r="5.5" /><circle cx="468" cy="242" r="5.5" />
+      </g>
+      <g fill="var(--ink-muted)">
+        <path d="M198.5 122A5.5 5.5 0 0 1 209.5 122Z" />
+        <path d="M286.5 122A5.5 5.5 0 0 1 297.5 122Z" />
+        <path d="M462.5 122A5.5 5.5 0 0 1 473.5 122Z" />
+        <path d="M198.5 162A5.5 5.5 0 0 1 209.5 162Z" />
+        <path d="M374.5 162A5.5 5.5 0 0 1 385.5 162Z" />
+        <path d="M198.5 202A5.5 5.5 0 0 1 209.5 202Z" />
+        <path d="M374.5 202A5.5 5.5 0 0 1 385.5 202Z" />
+        <path d="M462.5 202A5.5 5.5 0 0 1 473.5 202Z" />
+        <path d="M198.5 242A5.5 5.5 0 0 1 209.5 242Z" />
+        <path d="M462.5 242A5.5 5.5 0 0 1 473.5 242Z" />
+      </g>
+
+      <g fill="none" stroke="var(--rule-strong)" strokeWidth="1" strokeLinecap="round">
+        <circle cx="292" cy="82" r="5.5" /><path d="M288.1 85.9 295.9 78.1" />
+        <circle cx="380" cy="82" r="5.5" /><path d="M376.1 85.9 383.9 78.1" />
+        <circle cx="468" cy="82" r="5.5" /><path d="M464.1 85.9 471.9 78.1" />
+        <circle cx="556" cy="82" r="5.5" /><path d="M552.1 85.9 559.9 78.1" />
+        <circle cx="380" cy="122" r="5.5" /><path d="M376.1 125.9 383.9 118.1" />
+        <circle cx="556" cy="122" r="5.5" /><path d="M552.1 125.9 559.9 118.1" />
+        <circle cx="468" cy="162" r="5.5" /><path d="M464.1 165.9 471.9 158.1" />
+        <circle cx="556" cy="162" r="5.5" /><path d="M552.1 165.9 559.9 158.1" />
+        <circle cx="292" cy="202" r="5.5" /><path d="M288.1 205.9 295.9 198.1" />
+        <circle cx="556" cy="202" r="5.5" /><path d="M552.1 205.9 559.9 198.1" />
+        <circle cx="292" cy="242" r="5.5" /><path d="M288.1 245.9 295.9 238.1" />
+      </g>
+
+      <g fontSize="7.5" letterSpacing="0.8" fill="var(--ink-faint)">
+        <text x="620" y="74">INLINE</text>
+        <text x="620" y="114">INLINE</text>
+        <text x="620" y="154">PRE-DEPLOY</text>
+        <text x="620" y="194">DAYS</text>
+        <text x="620" y="234">WEEKS TO QUARTERS</text>
+      </g>
+      <rect x="620" y="79" width="10" height="6" fill="var(--accent)" />
+      <rect x="620" y="119" width="26" height="6" fill="var(--accent)" />
+      <rect x="620" y="159" width="44" height="6" fill="var(--ink-faint)" />
+      <rect x="620" y="199" width="84" height="6" fill="var(--pending)" />
+      <rect x="620" y="239" width="130" height="6" fill="var(--variance)" />
+
+      <g fontSize="8" letterSpacing="1" fill="var(--ink-faint)">
+        <circle cx="14" cy="278" r="5" fill="var(--accent)" stroke="none" />
+        <text x="26" y="282">DETECTS</text>
+        <circle cx="110" cy="278" r="5" fill="none" stroke="var(--ink-muted)" strokeWidth="1" />
+        <path d="M105 278A5 5 0 0 1 115 278Z" fill="var(--ink-muted)" stroke="none" />
+        <text x="122" y="282">PARTIAL</text>
+        <circle cx="206" cy="278" r="5" fill="none" stroke="var(--rule-strong)" strokeWidth="1" />
+        <path d="M202.5 281.5 209.5 274.5" stroke="var(--rule-strong)" strokeWidth="1" strokeLinecap="round" />
+        <text x="218" y="282">BLIND</text>
+      </g>
+      <text x="330" y="282" fill="var(--variance)" fontSize="8" letterSpacing="1">THE CONTESTED-CALL COLUMN HAS NO FILLED CELL</text>
+    </g>
+  </svg>
+</Figure>
+
+## Limits
+
+Three honest ones.
+
+Almost nothing in the mechanism is mine. Metamorphic testing is Chen and
+colleagues; property-based testing is QuickCheck; latent-truth estimation from
+disagreeing raters is Dawid and Skene; the chance-corrected agreement
+coefficients are Cohen and Krippendorff, with the marginal paradoxes mapped by
+Feinstein and Cicchetti; outcome estimation under a changed policy is off-policy
+evaluation. I am claiming the assembly and the emphasis for agentic work in a
+controlled finance function, not the parts.
+
+The disagreement-locus test is a hypothesis. I have not established the sampling
+distribution of the consensus-divergence rate, shown that it predicts downstream
+harm, or ruled out that consensus items are easy in ways that make the rate
+uninformative about the traffic that matters. I would not yet put it in a
+control narrative.
+
+And the honest gap is the one the figure draws. Five strategies, and the
+contested-call column stays empty. If the correct answer is genuinely disputed
+between competent people, evaluation cannot supply it — governance has to, by
+naming a human who owns the decision and accepting that the agent's role is to
+prepare it. That is a different problem, and it is the one
+[SOX-controlled environments](/writing/ai-agents-in-sox-controlled-environments)
+force you to solve first.
+
+## Where this goes
+
+Next in this pillar I want to take the harness itself: what has to be recorded
+at decision time so that the measurements above are still available six months
+later, when the outcome data finally arrives and nobody remembers why the agent
+was allowed to act.
+
+Until then, one question. Before you ask how accurate your agent is, ask what
+your reviewers' $\kappa$ is on the same items. If nobody has measured it, you do
+not have an accuracy problem. You have an instrument that has never been
+calibrated, and a number that means whatever the room wants it to mean.
