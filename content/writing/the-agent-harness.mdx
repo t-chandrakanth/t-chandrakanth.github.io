@@ -12,17 +12,22 @@ tags:
   - agent evaluation
 ---
 
-Two teams inside the same organisation built an agent for the same job: read a
-batch of unmatched ledger items, gather the supporting evidence, propose a
-disposition for each one. Same base model, same API, same weights. They built
-the evaluation set together from a shared task inventory, so there was no
-argument about what counted as success.
+At step nine the agent asked for a supporting schedule it had already asked for
+at step seven, received the same transport error, and asked again. At step
+twenty the cap fired, and it wrote three fluent paragraphs describing a close
+pack it had not assembled.
 
-One team's agent finished most of the set. The other's stalled on a third of it
-— the same two tool calls repeating until the step budget ran out, followed by a
-fluent summary of work it had not done.
+Two teams in the same organisation had built agents for that job: walk the
+period-end checklist, pull each account's balance and its prior period, fetch
+the schedule behind it, flag any movement over the stated threshold, write the
+commentary line. Same base model, same API, same weights. They built the
+evaluation set together from a shared task inventory, so there was no argument
+about what counted as success.
 
-The postmortem was written against the model. *Not ready for multi-step work in
+One team's agent finished most of the set. The other stalled on a third of it,
+in the way above.
+
+The post-mortem was written against the model. *Not ready for multi-step work in
 this domain. Revisit after the next release.*
 
 Nothing about the model differed. What differed was the tool surface — a wrapper
@@ -92,13 +97,13 @@ Once the harness is a named artefact you can enumerate its surfaces, and once
 you can enumerate them you can ask the only question worth asking about each
 one: was this decided, or did it default?
 
-## Five surfaces
+## Six surfaces
 
-Each has a shape you can name, and a failure it defaults to.
+Each has dimensions you can name, and a failure it defaults to.
 
 ### The tool surface
 
-Its dimensions are granularity, naming, error semantics and idempotence.
+Its dimensions are granularity, naming and idempotence.
 
 Granularity defaults to a one-to-one mirror of an internal service API, because
 that API already exists and wrapping it takes an afternoon. But its granularity
@@ -121,10 +126,9 @@ recovery move. Left to default, nobody labels it, and the harness ends up either
 retrying everything — which turns a timeout into a duplicate write — or retrying
 nothing, which turns a transient failure into a dead run.
 
-### Error messages are a design surface
+### Error semantics
 
-This deserves its own name, because it is the dimension most consistently
-inherited rather than designed.
+Of the six, this is the one most consistently inherited rather than designed.
 
 An error returned to a model is not a log line. It is the next thing in the
 context window and the only evidence the model has for choosing its next action.
@@ -240,96 +244,106 @@ truth](/writing/evaluating-agents-without-ground-truth) becomes its own problem.
 
 <Synthetic />
 
-Take a constructed suite of 120 tasks over a synthetic ledger, in four classes,
-run against one model under two harnesses. Harness A mirrors an internal service
-API tool for tool, passes transport status codes through as errors, appends and
-truncates from the front, caps the run at twenty steps and retries a failed call
-unchanged. Harness B exposes nine task-shaped operations, returns errors
-carrying the violated constraint and the admissible values, pins the task
-specification and a running fact record, requires each retry to change an
-argument or a tool, and checks a post-condition before a write counts as done.
+Take a constructed suite of 120 close-pack tasks over a synthetic set of books,
+in four classes, run against one model under two harnesses. Harness A mirrors an
+internal service API tool for tool, passes transport status codes through as
+errors, appends and truncates from the front, caps the run at twenty steps,
+retries a failed call unchanged, and keeps no record outside the transcript.
+Harness B exposes nine task-shaped operations, returns errors carrying the
+violated constraint and the admissible values, pins the task specification and a
+running fact record, requires each retry to change an argument or a tool, and
+checks a post-condition before a write counts as done.
 
 <Figure
   n={1}
-  caption="The harness ring, exploded. Five surfaces sit between a task and the model, and each one is decided by default if it is not decided deliberately; the right-hand column is what the default becomes. Harness A and Harness B in the table below differ on all five surfaces and share the model at the centre."
+  caption="The harness ring. Six surfaces sit between a task and the model, and each is decided by default if it is not decided deliberately; the right-hand column is what each default becomes. Harness A and Harness B share the model at the centre and differ on all six."
 >
-  <svg viewBox="0 0 760 290" className="w-full h-auto" role="img" aria-label="Diagram: an exploded ring of five harness surfaces drawn around an unchanged model, each surface numbered and paired with the behaviour it defaults to">
+
+  <svg viewBox="0 0 760 296" className="w-full h-auto" role="img" aria-label="Diagram: a ring of six numbered harness surfaces drawn around an unchanged model, with a task entering at the top and actions leaving at the bottom, and a table pairing each numbered surface with the behaviour it falls back to when nobody decides it">
     <g fontFamily="var(--font-mono)" fontSize="9.5">
 
       <g stroke="var(--accent)" strokeWidth="6" fill="none" strokeLinecap="round">
-        <path d="M177.2 68.3 A82 82 0 0 1 245.5 118.0" />
-        <path d="M249.9 131.6 A82 82 0 0 1 223.8 211.9" />
-        <path d="M212.2 220.3 A82 82 0 0 1 127.8 220.3" />
-        <path d="M116.2 211.9 A82 82 0 0 1 90.1 131.6" />
-        <path d="M94.5 118.0 A82 82 0 0 1 162.8 68.3" />
+        <path d="M177.1 60.3 A82 82 0 0 1 237.2 95" />
+        <path d="M244.3 107.3 A82 82 0 0 1 244.3 176.7" />
+        <path d="M237.2 189 A82 82 0 0 1 177.1 223.7" />
+        <path d="M162.9 223.7 A82 82 0 0 1 102.8 189" />
+        <path d="M95.7 176.7 A82 82 0 0 1 95.7 107.3" />
+        <path d="M102.8 95 A82 82 0 0 1 162.9 60.3" />
       </g>
 
-      <circle cx="170" cy="150" r="42" fill="var(--paper)" stroke="var(--ink-faint)" strokeWidth="1" />
-      <text x="170" y="148" textAnchor="middle" fontSize="10" letterSpacing="1.6" fill="var(--ink-muted)">MODEL</text>
-      <text x="170" y="164" textAnchor="middle" fontSize="8" letterSpacing="1.2" fill="var(--ink-faint)">UNCHANGED</text>
+      <circle cx="170" cy="142" r="42" fill="var(--paper)" stroke="var(--ink-faint)" strokeWidth="1" />
+      <text x="170" y="140" textAnchor="middle" fontSize="10" letterSpacing="1.6" fill="var(--ink-muted)">MODEL</text>
+      <text x="170" y="156" textAnchor="middle" fontSize="8" letterSpacing="1.2" fill="var(--ink-faint)">UNCHANGED</text>
 
       <g stroke="var(--ink-faint)" strokeWidth="1" fill="none">
-        <path d="M170 32 V104" />
-        <path d="M170 104 L166 97 M170 104 L174 97" />
-        <path d="M196 185 L233 238" />
-        <path d="M233 238 L226.5 234 M233 238 L231.5 230.5" />
+        <path d="M170 24 V96" />
+        <path d="M170 96 L166 89 M170 96 L174 89" />
+        <path d="M170 188 V246" />
+        <path d="M170 246 L166 239 M170 246 L174 239" />
       </g>
-      <text x="178" y="40" fontSize="8.5" letterSpacing="1.2" fill="var(--ink-faint)">TASK</text>
-      <text x="244" y="244" fontSize="8.5" letterSpacing="1.2" fill="var(--ink-faint)">ACTIONS</text>
+      <text x="178" y="32" fontSize="8.5" letterSpacing="1.2" fill="var(--ink-faint)">TASK</text>
+      <text x="170" y="264" textAnchor="middle" fontSize="8.5" letterSpacing="1.2" fill="var(--ink-faint)">ACTIONS</text>
 
       <g fill="var(--paper)" stroke="var(--accent)" strokeWidth="1">
-        <circle cx="228.8" cy="69.1" r="7.5" />
-        <circle cx="265.1" cy="180.9" r="7.5" />
-        <circle cx="170" cy="250" r="7.5" />
-        <circle cx="74.9" cy="180.9" r="7.5" />
-        <circle cx="111.2" cy="69.1" r="7.5" />
+        <circle cx="220" cy="55.4" r="7.5" />
+        <circle cx="270" cy="142" r="7.5" />
+        <circle cx="220" cy="228.6" r="7.5" />
+        <circle cx="120" cy="228.6" r="7.5" />
+        <circle cx="70" cy="142" r="7.5" />
+        <circle cx="120" cy="55.4" r="7.5" />
       </g>
       <g fill="var(--ink-muted)" fontSize="9" textAnchor="middle">
-        <text x="228.8" y="72.3">1</text>
-        <text x="265.1" y="184.1">2</text>
-        <text x="170" y="253.2">3</text>
-        <text x="74.9" y="184.1">4</text>
-        <text x="111.2" y="72.3">5</text>
+        <text x="220" y="58.6">1</text>
+        <text x="270" y="145.2">2</text>
+        <text x="220" y="231.8">3</text>
+        <text x="120" y="231.8">4</text>
+        <text x="70" y="145.2">5</text>
+        <text x="120" y="58.6">6</text>
       </g>
 
-      <text x="328" y="34" fill="var(--ink-faint)" fontSize="9" letterSpacing="1.4">HARNESS SURFACE</text>
-      <text x="486" y="34" fill="var(--ink-faint)" fontSize="9" letterSpacing="1.4">LEFT TO DEFAULT, IT BECOMES</text>
-      <path d="M306 42 H752" stroke="var(--rule)" strokeWidth="1" />
+      <text x="328" y="30" fill="var(--ink-faint)" fontSize="9" letterSpacing="1.4">HARNESS SURFACE</text>
+      <text x="486" y="30" fill="var(--ink-faint)" fontSize="9" letterSpacing="1.4">LEFT TO DEFAULT, IT BECOMES</text>
+      <path d="M306 38 H752" stroke="var(--rule)" strokeWidth="1" />
 
       <g fill="var(--paper)" stroke="var(--accent)" strokeWidth="1">
-        <circle cx="312" cy="58.8" r="7.5" />
-        <circle cx="312" cy="96.8" r="7.5" />
-        <circle cx="312" cy="134.8" r="7.5" />
-        <circle cx="312" cy="172.8" r="7.5" />
-        <circle cx="312" cy="210.8" r="7.5" />
+        <circle cx="312" cy="56" r="7.5" />
+        <circle cx="312" cy="90" r="7.5" />
+        <circle cx="312" cy="124" r="7.5" />
+        <circle cx="312" cy="158" r="7.5" />
+        <circle cx="312" cy="192" r="7.5" />
+        <circle cx="312" cy="226" r="7.5" />
       </g>
       <g fill="var(--ink-muted)" fontSize="9" textAnchor="middle">
-        <text x="312" y="62">1</text>
-        <text x="312" y="100">2</text>
-        <text x="312" y="138">3</text>
-        <text x="312" y="176">4</text>
-        <text x="312" y="214">5</text>
+        <text x="312" y="59.2">1</text>
+        <text x="312" y="93.2">2</text>
+        <text x="312" y="127.2">3</text>
+        <text x="312" y="161.2">4</text>
+        <text x="312" y="195.2">5</text>
+        <text x="312" y="229.2">6</text>
       </g>
 
       <g fill="var(--ink-muted)" letterSpacing="1.2">
-        <text x="328" y="62">TOOL SURFACE</text>
-        <text x="328" y="100">CONTEXT ASSEMBLY</text>
-        <text x="328" y="138">CONTROL LOOP</text>
-        <text x="328" y="176">STATE</text>
-        <text x="328" y="214">VERIFICATION</text>
+        <text x="328" y="59.2">TOOL SURFACE</text>
+        <text x="328" y="93.2">ERROR SEMANTICS</text>
+        <text x="328" y="127.2">CONTEXT ASSEMBLY</text>
+        <text x="328" y="161.2">CONTROL LOOP</text>
+        <text x="328" y="195.2">STATE</text>
+        <text x="328" y="229.2">VERIFICATION</text>
       </g>
       <g fill="var(--pending)" fontSize="9">
-        <text x="486" y="62">a mirror of an internal service API</text>
-        <text x="486" y="100">append, then evict the oldest first</text>
-        <text x="486" y="138">a step cap, and retry the same call</text>
-        <text x="486" y="176">whatever survives in the transcript</text>
-        <text x="486" y="214">the agent's own report that it worked</text>
+        <text x="486" y="59.2">a mirror of an internal service API</text>
+        <text x="486" y="93.2">a transport status code, passed through</text>
+        <text x="486" y="127.2">append, then evict the oldest first</text>
+        <text x="486" y="161.2">a step cap, and retry the same call</text>
+        <text x="486" y="195.2">whatever survives in the transcript</text>
+        <text x="486" y="229.2">the agent's own report that it worked</text>
       </g>
 
-      <text x="306" y="264" fill="var(--variance)" letterSpacing="1.2">SAME MODEL. THE RING IS WHAT DIFFERS.</text>
-      <path d="M306 272 H752" stroke="var(--variance)" strokeWidth="1" opacity="0.35" />
+      <text x="306" y="274" fill="var(--variance)" letterSpacing="1.2">SAME MODEL. THE RING IS WHAT DIFFERS.</text>
+      <path d="M306 282 H752" stroke="var(--variance)" strokeWidth="1" opacity="0.35" />
     </g>
   </svg>
+
 </Figure>
 
 These numbers are constructed for this suite, not measured on any system. They
@@ -379,15 +393,15 @@ enough to recover from uninformative errors and to rebuild an evicted task
 specification unaided, the harness term would shrink and the argument with it. I
 expect that shrinkage to be partial rather than total.
 
-Very little here is novel, and what is not has literatures with names. Tool
-granularity and naming is affordance design in Donald Norman's sense, dressed in
-JSON. That a notation's usability decomposes into enumerable dimensions rather
-than taste is Green and Petre's Cognitive Dimensions of Notations. Error-message
-design has its own literature in programming education; Brett Becker and
-colleagues on compiler error messages is where I would start. A harness is also,
-structurally, an environment with a language model in it, which reinforcement
-learning has been shaping for decades. The enumeration is mine; the ideas
-underneath it are not.
+Very little here is novel, and the parts that are not have literatures with
+names. Tool granularity and naming is affordance design in Donald Norman's
+sense, dressed in JSON. That a notation's usability decomposes into enumerable
+dimensions rather than into taste is Green and Petre's cognitive dimensions of
+notations. Error-message design has its own literature in programming education;
+Brett Becker and colleagues on compiler error messages is where I would start. A
+harness is also, structurally, an environment with a language model inside it,
+which reinforcement learning has been shaping for decades. The enumeration is
+mine. The ideas underneath it are not.
 
 The framing has a failure mode of its own. A harness that compensates for a weak
 model becomes scaffolding a strong one has to work around, and every surface
@@ -396,12 +410,11 @@ coupling to a model version visible, not absent.
 
 ## Where this goes
 
-Next in this [pillar](/research) is the measurement problem the last section
-walked into: how to evaluate an agent when nobody can supply the ground truth
-its output would be scored against, which is the normal condition in
-reconciliation and control work rather than an edge case. After that, what a
-harness specification has to contain before an auditor will read it as evidence.
+Next in this [pillar](/research) is the measurement problem the verification
+boundary walked into: how to evaluate an agent when nobody can supply the ground
+truth its output would be scored against, which is the normal condition in
+reconciliation and control work rather than an edge case.
 
-If you are about to file a postmortem against the model, the question I would
+If you are about to file a post-mortem against the model, the question I would
 ask first is not *which model was this*. It is *can anyone here produce the
 harness that ran*.

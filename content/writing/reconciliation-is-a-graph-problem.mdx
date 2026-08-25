@@ -165,11 +165,10 @@ $$
 \sum_{i} a_i \;=\; \sum_{j} b_j
 $$
 
-per account, per currency, per period. Value is conserved. This is the fact that
-makes the problem solvable at all, and it is emphatically global: no pair
-possesses it, no pairwise score can approximate it, and it is exactly the
-information a per-pair acceptance rule discards. It is the same species of hard
-identity I have argued elsewhere that
+per account, per currency, per period. Value is conserved. That single fact is
+what makes the problem solvable, and it is global: no pair possesses it, no
+pairwise score approximates it, and it is exactly the information a per-pair
+acceptance rule throws away. It is the same species of hard identity that
 [learned models must satisfy rather than approximate](/writing/neural-models-and-accounting-identities).
 
 To be usable on a real period, the formulation needs an exception node: a column
@@ -298,17 +297,19 @@ scoring above a floor of 0.15.
         <text x="210" y="51">25.0k · .52</text>
         <text x="496" y="106">15.0k · .74</text>
         <text x="276" y="124">25.0k · .77</text>
-        <text x="276" y="181">9.4k · .75</text>
-        <text x="276" y="218">6.6k · .68</text>
+        <text x="276" y="175">9.4k · .75</text>
+        <text x="276" y="214">6.6k · .68</text>
       </g>
       <text x="205" y="92" fill="var(--variance)">GREEDY .88</text>
       <g fill="var(--ink-faint)">
-        <text x="530" y="167">s .19</text>
-        <text x="420" y="129">s .21</text>
+        <text x="530" y="166">s .19</text>
+        <text x="420" y="113">s .21</text>
       </g>
 
       <path d="M40 238 H790" stroke="var(--rule)" strokeWidth="1" fill="none" />
-      <text x="40" y="256" fill="var(--ink-muted)">CONSERVATION  Σ a = Σ b = 81,000    ROW SUMS  40.0  25.0  9.4  6.6    COL SUMS  25.0  15.0  41.0</text>
+      <text x="40" y="256" fill="var(--ink-muted)">CONSERVATION Σa = Σb = 81,000</text>
+      <text x="256" y="256" fill="var(--ink-faint)">ROW SUMS 40.0 · 25.0 · 9.4 · 6.6</text>
+      <text x="480" y="256" fill="var(--ink-faint)">COL SUMS 25.0 · 15.0 · 41.0</text>
 
       <g fill="none" strokeLinecap="round">
         <path d="M40 277 h24" stroke="var(--accent)" strokeWidth="1.8" />

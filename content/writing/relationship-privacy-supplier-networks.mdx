@@ -13,29 +13,27 @@ tags:
   - enterprise AI privacy
 ---
 
-The [previous piece in this pillar](/writing/why-data-masking-is-not-enough)
-argued that masking is a control on the representation of data, and that most of
-what an enterprise needs to protect does not live in the representation. The
-clearest of the three leaks was relationship disclosure, and I left it there as
-an assertion. This piece takes it on its own terms.
+An analyst opens a file with four columns: surrogate supplier key, surrogate
+entity key, month, bucketed amount. A privacy reviewer signed it off as holding
+no personal data and no named counterparty, and that was true. Supplier names
+became surrogates. Legal entities became surrogates. Addresses and contact
+fields went, contract values were bucketed to a band.
 
-Here is the scene. A procurement organisation contracts an AI vendor to build a
-spend-analytics assistant. Before anything leaves the building the extract goes
-through the privacy programme. Supplier names become surrogate keys. Legal
-entity names become surrogate keys. Contract values are bucketed, addresses are
-dropped, contact fields are removed. What ships is a table of edges: surrogate
-supplier, surrogate entity, month, bucketed amount. A reviewer signs it off,
-correctly, as containing no personal data and no named counterparty.
+She opens a second window on the public record. Corporate registries name every
+legal entity in the buying group and show how they nest, so within an hour each
+entity surrogate in the file has a company against it. That is one whole side of
+the relationship mapped, for nothing. The suppliers that touch several entities
+now have nowhere to hide: each has a set of buyers that no other supplier in the
+file shares, and one trade announcement naming that supplier alongside two of
+its customers closes the loop.
 
-Four months later an analyst who has a copy of that file sits down with a
-browser and the public record. Trade registries. Customs manifests. The buying
-organisation's own award announcements. Job postings that name a site, a
-category and a partner in the same paragraph. Inside a working day they can say
-which surrogate is the sole-source supplier to the largest business unit, which
-two entities depend on the same critical vendor, and how much of the spend rests
-on one relationship.
+No field in that extract identified anyone. The extract did.
 
-No field in that file identified anyone. The file did.
+[An earlier piece in this pillar](/writing/why-data-masking-is-not-enough) named
+relationship disclosure as one of three leaks masking cannot reach, and left it
+as an assertion. This is the arithmetic behind the assertion, worked on
+synthetic data, and the reason it lands hardest on exactly the relationships
+worth protecting.
 
 ## Consistency is the vulnerability
 
@@ -46,7 +44,7 @@ entirely about aggregating rows that refer to the same supplier. Consistent
 surrogates are not an implementation shortcut that a stricter privacy team could
 negotiate away. They are the deliverable.
 
-Which states the problem in one line: joinability and structure preservation are
+That states the problem in one line. Joinability and structure preservation are
 the same property described from two directions. A consistent pseudonym is by
 construction an isomorphism from the real graph onto the released one — same
 nodes, same edges, same everything except the labels. Anonymisation of this kind
@@ -95,9 +93,10 @@ Fix a bipartite graph with $n$ suppliers on one side and $m$ buying entities on
 the other, an edge wherever a supplier invoices an entity. Write $d(s)$ for the
 number of entities supplier $s$ serves.
 
-Supplier degrees are heavy-tailed in essentially every procurement estate I have
-seen described. Most suppliers touch one entity. A small number touch nearly all
-of them. Model it as a Zipf distribution truncated at $m$, so that
+Assume the degrees are heavy-tailed. Most suppliers touch one entity; a handful
+touch nearly all of them. That is the shape the operations literature describes,
+and I am assuming it here rather than reporting it. Model it
+as a Zipf distribution truncated at $m$, so that
 $\Pr[d = k] = p_k = k^{-\alpha}/Z$ with $Z = \sum_{j=1}^{m} j^{-\alpha}$ and
 $\alpha$ somewhere between 2 and 3.
 
@@ -112,7 +111,9 @@ $$
 This quantity is the anonymity set size minus one. It is the k that k-anonymity
 would have reported, had degree been treated as a quasi-identifier. Under a
 Poisson approximation the probability that a degree-$k$ supplier is structurally
-unique is about $\exp(-\kappa(k))$.
+unique is about $\exp(-\kappa(k))$. None of that counting is new: it is the
+anonymity-set arithmetic statistical disclosure control has done since Dalenius,
+pointed at a structural property instead of a column.
 
 The shape of $\kappa$ is the whole argument. It falls like $k^{-\alpha}$, so it
 crosses one at
@@ -177,13 +178,12 @@ morning's desk research, because a buying organisation's structure is public by
 regulation and its relationships are public by marketing.
 
 Corporate registries and statutory filings give you the entity side of the
-bipartite graph outright — names, jurisdictions, group structure, sometimes
-turnover. That is one whole side of the graph, complete, for nothing. Customs
-and bill-of-lading records, published in several jurisdictions, give
-shipper-to-consignee pairs, which are edges named on both ends. Award
-announcements and supplier-of-the-year pages name individual relationships and
-are written specifically to be found. Job postings name a site, a category and
-often a named counterparty in the same advertisement.
+bipartite graph outright: names, jurisdictions, group structure, sometimes
+turnover. Customs and bill-of-lading records, published in several
+jurisdictions, give shipper-to-consignee pairs, which are edges named on both
+ends. Award announcements and supplier-of-the-year pages name individual
+relationships and are written to be found. Job postings name a site, a category
+and often a counterparty in the same advertisement.
 
 None of this is exotic tradecraft. It is the standard research pack any
 competitive-intelligence function assembles before a category review, and it
@@ -211,17 +211,18 @@ importance.
 
 <Synthetic />
 
-Take a synthetic bipartite graph: 400 suppliers, 12 buying entities, supplier
-degrees drawn from a Zipf distribution truncated at 12 with $\alpha = 2.8$, so
-that $Z \approx 1.241$. Mean supplier degree is 1.38 and the graph carries about
-553 edges. Nothing here is measured; it is a construction chosen so the
-arithmetic is checkable.
+Take the synthetic supplier estate from the previous piece and give it a
+bipartite structure: 400 suppliers, 12 buying entities, supplier degrees drawn
+from a Zipf distribution truncated at 12 with $\alpha = 2.8$, so that
+$Z \approx 1.241$. Mean supplier degree is 1.38 and the graph carries about 553
+edges. Nothing here is measured. It is a construction chosen so that every
+number below can be checked with a pocket calculator.
 
 | Degree | Suppliers expected | Collisions by degree | Collisions by neighbourhood |
 |---|---|---|---|
 | 1 | 322 | 321.5 | 26.8 |
 | 2 | 46 | 46.2 | 0.70 |
-| 3 | 15 | 14.9 | 0.067 |
+| 3 | 15 | 14.8 | 0.067 |
 | 4 | 6.6 | 6.6 | 0.013 |
 | 8 | 0.95 | 0.95 | 0.0019 |
 | 12 | 0.31 | 0.31 | 0.31 |
@@ -230,10 +231,10 @@ Read the third column first. Degree alone crosses the uniqueness threshold at
 $k^{*} \approx 7.9$: a supplier serving eight or more of the twelve entities is
 expected to have fewer than one structural twin in the entire file. Read the
 fourth column next. Once the attacker knows which entities rather than how many,
-the threshold falls to two, and by degree three a supplier's neighbourhood is
-unique roughly fourteen times over. The last row is the honest wrinkle — a
-supplier serving all twelve entities has the full set as its neighbourhood, so
-there is nothing left to refine and $\kappa_N$ collapses back onto $\kappa$.
+the threshold falls to two, and at degree three the expected number of twins is
+about one in fifteen. The last row is the honest wrinkle: a supplier serving all
+twelve entities has the full set as its neighbourhood, so there is nothing left
+to refine and $\kappa_N$ collapses back onto $\kappa$.
 
 Now run the seed. Round zero costs a filing search: all twelve entities, named
 and mapped, because a group's legal-entity footprint is a matter of public
@@ -247,12 +248,12 @@ the nodes and 138 of the 553 edges — a quarter of the edge mass.
 Round two adds one weak non-structural attribute that survives masking, say a
 settlement-rhythm signature coarsened to four buckets. The distinguishable
 classes at degree two go from 66 to 264 and $\kappa_N(2)$ falls from 0.70 to
-0.18, bringing the 46 degree-two suppliers into range. Cumulative: 78 suppliers,
+0.17, bringing the 46 degree-two suppliers into range. Cumulative: 78 suppliers,
 19% of the nodes, 231 edges, 42% of the edge mass.
 
 <Figure
   n={1}
-  caption="Seed-and-extend on a bipartite supplier graph. The twelve buying entities on the right are recovered from public filings at no cost and form the seed. The wavefront moves left: suppliers touching three or more entities have effectively unique neighbourhoods (expected collisions 0.07) and resolve first; degree-two suppliers resolve once one coarse non-structural attribute is added; the single-entity tail stays interchangeable. Horizontal position encodes the round in which a supplier is pinned, not its position in the graph."
+  caption="Seed-and-extend on a bipartite supplier graph. The buying entities on the right are recovered from public filings at no cost and form the seed. The wavefront moves left: suppliers touching three or more entities have effectively unique neighbourhoods (expected collisions 0.07) and resolve first; degree-two suppliers resolve once one coarse non-structural attribute is added; the single-entity tail stays interchangeable. Horizontal position encodes the round in which a supplier is pinned, not position in the graph, and the node counts drawn are illustrative — the arithmetic runs over 400 suppliers and 12 entities."
 >
   <svg viewBox="0 0 760 300" className="w-full h-auto" role="img" aria-label="Diagram: a bipartite supplier-to-entity graph in which a public seed of twelve buying entities propagates leftward in rounds, resolving high-degree suppliers first and leaving single-entity suppliers unresolved">
     <g fontFamily="var(--font-mono)" fontSize="9.5">
@@ -325,7 +326,7 @@ classes at degree two go from 66 to 264 and $\kappa_N(2)$ falls from 0.70 to
       </g>
       <g textAnchor="middle" fontSize="9" fill="var(--ink-faint)">
         <text x="214" y="295">COLLISIONS 26.8</text>
-        <text x="356" y="295">COLLISIONS 0.18</text>
+        <text x="356" y="295">COLLISIONS 0.17</text>
         <text x="470" y="295">COLLISIONS 0.07</text>
         <text x="608" y="295">12 OF 12 MAPPED</text>
       </g>
@@ -338,10 +339,10 @@ Nineteen percent of the nodes does not sound like a successful attack.
 Forty-two percent of the edges sounds better. Neither is the number that
 matters. What matters is that the resolved set is not a random 19% — it is
 precisely the concentrated end, selected by the same property that makes those
-relationships worth knowing about. If spend correlates with the number of
-entities served, which it usually does, the resolved fraction of the money is
-larger still, though that is an assumption about the synthetic graph and not
-something I measured on it.
+relationships worth knowing about. If spend correlates with breadth of supply,
+the resolved fraction of the money is larger still than the resolved fraction of
+the edges. That correlation is an assumption about the synthetic graph. I did
+not measure it, and I would not want it read as though I had.
 
 <Callout label="What this example is and is not" tone="neutral">
   Everything above is arithmetic on a constructed distribution. It shows that a

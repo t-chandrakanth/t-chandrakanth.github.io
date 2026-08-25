@@ -13,23 +13,23 @@ tags:
   - latency budget
 ---
 
-A retail search team spends a quarter on the ranker. They add eleven features,
-move from a linear model to gradient-boosted trees, retune to a pairwise
-objective, and ship behind a flag. Offline $\text{nDCG}@10$ moves by fourteen
-thousandths. The online conversion metric does not move at all.
-
-Then a merchandiser types *boys navy school jumper age 7* into the production
+A merchandiser types *boys navy school jumper age 7* into the production search
 box and gets back a men's navy quarter-zip, three girls' cardigans and a car
-seat. The item she wanted is in the catalogue. Its title is "Junior Crew-Neck
-Sweatshirt — Navy — 6-7Y", its department is Schoolwear, and its attribute block
-carries `age_band: 6-7`. Nothing about the record is broken.
+seat. The item she wanted is in the catalogue, its title "Junior Crew-Neck
+Sweatshirt — Navy — 6-7Y", its department Schoolwear, its attribute block
+carrying `age_band: 6-7`. Nothing about the record is broken.
 
-The team's relevance dashboard measures the final ten results. Every experiment
-they ran that quarter changed the order of a candidate set nobody had looked at.
-When someone finally instrumented the retriever, the sweatshirt was not in the
-top four hundred candidates for that query. It was not in the top four thousand.
-The word *jumper* appears nowhere in the record, and the dense encoder had
-learned *jumper* mostly from a corpus where it means a pinafore dress.
+The team had just finished a quarter on the ranker. Eleven new features, a move
+from a linear model to gradient-boosted trees, a retune to a pairwise objective,
+shipped behind a flag. Offline $\text{nDCG}@10$ moved by fourteen thousandths,
+and the online conversion metric did not move at all.
+
+The relevance dashboard measures the final ten results. Every experiment run
+that quarter changed the order of a candidate set nobody had looked at. When
+someone finally instrumented the retriever, the sweatshirt was not in the top
+four hundred candidates for that query. It was not in the top four thousand. The
+word *jumper* appears nowhere in the record, and the dense encoder had learned
+*jumper* mostly from a corpus where it means a pinafore dress.
 
 They had spent a quarter tuning a stage that had never seen the answer.
 
@@ -42,10 +42,11 @@ really do beat pointwise regression. None of that is in dispute.
 
 The problem is structural. A search stack is a cascade, and every stage after
 retrieval emits an ordering of a *subset* of the candidate set the retriever
-handed it. Let $C_q$ be that candidate set, $\lvert C_q \rvert = k$, and let $R_q$ be the set
-of relevant items for query $q$. With graded gain and a top-ten cut, the best any
-downstream stage can do is place every candidate it holds that is also relevant
-at the front of the list. So with
+handed it. Let $C_q$ be that candidate set with $\lvert C_q \rvert = k$, and let
+$R_q$ be the set of relevant items for query $q$. Take binary gain and a top-ten
+cut, because the arithmetic is transparent and graded gain changes the constants
+rather than the shape. The best any downstream stage can do is put every
+candidate it holds that is also relevant at the front of the list, so with
 
 $$
 D(m) \;=\; \sum_{i=1}^{m} \frac{1}{\log_2(i+1)}, \qquad
@@ -59,10 +60,12 @@ $$
 \text{nDCG}@10 \;\le\; \frac{D(m_q)}{D(n_q)}
 $$
 
-This is the concrete form of $\text{nDCG}_{\text{final}} \le f(\text{recall}@k)$.
-The function $f$ is increasing and concave in $m$, so by Jensen's inequality the
-query-averaged score is bounded by $f$ evaluated at the average recall — the
-ceiling survives aggregation.
+That is the concrete form of a looser statement everyone nods at and few
+instrument: final quality is a function of recall at $k$ and cannot exceed it.
+Hold the number of relevant items fixed and $D(m)/D(n)$ rises in $m$ with
+shrinking increments — it is concave — so by Jensen's inequality the average of
+the per-query ceilings is itself bounded by the ceiling evaluated at average
+recall. Aggregating over a traffic mix does not soften the constraint.
 
 Put numbers on it. Take a query with five relevant items. If the retriever
 returns three of them, a *perfect* ranker scores $D(3)/D(5) = 0.723$. Four, and
@@ -78,11 +81,18 @@ the failure it can fix cheaply from the failure it cannot fix at all.
 ## Measure the stage, not the stack
 
 The change of frame is to stop reporting one number and start reporting two per
-stage: the **ceiling** that stage inherits, and the **utilisation** — how much of
-its own headroom it actually captured. A reranker at 0.90 utilisation under a
-ceiling of 0.55 is doing excellent work in a bad seat. The same reranker reported
-as "nDCG 0.495" looks like an underperforming model, and the next quarter of
-engineering goes to replacing it.
+stage: the **ceiling** that stage inherits from everything upstream of it, and
+the **utilisation** — the fraction of its own headroom it captured. Both are
+computable from what a stage already logs. The ceiling is the bound above,
+evaluated on the candidate set that stage was actually handed; the utilisation
+is the score it achieved divided by that bound. A reranker at 0.90 utilisation
+under a ceiling of 0.55 is doing excellent work in a bad seat. The same reranker
+reported as "nDCG 0.495" looks like an underperforming model, and the next
+quarter of engineering goes to replacing it.
+
+The two numbers separate because they answer different questions, and one number
+answers neither. Utilisation says whether this stage is well built. The ceiling
+says whether it was given anything to work with.
 
 <KeyLine>
   Retrieval decides what is possible. Everything downstream is a permutation,
@@ -98,19 +108,21 @@ pipeline.
 
 ## Four stages and the budget each one deserves
 
-A retail search backend gets somewhere near 120 ms at p99, because the page has
-a budget too and search is one call inside it. Four stages compete for that
-budget, and the allocation is the design decision — not the model choice.
+Assume the search backend has something near 120 ms at p99, because the page has
+a budget too and search is one call inside it. The exact figure does not matter;
+that there is one does. Four stages compete for it, and the allocation is the
+design decision — not the model choice.
 
 ### 1. Query understanding and rewriting
 
 Four jobs, none glamorous. Spelling correction, conditioned on the catalogue
-rather than on a dictionary, because *sonos* is not a typo and *nappys* is.
-Synonymy. Attribute extraction, which turns "age 7" from a term to be matched
-into a filter to be applied, "navy" into a colour facet, "boys" into a
-department. Intent classification, separating a navigational query for a brand
-or a model number from a category browse from an attribute-constrained search,
-because each deserves a different retrieval policy.
+rather than on a dictionary, because half the brand names in a retail catalogue
+are deliberate misspellings and *nappys* is an accidental one. Synonymy.
+Attribute extraction, which turns "age 7" from a term to be matched into a
+filter to be applied, "navy" into a colour facet, "boys" into a department.
+Intent classification, separating a navigational query for a brand or a model
+number from a category browse from an attribute-constrained search, because each
+deserves a different retrieval policy.
 
 Synonymy is where retail is genuinely peculiar. The shopper's vocabulary and the
 catalogue taxonomy are two different languages. Merchants write titles for the
@@ -334,10 +346,10 @@ the remaining 15 ms on $k = 800$ returns $0.008$. Same p99, net $+0.014$.
 Three honest ones.
 
 The bound is loose in level. At tail recall of 0.66 it permits
-$\text{nDCG}@10 \approx 0.77$ against an observed 0.388, so the ceiling is not
-what is binding here. It constrains what is possible and says nothing about where
-the loss sits; finding that needs a segment-level ablation, and the segments need
-judgements many teams do not have.
+$\text{nDCG}@10 \approx 0.77$ against the 0.388 the simulation produces, so the
+ceiling is nowhere near binding there. It constrains what is possible and says
+nothing about where the loss actually sits; finding that needs a segment-level
+ablation, and the segments need judgements many teams do not have.
 
 None of the architecture is novel and the literature is not obscure. Multi-stage
 cascades were formalised by Wang, Lin and Metzler; BM25 is Robertson and

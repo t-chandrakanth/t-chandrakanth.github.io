@@ -80,25 +80,35 @@ export const projects: ResearchProject[] = [
     question:
       "What does reconciliation accuracy mean once you stop assuming records pair off one-to-one?",
     summary:
-      "A representation and evaluation programme for financial reconciliation built on heterogeneous temporal graphs. The working hypothesis is that the cases enterprise reconciliation actually fails on — splits, partials, aggregations, out-of-order settlement — are not edge cases of a matching problem but the ordinary case of a correspondence problem over a graph. The deliverable is an open benchmark with deliberately injected error classes, so that the hard cases stop being invisible in aggregate accuracy.",
+      "A representation and evaluation programme for financial reconciliation built on heterogeneous temporal graphs. The hypothesis is that the cases enterprise reconciliation actually fails on — splits, partials, aggregations, out-of-order settlement — are not edge cases of a matching problem but the ordinary case of a correspondence problem over a graph. The manuscript is complete: on RECONBENCH, a synthetic benchmark built from public AML simulation data, global consistency inference reaches 0.949 link F1 and 0.944 graph-consistency accuracy, and the margin over pairwise graph matching widens as the topology moves away from one-to-one.",
     artifacts: [
-      { label: "Synthetic benchmark generator", note: "In development — to be released under an OSI licence with a CITATION.cff" },
-      { label: "Method write-up", note: "Drafting" },
+      {
+        label: "ReconGraph manuscript",
+        href: "/publications/recongraph",
+        note: "Complete — abstract, method and results published here; not submitted",
+      },
+      { label: "RECONBENCH generator", note: "To be released under an OSI licence with a CITATION.cff" },
     ],
     since: "2026",
   },
   {
-    slug: "constrained-reconciliation",
-    code: "CR",
-    title: "Constraint-aware learning under accounting identities",
+    slug: "neurorecon",
+    code: "NR",
+    title: "NeuroRecon — constraint-aware learning under accounting identities",
     short: "Learning under accounting identities",
     pillar: "P2",
-    status: "exploratory",
+    status: "in-progress",
     question:
       "Where should a hard constraint be enforced when the model's output must balance exactly?",
     summary:
-      "Neural estimators do not respect conservation. In a domain where the sum of the parts is not approximately the whole but definitionally the whole, that is disqualifying. This strand compares the four available injection points — training objective, inference-time projection, post-processing repair, and architectural guarantee — on the axis that matters in practice: what happens to the violations you did not eliminate.",
-    artifacts: [{ label: "Comparative study", note: "Design stage" }],
+      "Neural estimators do not respect conservation. In a domain where the sum of the parts is not approximately the whole but definitionally the whole, that is disqualifying. NeuroRecon puts five constraint families — amount conservation, event ordering, double-entry balance, cardinality and organisation-specific rules — into the training objective as differentiable penalties rather than into an inference-time filter. On a controlled benchmark that reaches 94.6% F1 at a 0.6% constraint-violation rate, and holds 80.6% F1 when three-quarters of reference identifiers are corrupted — evidence that what was learned is financial structure rather than key matching.",
+    artifacts: [
+      {
+        label: "NeuroRecon manuscript",
+        href: "/publications/neurorecon",
+        note: "Complete — abstract, method and results published here; not submitted",
+      },
+    ],
     since: "2026",
   },
   {

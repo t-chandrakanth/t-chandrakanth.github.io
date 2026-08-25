@@ -6,6 +6,7 @@ import { allPosts } from "@/lib/posts";
 import { formatDate } from "@/lib/format";
 import { pillars } from "@/content/pillars";
 import { projects, statusMeta, thesis } from "@/content/research";
+import { detailedPublications } from "@/content/publications";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ export default function HomePage() {
   const posts = allPosts();
   const recent = posts.slice(0, 4);
   const active = projects.filter((p) => p.status === "in-progress").slice(0, 3);
+  const papers = detailedPublications();
 
   return (
     <>
@@ -241,6 +243,37 @@ export default function HomePage() {
                       <span className="text-[1rem] tracking-[-0.01em]">{p.short}</span>
                     </div>
                     <Stamp tone={statusMeta[p.status].tone}>{statusMeta[p.status].label}</Stamp>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {papers.length > 0 && (
+            <div className="mt-14">
+              <div className="flex flex-wrap items-baseline justify-between gap-4 border-t border-rule-strong pt-3">
+                <Kicker className="text-ink-muted">Manuscripts</Kicker>
+                <Link
+                  href="/publications"
+                  className="font-kicker text-ink-faint hover:text-accent transition-colors"
+                >
+                  All publications →
+                </Link>
+              </div>
+              <ul className="mt-5 grid gap-x-10 md:grid-cols-2">
+                {papers.map((paper) => (
+                  <li key={paper.id} className="border-t border-rule py-6">
+                    <Link href={`/publications/${paper.id}`} className="group block no-underline">
+                      <div className="flex items-center gap-3">
+                        <span className="font-kicker text-accent">{paper.short}</span>
+                        <Stamp tone="neutral">In preparation</Stamp>
+                      </div>
+                      <h3 className="mt-3 text-[1.05rem] leading-snug tracking-[-0.012em] transition-colors group-hover:text-accent">
+                        {paper.title.split(": ")[1] ?? paper.title}
+                      </h3>
+                      <p className="text-ink-muted mt-2.5 text-[0.925rem] leading-relaxed">
+                        {paper.abstract?.slice(0, 155).trimEnd()}…
+                      </p>
+                    </Link>
                   </li>
                 ))}
               </ul>

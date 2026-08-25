@@ -9,6 +9,7 @@ import {
   type Publication,
   type PublicationKind,
 } from "@/content/publications";
+import { pillarById } from "@/content/pillars";
 import { liveProfiles, site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -32,7 +33,7 @@ const SECTIONS: {
     intro:
       "Accepted at a named venue, with a DOI or a venue link. Nothing appears in this section until both exist.",
     empty:
-      "No peer-reviewed publications yet. Two strands are being written up; when one is accepted it will appear here with its venue and DOI, and not before.",
+      "No peer-reviewed publications yet. Two manuscripts are complete and listed below under \u201cIn preparation\u201d; when one is accepted it will move up to this section with its venue and DOI, and not before.",
   },
   {
     kind: "preprint",
@@ -41,20 +42,22 @@ const SECTIONS: {
     intro:
       "Posted publicly and citable, but not peer-reviewed. Listed separately because the distinction matters and collapsing it is the most common form of status inflation.",
     empty:
-      "No preprints posted yet. Several projects on the research programme are heading here first.",
+      "No preprints posted yet. The two completed manuscripts below are the likely first candidates.",
   },
   {
     kind: "in-preparation",
     n: 3,
     label: "In preparation",
     intro:
-      "Active write-ups with no submission date. Listed so the programme is legible, and labelled so nobody mistakes them for something they are not.",
+      "Complete manuscripts with no submission date, and work still being written. Listed in full \u2014 abstract, contributions, method and results \u2014 so the work is legible, and labelled so nobody mistakes a manuscript for a publication.",
     empty: "Nothing currently in preparation.",
   },
 ];
 
 function Entry({ p, index }: { p: Publication; index: number }) {
   const citation = formatCitation(p);
+  const detail = p.abstract ? `/publications/${p.id}` : undefined;
+  const pillar = p.pillar ? pillarById(p.pillar) : undefined;
   return (
     <li className="border-b border-rule py-7">
       <div className="grid gap-x-8 gap-y-3 lg:grid-cols-[3.5rem_minmax(0,1fr)]">
@@ -63,7 +66,11 @@ function Entry({ p, index }: { p: Publication; index: number }) {
         </span>
         <div>
           <h3 className="text-[clamp(1.1rem,1rem+0.5vw,1.35rem)] leading-[1.28] tracking-[-0.013em]">
-            {p.url || p.doi ? (
+            {detail ? (
+              <Link href={detail} className="link-rule">
+                {p.title}
+              </Link>
+            ) : p.url || p.doi ? (
               <a
                 href={p.doi ? `https://doi.org/${p.doi}` : p.url}
                 target="_blank"
@@ -94,6 +101,12 @@ function Entry({ p, index }: { p: Publication; index: number }) {
             </p>
           ) : null}
 
+          {p.abstract ? (
+            <p className="text-ink-muted mt-3 max-w-[64ch] text-[0.95rem] leading-relaxed">
+              {p.abstract.slice(0, 240).trimEnd()}…
+            </p>
+          ) : null}
+
           {p.note ? (
             <p className="text-ink-faint mt-3 max-w-[62ch] text-[0.875rem] leading-relaxed">
               {p.note}
@@ -101,6 +114,15 @@ function Entry({ p, index }: { p: Publication; index: number }) {
           ) : null}
 
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+            {detail ? (
+              <Link
+                href={detail}
+                className="font-kicker text-accent hover:text-accent-hi transition-colors"
+              >
+                Abstract, method &amp; results →
+              </Link>
+            ) : null}
+            {pillar ? <Kicker className="text-ink-faint">{pillar.name}</Kicker> : null}
             {p.doi ? (
               <a
                 href={`https://doi.org/${p.doi}`}

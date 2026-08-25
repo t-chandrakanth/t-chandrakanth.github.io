@@ -15,14 +15,14 @@ tags:
 
 An allocation model splits a shared cost pool across five business units. By
 every measure anyone asked for, it is a good model. Each unit's allocation lands
-within a tenth of a percent of the held-out target. The residuals are unbiased.
+within a tenth of a per cent of the held-out target. The residuals are unbiased.
 The error distribution is boring in the way you want error distributions to be.
 
 Then it goes to a reviewer, who adds up the five numbers. The pool was
 4,812,600.00. The allocations come to 4,812,617.31.
 
-Seventeen point three one, against four point eight million. As a percentage
-that is 0.00036, which is well inside every tolerance in the model's own
+Seventeen point three one, against four point eight million. As a share of the
+pool that is 0.00036 per cent, well inside every tolerance in the model's own
 evaluation report. As an accounting statement it is not a small error, because
 the sum of the parts here is not approximately the whole — it is definitionally
 the whole. There is no line on the statement called *difference*. The reviewer's
@@ -78,9 +78,9 @@ evidence that satisfies one is
 
 ## The reframe
 
-So stop asking how small the violation can be made, and start asking where the
-violation can be made impossible. Those are different questions with different
-answers, and the second one has only four candidate sites: the training
+Stop asking how small the violation can be made. Ask where it can be made
+impossible. Those are different questions with different answers, and the second
+has only four candidate sites: the training
 objective, the forward pass, the raw output vector, and whatever happens
 downstream of the model before a number reaches the ledger. Each site yields a
 different *kind* of guarantee — statistical, structural, algebraic, procedural —
@@ -91,11 +91,11 @@ and the kinds are not interchangeable.
   parameterisation is a fact.
 </KeyLine>
 
-Nothing in that sentence is original as mathematics. What I think is
-under-appreciated in applied work is how often the choice between the four sites
-is made implicitly, by whoever wrote the training loop, and then discovered by a
-reviewer six months later at the point where a statement fails to tie and nobody
-in the room can say which of the four was meant to be holding the line.
+Nothing in that sentence is original as mathematics. What goes under-appreciated
+in applied work is how often the choice between the four sites is made
+implicitly, by whoever wrote the training loop. It surfaces six months later,
+when a statement fails to tie and nobody in the room can say which of the four
+was meant to be holding the line.
 
 ## Four places to put a constraint
 
@@ -202,15 +202,16 @@ can be a credit.
 
 ### The arithmetic the guarantee holds in
 
-One more thing, which the four-way framing tends to hide. Projection and
-architecture are exact over the reals. A ledger is not over the reals; it is
-over a lattice of cents. Round a vector that sums exactly to the total, and the
-rounded vector generally does not. The set of representable outputs is not a
-subspace, and no continuous parameterisation lands on it by construction. The
-final rounding step is where an exact guarantee quietly becomes an approximate
-one — which is why the last operation before posting has to be a lattice-aware
-allocation such as the largest-remainder method, with the same apportionment
-paradoxes Balinski and Young catalogued for legislative seats.
+Projection and architecture are exact over the reals. A ledger is not kept over
+the reals; it is kept over a lattice of cents. Round a vector that sums exactly
+to the total, and the rounded vector generally does not. The set of
+representable outputs is not a subspace, and no continuous parameterisation
+lands on it by construction.
+
+So the last operation before posting has to be a lattice-aware allocation — the
+largest-remainder method or a cousin of it — which drags in the apportionment
+paradoxes Balinski and Young catalogued for legislative seats. An exact
+guarantee proved one step upstream of rounding is not an exact guarantee.
 
 ## A worked example
 
@@ -223,7 +224,7 @@ so that the distributional side-effects are visible rather than smeared.
 
 <Figure
   n={1}
-  caption="The four injection points as a pipeline. Rows are stages a prediction passes through; each column intervenes at exactly one of them, and the thin rules mark the stages it leaves untouched. The lower block reports what each intervention actually guarantees and the residual it leaves on the synthetic allocation below — first in exact arithmetic, then after rounding to cents, which is the only arithmetic the ledger has."
+  caption="The four injection points as a pipeline. Rows are stages a prediction passes through; each column intervenes at exactly one of them, and the thin rules mark the stages it leaves untouched. The lower block reports what each intervention guarantees and the residual it leaves on the synthetic allocation below — first in exact arithmetic, then after rounding to cents, which is the only arithmetic the ledger has. The residual under the objective column is stipulated, not trained; the other three are arithmetic on the table that follows."
 >
   <svg viewBox="0 0 760 296" className="w-full h-auto" role="img" aria-label="Diagram: four columns for objective, projection, repair and architecture, showing which pipeline stage each one acts on and the residual violation each one leaves">
     <g fontFamily="var(--font-mono)" fontSize="9">
@@ -377,13 +378,14 @@ experimental design and no experiment behind it.
 
 ## Where this goes
 
-The next piece in this pillar takes on the constraints that are not affine —
-conditional rules, tolerances, and inequalities — where the four-site map still
-applies but only one of the sites survives. After that, the harder question:
-what a control tester should be shown to accept a structural guarantee, which is
-a problem in [evidence rather than modelling](/writing/evaluating-agents-without-ground-truth),
-and the reason the rest of this pillar exists on the [research page](/research).
+Constraints that are not affine come next in this pillar — conditional rules,
+tolerances, inequalities — where the four-site map still applies but only one
+site survives it. After that, the harder question: what a control tester should
+be shown before accepting a structural guarantee, which is a problem in
+[evidence rather than modelling](/writing/evaluating-agents-without-ground-truth).
+The rest of the pillar is laid out on the [research page](/research).
 
-The question worth holding onto is not whether your model satisfies the
-identity. It is where the satisfaction is enforced, and in which arithmetic the
-proof holds.
+Before accepting that a model respects an identity, find out which of the four
+sites is holding it and in which arithmetic that proof was written. If the
+answer is the loss function, there is no proof — only a preference that has so
+far behaved itself.

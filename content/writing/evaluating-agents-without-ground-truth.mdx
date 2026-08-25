@@ -42,7 +42,7 @@ thousand items carefully, freeze that as the reference. You now have accuracy,
 precision, a confusion matrix, and a number for the steering pack.
 
 What you actually have is one reviewer's opinion with a budget attached, and an
-instrument whose ceiling you have not computed.
+instrument nobody has calibrated.
 
 Take the binary case, because the arithmetic is transparent. Let $a$ be the
 agent's true accuracy and $\alpha$ the reference labeller's true accuracy, and
@@ -54,9 +54,9 @@ $$
 $$
 
 because you score a hit both when both are right and when both are wrong in the
-same direction. Two things follow. The ceiling is $\alpha$: an agent that is
-right every single time measures at exactly the labeller's accuracy and no
-higher. And the sensitivity is
+same direction. Two things follow. The instrument saturates at $\alpha$: an
+agent that is right every single time still measures at exactly the labeller's
+accuracy, never above it. And the sensitivity is
 
 $$
 \frac{\partial \hat{a}}{\partial a} \;=\; 2\alpha - 1
@@ -131,8 +131,8 @@ the traffic into *agreed* and *diverged*.
 The diverged set is where scarce review capacity should go. That is the whole
 value, and it is considerable.
 
-The caveat has to be stated hard, because this is where teams talk themselves
-into a result they did not earn. Agreement is not accuracy. Two systems that
+The caveat is where teams talk themselves into a result they did not earn.
+Agreement is not accuracy. Two systems that
 read the same retrieval index, inherit the same prompt lineage, or consume the
 same upstream normalisation share their failure modes, and correlated errors
 inflate agreement without touching correctness. With two raters and a binary
@@ -188,12 +188,12 @@ above chance.
 
 Two consequences get missed.
 
-First, every agreement figure has to be read against the human $\kappa$
-ceiling. An agent that reaches human-level agreement with a reviewer has not
-demonstrated parity. It has hit the measurement floor — the least informative
-reading the instrument can return, because at that point "as good as a second
-human" and "differently wrong by coincidentally the same distance" produce
-identical numbers.
+First, every agreement figure has to be read against what two humans achieve on
+the same items. An agent that reaches human-level agreement with a reviewer has
+not demonstrated parity. It has hit the measurement floor — the least
+informative reading the instrument can return, because at that point "as good as
+a second human" and "differently wrong by coincidentally the same distance"
+produce identical numbers.
 
 Second, $\kappa$ is never a number to report alone. Its chance correction
 depends on the marginals, so a skewed disposition distribution drags it down
@@ -221,8 +221,10 @@ self-inflicted — reviewers who come to trust the agent check less carefully, s
 reversal rates fall for reasons unrelated to correctness. And the selection is
 brutal: only items the harness allowed through generate outcomes at all, so you
 are estimating one policy's value from data produced under another. That is
-off-policy evaluation, it has a large literature, and the price of admission is
-logging the acceptance propensity at decision time. If your
+off-policy evaluation. It has a large literature, most of it resting on the
+inverse-probability weighting Horvitz and Thompson introduced for survey
+sampling, and the price of admission is logging the acceptance propensity at
+decision time. If your
 [agent harness](/writing/the-agent-harness) does not record why an action was
 permitted, this measurement is unavailable to you later at any price.
 
@@ -232,11 +234,13 @@ The obvious shortcut is to put a model in the reviewer's seat, calibrate it
 against human ratings, and scale. The calibration usually looks excellent. It is
 usually measuring the wrong thing.
 
-Two effects compound. The first is documented: LLM judges track human
+Two effects compound. The first is documented: model judges track human
 *preference* — fluency, structure, confident phrasing, length — far more
-faithfully than they track correctness, and the judge literature has catalogued
-position bias, verbosity bias and self-preference for years. A wrong disposition
-with a well-organised rationale outscores a right one expressed tersely.
+faithfully than they track correctness. Position bias, verbosity bias and
+self-preference have been catalogued since Zheng and colleagues first put model
+judges alongside human raters and measured where the two came apart. A wrong
+disposition with a well-organised rationale outscores a right one expressed
+tersely.
 
 The second is structural and worse. Your calibration set is, by construction,
 the sub-population where humans agreed — those were the items you could label.
@@ -280,11 +284,12 @@ sign-off pack: *the agent matches expert dispositions 75% of the time, against
 an inter-reviewer baseline of 74%. The agent is at human parity.* Both
 sentences are arithmetically true. The conclusion is unsupported.
 
-It is unsupported for two reasons. The standard error on a $\kappa$ estimated
-from 200 items in this range is roughly 0.06, so 0.53 and 0.52 are the same
-number — the instrument has no resolution at this sample size and would not
-distinguish a good agent from a mediocre one. And 75% was never accuracy. It is
-agreement with one reviewer, whose own agreement with a peer is 74%.
+It is unsupported for two reasons. On the standard large-sample approximation,
+the standard error of a $\kappa$ estimated from 200 items in this range is about
+0.06, so 0.53 and 0.52 are the same number — the instrument has no resolution at
+this sample size and would not separate a good agent from a mediocre one. And
+75% was never accuracy. It is agreement with one reviewer, whose own agreement
+with a peer is 74%.
 
 Now split by locus. Of the 200 items, 148 are consensus and 52 are contested.
 On the 52 contested items the agent sides with A 22 times, with B 24 times, and
@@ -431,10 +436,10 @@ force you to solve first.
 
 ## Where this goes
 
-Next in this pillar I want to take the harness itself: what has to be recorded
-at decision time so that the measurements above are still available six months
-later, when the outcome data finally arrives and nobody remembers why the agent
-was allowed to act.
+The piece I want to write next takes the recording problem underneath all five:
+what a run has to leave behind at the moment it acts, so that the slowest
+measurement on the list is still available six months later, when the outcome
+data finally arrives and nobody remembers why the agent was allowed to act.
 
 Until then, one question. Before you ask how accurate your agent is, ask what
 your reviewers' $\kappa$ is on the same items. If nobody has measured it, you do

@@ -102,6 +102,17 @@ export default function AboutPage() {
               emit before a control tester will accept it.
             </p>
             <p>
+              Two manuscripts came out of the first two strands —{" "}
+              <Link href="/publications/recongraph">ReconGraph</Link>, on
+              reconciliation as probabilistic inference over a heterogeneous
+              temporal graph, and{" "}
+              <Link href="/publications/neurorecon">NeuroRecon</Link>, on putting
+              accounting constraints into the training objective rather than into
+              a filter that runs afterwards. Both are complete and neither has
+              been submitted anywhere yet; the abstracts, methods and full result
+              tables are on this site.
+            </p>
+            <p>
               I write here because the intersection is underpopulated. There is
               excellent work in graph learning, excellent work in neuro-symbolic
               methods, and a great deal of writing about AI governance. There is

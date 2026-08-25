@@ -20,10 +20,11 @@ team's own quality checks agree with the agent on the overwhelming majority of
 items it has touched. By every measure the team owns, it works.
 
 In October a control tester picks it up. She asks five questions, none of them
-about the model. What is the population this control operated on during the
-period. How was the sample selected from that population. Take this one item —
-reproduce the decision. Who authorised it, and what did they see when they did.
-And what happened to the ones that failed.
+about the model. What was the population this control operated on during the
+period. Take this one item and reproduce the decision, here, now. Who authorised
+it, and what did they see when they did. What shows the control ran on all of
+the population and not only the part you sampled. And what happened to the ones
+that failed.
 
 The team cannot answer any of them. The agent's dispositions sit in the queue's
 history as actions by a service account. The context is gone: retrieval was
@@ -31,8 +32,8 @@ live, the documents have since been superseded, the model has been upgraded
 twice. The reviewer's approval is a timestamp and a user id. The only list of
 what the agent touched is a list the agent produced.
 
-The control is rated ineffective. Not one disposition in it was wrong. Not one
-of them was testable.
+The control is rated ineffective. Not one disposition was wrong. Not one was
+testable.
 
 ## A policy is not evidence
 
@@ -71,8 +72,7 @@ enough to be trusted with a control activity. It is what the agent leaves behind
 when it acts.
 
 <KeyLine>
-  An auditor cannot test what your agent decided. They can only test what your
-  agent left behind.
+  An auditor cannot test what your agent decided. They can only test what your agent left behind.
 </KeyLine>
 
 That is narrower than it sounds, and it is not a complaint about auditors.
@@ -278,8 +278,8 @@ tolerance approved by an authorised reviewer.
 
       <path d="M60 88V62H186m-6-4 6 4-6 4" stroke="var(--variance)" strokeWidth="1" strokeDasharray="3 3" fill="none" />
       <rect x="188" y="58" width="8" height="8" fill="none" stroke="var(--variance)" strokeWidth="1" />
-      <text x="204" y="58" fontSize="8.5" fill="var(--variance)" letterSpacing="1.2">UNROUTED ITEMS</text>
-      <text x="204" y="70" fontSize="8" fill="var(--ink-faint)">no record · no test</text>
+      <text x="204" y="65" fontSize="8.5" fill="var(--variance)" letterSpacing="1.2">UNROUTED ITEMS</text>
+      <text x="204" y="77" fontSize="8" fill="var(--ink-faint)">no record · no test</text>
 
       <rect x="8" y="88" width="110" height="56" fill="none" stroke="var(--rule-strong)" strokeWidth="1" />
       <text x="18" y="112" fill="var(--ink-muted)" letterSpacing="1.2">POPULATION</text>
@@ -332,13 +332,13 @@ tolerance approved by an authorised reviewer.
 
       <g textAnchor="middle">
         <text x="100" y="200" fontSize="9" fill="var(--ink-muted)" letterSpacing="1.2">ADMISSION RECORD</text>
-        <text x="100" y="213" fontSize="8" fill="var(--ink-faint)">item, period, source</text>
+        <text x="100" y="213" fontSize="8" fill="var(--ink-faint)">that the item entered scope</text>
         <text x="283" y="200" fontSize="9" fill="var(--ink-muted)" letterSpacing="1.2">PROPOSAL RECORD</text>
-        <text x="283" y="213" fontSize="8" fill="var(--ink-faint)">inputs the agent saw</text>
+        <text x="283" y="213" fontSize="8" fill="var(--ink-faint)">what the agent was given</text>
         <text x="430" y="200" fontSize="9" fill="var(--ink-muted)" letterSpacing="1.2">REVIEWER RECORD</text>
-        <text x="430" y="213" fontSize="8" fill="var(--ink-faint)">what was shown, when</text>
+        <text x="430" y="213" fontSize="8" fill="var(--ink-faint)">what the reviewer saw</text>
         <text x="620" y="200" fontSize="9" fill="var(--ink-muted)" letterSpacing="1.2">DISPOSITION RECORD</text>
-        <text x="620" y="213" fontSize="8" fill="var(--ink-faint)">verdict, rule version</text>
+        <text x="620" y="213" fontSize="8" fill="var(--ink-faint)">what was decided, and why</text>
       </g>
 
       <path d="M45 230V238H675V230" stroke="var(--rule-strong)" strokeWidth="1" fill="none" />
@@ -367,8 +367,8 @@ That is a gate doing something.
 
 The tester samples 25 items from the recorded set, replays the gate on each from
 the recorded inputs, and finds no deviations. With $n = 25$ and zero deviations,
-the one-sided 95% bound on the deviation rate is $1 - 0.05^{1/25} \approx 0.113$.
-Substituting into the coverage bound:
+the exact one-sided 95% upper bound on the deviation rate within $R$ is
+$1 - 0.05^{1/25} \approx 0.113$. Substituting into the coverage bound:
 
 $$
 \varepsilon_P \;\le\; 0.942 \times 0.113 \;+\; 0.058 \;\approx\; 0.164

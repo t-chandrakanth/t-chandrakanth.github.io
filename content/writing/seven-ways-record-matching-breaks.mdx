@@ -45,12 +45,13 @@ Start from what the engine computes. For a ledger item $a$ and a settlement
 record $b$ it evaluates a conjunction
 
 $$
-m(a, b) \;=\; \big[k(a) = k(b)\big] \;\wedge\; \big[\lvert v(a) - v(b) \rvert \le \epsilon\big] \;\wedge\; \big[\lvert t(a) - t(b) \rvert \le \delta\big]
+m(a, b) \;=\; \big[k(a) = k(b)\big] \cdot \big[\lvert v(a) - v(b) \rvert \le \epsilon\big] \cdot \big[\lvert t(a) - t(b) \rvert \le \delta\big]
 $$
 
-where $k$ is the reference key, $v$ the signed amount and $t$ the date, and each
-square bracket is one when the condition inside it holds. It then resolves the
-surviving pairs into an assignment subject to $\sum_b x_{ab} \le 1$ and
+where $k$ is the reference key, $v$ the signed amount and $t$ the date. Each
+bracket is one when the condition inside it holds and zero otherwise, so $m$ is
+one only when all three hold together. The engine then resolves the surviving
+pairs into an assignment subject to $\sum_b x_{ab} \le 1$ and
 $\sum_a x_{ab} \le 1$: at most one $b$ per $a$, at most one $a$ per $b$.
 
 Widening a tolerance does not make a match more likely to be right. It makes more
@@ -114,7 +115,10 @@ split settlement is a cardinality failure reported as an amount mismatch, so an
 amount tolerance is what gets added, and an amount tolerance cannot fix
 cardinality. It only widens $\epsilon$ until the wrong things match.
 
-Every amount in the seven sketches below is invented.
+<Synthetic />
+
+Every amount in the seven sketches below, and every figure in the worked example
+after them, is invented.
 
 ### 1. Split settlement
 
@@ -239,12 +243,10 @@ necessary condition and not a sufficient one, which is a
 
 ## A worked example
 
-<Synthetic />
-
-The population below is invented. It is internally consistent — the counts sum,
-and the minutes are counts multiplied by a median handling time — and it is
-calibrated against nothing at all. Treat its shape as a hypothesis about where
-effort concentrates, not as a measurement.
+The population below is internally consistent — the counts sum, and the minutes
+are counts multiplied by a median handling time — and it is calibrated against
+nothing at all. Treat its shape as a hypothesis about where effort concentrates,
+not as a measurement.
 
 One monthly cycle on a mid-sized receivables book: 240,000 items presented to the
 matcher, 232,800 auto-matched, 7,200 exceptions. The headline is 97.0%. The same
@@ -265,7 +267,7 @@ hardest.
 
 That is 7,200 items and 67,710 analyst minutes, or 1,128 hours. Across a
 twenty-one day cycle it is a little over seven full-time analysts, and every one
-of them is working the three percent. Two classes alone — aggregated remittance
+of them is working the three per cent. Two classes alone — aggregated remittance
 and reference-field mutation — are 22.2% of the items and 47.4% of the minutes.
 
 <Figure
@@ -280,7 +282,7 @@ and reference-field mutation — are 22.2% of the items and 47.4% of the minutes
         <text x="8" y="16">EXCEPTION CLASS</text>
         <text x="196" y="16">GATES, IN APPLICATION ORDER</text>
         <text x="568" y="16">TOL</text>
-        <text x="602" y="16">SHARE OF ITEMS / MINUTES</text>
+        <text x="602" y="16">ITEMS / MINUTES</text>
       </g>
 
       <g fontSize="9" textAnchor="middle" letterSpacing="1.2" fill="var(--ink-muted)">
@@ -487,12 +489,14 @@ about misallocated effort rests on.
 
 ## Where this goes
 
-The next piece in this pillar takes the reframe at its word. If what the engine
-should be recovering is a correspondence between subsets, across systems and
+The reframe, taken at its word, is the piece that precedes this one. If what the
+engine should recover is a correspondence between subsets, across systems and
 across time, then reconciliation is
 [a graph problem](/writing/reconciliation-is-a-graph-problem) and the seven
-classes are seven edge types rather than seven exceptions. The rest of the pillar
-sits on the [research page](/research).
+classes are seven edge types rather than seven exceptions. What comes next is
+the part I have not built: a classifier that routes an unseen exception to the
+assumption it violated rather than to the gate that reported it. The rest of the
+pillar sits on the [research page](/research).
 
 The question worth holding onto is not what your auto-match rate is. It is this:
 of the items that auto-matched last month, how many has anyone ever checked?
