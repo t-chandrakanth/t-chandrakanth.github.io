@@ -1,0 +1,407 @@
+---
+title: "The Agent Harness: The Part Nobody Designs Deliberately"
+description: "Two teams run the same model on the same task and get results that differ by more than a model generation. The gap is not in the model. It is in the ring of code around it."
+date: "2026-08-25"
+pillar: "P5"
+order: 7
+quotable: "A model is chosen once, deliberately. A harness is chosen a hundred times, by whoever was closest to the keyboard."
+tags:
+  - agent engineering
+  - tool design
+  - context assembly
+  - agent evaluation
+---
+
+Two teams inside the same organisation built an agent for the same job: read a
+batch of unmatched ledger items, gather the supporting evidence, propose a
+disposition for each one. Same base model, same API, same weights. They built
+the evaluation set together from a shared task inventory, so there was no
+argument about what counted as success.
+
+One team's agent finished most of the set. The other's stalled on a third of it
+— the same two tool calls repeating until the step budget ran out, followed by a
+fluent summary of work it had not done.
+
+The postmortem was written against the model. *Not ready for multi-step work in
+this domain. Revisit after the next release.*
+
+Nothing about the model differed. What differed was the tool surface — a wrapper
+for every internal endpoint on one side, task-shaped operations on the other.
+What an error looked like when a call failed. What was still in the context
+window at step nine. Whether a retry was permitted to repeat itself. Whether
+anything at all checked the work before the loop declared victory.
+
+Those decisions were made by four people over five weeks, none of whom thought
+they were making a decision.
+
+## Why upgrading the model does not close the gap
+
+The instinctive fix is to wait for a better model. It is a reasonable instinct:
+model capability is the one variable that improves without anyone in the
+building doing anything, and there is a leaderboard to watch meanwhile.
+
+Write task performance as $Y$, determined by the model $M$ and the harness $H$
+around it. Let both vary — $M$ across generations, $H$ across the harnesses a
+competent team might plausibly build for this task. The law of total variance
+splits the outcome without any modelling assumptions at all:
+
+$$
+\operatorname{Var}(Y) \;=\; \mathbb{E}_H\!\left[\operatorname{Var}(Y \mid H)\right]
+\;+\; \operatorname{Var}_H\!\left(\mathbb{E}[Y \mid H]\right)
+$$
+
+The first term is the spread from swapping models inside a fixed harness — the
+quantity a model evaluation reports. The second is the spread from swapping
+harnesses, and almost nobody measures it, because the postmortem holds $H$ fixed
+at whatever it happened to be and never registers that it was a variable.
+
+If the second term is the larger one on your task, a model upgrade is a small
+multiplier on a large error. It lifts both harnesses. The gap between the two
+teams survives it, because the gap was never in the term the upgrade touches.
+
+There is a second-order problem underneath. A harness is tuned, informally, to
+the failure modes of the model it grew up around: the retry rule that exists
+because the old model kept malforming one argument, the prompt paragraph that
+exists because it once looped on a null result. Swap the model and those
+adaptations do not go neutral, they go stale. Upgrading without re-deriving the
+harness has a real chance of regressing.
+
+And you cannot diff what nobody wrote down. Ask a team to produce the harness
+that ran and you get a prompt template, a helper module, a truncation buried in
+an HTTP client, and a retry decorator someone added on a Friday.
+
+## The harness is an artefact
+
+The move is to stop treating the code around the model as glue and start
+treating it as an engineered artefact with a specification, a version, an owner
+and a changelog. It is not plumbing between a model and a business. It is the
+entire interface between a general-purpose reasoner and a specific institution:
+every affordance the model has, every fact it can see, every consequence it can
+cause, and every signal it gets back about whether any of it worked.
+
+Stated that way the asymmetry is hard to miss. Choosing a model is a procurement
+decision with a benchmark, a review and a meeting. Choosing a harness is forty
+small decisions spread across a quarter, each locally reasonable, none recorded.
+
+<KeyLine>
+  A model is chosen once, deliberately. A harness is chosen a hundred times, by
+  whoever was closest to the keyboard.
+</KeyLine>
+
+Once the harness is a named artefact you can enumerate its surfaces, and once
+you can enumerate them you can ask the only question worth asking about each
+one: was this decided, or did it default?
+
+## Five surfaces
+
+Each has a shape you can name, and a failure it defaults to.
+
+### The tool surface
+
+Its dimensions are granularity, naming, error semantics and idempotence.
+
+Granularity defaults to a one-to-one mirror of an internal service API, because
+that API already exists and wrapping it takes an afternoon. But its granularity
+was chosen for a different consumer — a service-to-service caller with a type
+checker, a retry library and a developer reading reference documentation. A
+model has none of those. Too fine, and the agent spends its budget on assembly
+with a selection error available at every step. Too coarse, and a single tool
+takes a free-form argument encoding an entire query, so every mistake surfaces
+as one opaque failure a long way from the intent that caused it. The granularity
+that works is the granularity of the *task*, which is rarely the granularity of
+the service.
+
+Naming is not cosmetic: name and description are the entire basis on which the
+model discriminates between tools. Two operations whose names differ by a
+qualifier will be confused, and the confusion is silent — the near neighbour
+returns plausible data and the run continues, wrong, with no error anywhere.
+
+Idempotence needs an explicit answer per tool, because retry is the loop's main
+recovery move. Left to default, nobody labels it, and the harness ends up either
+retrying everything — which turns a timeout into a duplicate write — or retrying
+nothing, which turns a transient failure into a dead run.
+
+### Error messages are a design surface
+
+This deserves its own name, because it is the dimension most consistently
+inherited rather than designed.
+
+An error returned to a model is not a log line. It is the next thing in the
+context window and the only evidence the model has for choosing its next action.
+It is prompt, not telemetry.
+
+Three properties decide whether it works. Does it say what failed. Does it say
+why, in terms of the action that was taken. Does it say what would have been
+valid instead. `500 Internal Server Error` has none of the three.
+`Invalid parameter` has the first. `end_date '2026-02-30' is not a calendar
+date; supply an ISO date inside the open period` has all three.
+
+The consequence is not ergonomic, it is control flow. An error the model cannot
+act on produces a retry loop: with nothing telling it what to change, the model
+re-issues substantially the same call with cosmetic variation until the budget
+is gone. An error that names the violated constraint and the admissible values
+produces a recovery in one step, and the transcript reads like a competent
+operator hitting a snag. Same failure, same tool, same model, different string.
+
+<Ledger
+  leftLabel="What an error is usually written for"
+  rightLabel="What a model needs from the same error"
+  left={
+    <ul>
+      <li>A stable code an alert can fire on</li>
+      <li>A stack trace that locates the defect</li>
+      <li>Terseness, so the log stays cheap</li>
+    </ul>
+  }
+  right={
+    <ul>
+      <li>The constraint that was violated, named</li>
+      <li>The argument that violated it, quoted back</li>
+      <li>The values that would have been accepted</li>
+      <li>Whether repeating the call is safe</li>
+    </ul>
+  }
+/>
+
+### Context assembly
+
+The dimensions here are what enters the window, why, and what leaves.
+
+The default is append-everything, then drop from the front on overflow. That
+policy is precisely backwards. The oldest tokens are the task definition, the
+constraints and the acceptance criteria — the things that stayed true for the
+whole run. The newest tokens are the last tool payload, frequently four thousand
+rows of which two matter. The default evicts the instructions and preserves the
+noise, which is why long runs drift into confident irrelevance shortly after the
+first overflow.
+
+The deliberate version pins what is invariant, compresses tool output at the
+moment of receipt rather than at the moment of pressure, and maintains a short
+explicit record of what has been established so far. Compaction is a lossy
+rewrite of the record, which makes it a control in its own right — the evidence
+a reviewer reads afterwards is whatever survived it, and that is one reason
+[agents in SOX-controlled
+environments](/writing/ai-agents-in-sox-controlled-environments) are harder than
+they look. And what is in the window is also what leaves the building, which is
+a separate problem [masking does not
+solve](/writing/why-data-masking-is-not-enough).
+
+### The control loop
+
+Stop conditions, retry policy, and how failure is represented back to the model.
+
+The default stop condition is a step cap, which is not a stop condition but a
+timeout wearing one. It fires at the worst available moment, mid-sequence,
+leaving partial state that nobody designed for. Real stop conditions are
+positive: a post-condition holds; the model asks to stop and a check agrees; the
+model requests something it is not permitted to have; progress has stalled — the
+same call producing the same error twice.
+
+Retry policy has one rule that costs nothing to adopt and changes the shape of
+every transcript: a retry must alter at least one thing — the argument, the
+tool, or the plan. A retry that alters nothing is a loop with extra billing. Two
+identical failures should escalate out of the loop into a report, not into a
+third attempt.
+
+### State
+
+The dimension is what persists between steps, and who owns it.
+
+There are three places state can live. The context window: visible to the model,
+lossy, and rewritten every time you compact. The harness's own store: durable,
+and invisible to the model unless something deliberately surfaces it. The system
+of record: authoritative, and being mutated by the agent's own actions while it
+runs. Left to default, state lives only in the transcript, which means
+compaction silently edits it and the model's belief about the world diverges
+from the world the moment a call half-succeeds.
+
+The question to answer explicitly is which of the three wins when a fact appears
+in two of them, and what reconciles them when they disagree. That is the same
+question a distributed system asks about a cache, and refusing to answer it
+produces the failure everyone recognises: an agent that reports completing a
+step it started and abandoned.
+
+### The verification boundary
+
+The dimension is where the check lives, and there are three options in
+increasing order of strength — the model's own judgement, a post-condition
+evaluated by the harness, a constraint enforced by the target system.
+
+Left to default there is no boundary, so the evidence that a task was done is
+the agent's own assertion that it was done. The model observes only what tools
+return to it; if nothing re-reads the world after a write, *done* means no more
+than *I emitted a call that did not raise*. The boundary earns its keep twice:
+at run time it is the stop condition worth having, and at review time it is the
+only thing that produces evidence someone outside the team can accept. Where no
+ground truth exists to check against, [evaluating agents without ground
+truth](/writing/evaluating-agents-without-ground-truth) becomes its own problem.
+
+## A worked example
+
+<Synthetic />
+
+Take a constructed suite of 120 tasks over a synthetic ledger, in four classes,
+run against one model under two harnesses. Harness A mirrors an internal service
+API tool for tool, passes transport status codes through as errors, appends and
+truncates from the front, caps the run at twenty steps and retries a failed call
+unchanged. Harness B exposes nine task-shaped operations, returns errors
+carrying the violated constraint and the admissible values, pins the task
+specification and a running fact record, requires each retry to change an
+argument or a tool, and checks a post-condition before a write counts as done.
+
+<Figure
+  n={1}
+  caption="The harness ring, exploded. Five surfaces sit between a task and the model, and each one is decided by default if it is not decided deliberately; the right-hand column is what the default becomes. Harness A and Harness B in the table below differ on all five surfaces and share the model at the centre."
+>
+  <svg viewBox="0 0 760 290" className="w-full h-auto" role="img" aria-label="Diagram: an exploded ring of five harness surfaces drawn around an unchanged model, each surface numbered and paired with the behaviour it defaults to">
+    <g fontFamily="var(--font-mono)" fontSize="9.5">
+
+      <g stroke="var(--accent)" strokeWidth="6" fill="none" strokeLinecap="round">
+        <path d="M177.2 68.3 A82 82 0 0 1 245.5 118.0" />
+        <path d="M249.9 131.6 A82 82 0 0 1 223.8 211.9" />
+        <path d="M212.2 220.3 A82 82 0 0 1 127.8 220.3" />
+        <path d="M116.2 211.9 A82 82 0 0 1 90.1 131.6" />
+        <path d="M94.5 118.0 A82 82 0 0 1 162.8 68.3" />
+      </g>
+
+      <circle cx="170" cy="150" r="42" fill="var(--paper)" stroke="var(--ink-faint)" strokeWidth="1" />
+      <text x="170" y="148" textAnchor="middle" fontSize="10" letterSpacing="1.6" fill="var(--ink-muted)">MODEL</text>
+      <text x="170" y="164" textAnchor="middle" fontSize="8" letterSpacing="1.2" fill="var(--ink-faint)">UNCHANGED</text>
+
+      <g stroke="var(--ink-faint)" strokeWidth="1" fill="none">
+        <path d="M170 32 V104" />
+        <path d="M170 104 L166 97 M170 104 L174 97" />
+        <path d="M196 185 L233 238" />
+        <path d="M233 238 L226.5 234 M233 238 L231.5 230.5" />
+      </g>
+      <text x="178" y="40" fontSize="8.5" letterSpacing="1.2" fill="var(--ink-faint)">TASK</text>
+      <text x="244" y="244" fontSize="8.5" letterSpacing="1.2" fill="var(--ink-faint)">ACTIONS</text>
+
+      <g fill="var(--paper)" stroke="var(--accent)" strokeWidth="1">
+        <circle cx="228.8" cy="69.1" r="7.5" />
+        <circle cx="265.1" cy="180.9" r="7.5" />
+        <circle cx="170" cy="250" r="7.5" />
+        <circle cx="74.9" cy="180.9" r="7.5" />
+        <circle cx="111.2" cy="69.1" r="7.5" />
+      </g>
+      <g fill="var(--ink-muted)" fontSize="9" textAnchor="middle">
+        <text x="228.8" y="72.3">1</text>
+        <text x="265.1" y="184.1">2</text>
+        <text x="170" y="253.2">3</text>
+        <text x="74.9" y="184.1">4</text>
+        <text x="111.2" y="72.3">5</text>
+      </g>
+
+      <text x="328" y="34" fill="var(--ink-faint)" fontSize="9" letterSpacing="1.4">HARNESS SURFACE</text>
+      <text x="486" y="34" fill="var(--ink-faint)" fontSize="9" letterSpacing="1.4">LEFT TO DEFAULT, IT BECOMES</text>
+      <path d="M306 42 H752" stroke="var(--rule)" strokeWidth="1" />
+
+      <g fill="var(--paper)" stroke="var(--accent)" strokeWidth="1">
+        <circle cx="312" cy="58.8" r="7.5" />
+        <circle cx="312" cy="96.8" r="7.5" />
+        <circle cx="312" cy="134.8" r="7.5" />
+        <circle cx="312" cy="172.8" r="7.5" />
+        <circle cx="312" cy="210.8" r="7.5" />
+      </g>
+      <g fill="var(--ink-muted)" fontSize="9" textAnchor="middle">
+        <text x="312" y="62">1</text>
+        <text x="312" y="100">2</text>
+        <text x="312" y="138">3</text>
+        <text x="312" y="176">4</text>
+        <text x="312" y="214">5</text>
+      </g>
+
+      <g fill="var(--ink-muted)" letterSpacing="1.2">
+        <text x="328" y="62">TOOL SURFACE</text>
+        <text x="328" y="100">CONTEXT ASSEMBLY</text>
+        <text x="328" y="138">CONTROL LOOP</text>
+        <text x="328" y="176">STATE</text>
+        <text x="328" y="214">VERIFICATION</text>
+      </g>
+      <g fill="var(--pending)" fontSize="9">
+        <text x="486" y="62">a mirror of an internal service API</text>
+        <text x="486" y="100">append, then evict the oldest first</text>
+        <text x="486" y="138">a step cap, and retry the same call</text>
+        <text x="486" y="176">whatever survives in the transcript</text>
+        <text x="486" y="214">the agent's own report that it worked</text>
+      </g>
+
+      <text x="306" y="264" fill="var(--variance)" letterSpacing="1.2">SAME MODEL. THE RING IS WHAT DIFFERS.</text>
+      <path d="M306 272 H752" stroke="var(--variance)" strokeWidth="1" opacity="0.35" />
+    </g>
+  </svg>
+</Figure>
+
+These numbers are constructed for this suite, not measured on any system. They
+illustrate a shape; the claim they carry is structural, not quantitative.
+
+| Task class | Tasks | Harness A | Harness B |
+|---|---|---|---|
+| Single lookup, one tool call | 40 | 92% | 95% |
+| Multi-step retrieval, no failure injected | 30 | 68% | 87% |
+| Recoverable tool failure injected | 30 | 24% | 79% |
+| Long horizon, fourteen or more steps | 20 | 15% | 61% |
+| **Weighted total** | **120** | **56%** | **83%** |
+
+Three things are worth reading off that table.
+
+The first class barely separates them, 92 against 95. That is the class most
+benchmarks are built from — one call, one answer, no recovery, no memory — and
+it is the class least sensitive to everything this piece is about. A leaderboard
+delta measured on single-call tasks transfers to your agent in proportion to how
+much of your work looks like single-call tasks.
+
+The gap opens where recovery is required: 24 against 79 on the class with an
+injected tool failure. In one harness the failure arrived as a status code; in
+the other it arrived as a sentence naming the constraint and the admissible
+values.
+
+It opens again on the long-horizon class, 15 against 61, and the cause is
+eviction. The runs that failed under Harness A did not fail at the step that
+needed step-two evidence. They failed earlier, at the moment that evidence was
+dropped to make room for a payload.
+
+<Callout label="The strong claim, stated as a hypothesis" tone="warning">
+  My hypothesis is that on agentic tasks with a non-trivial tool surface, the
+  harness term in that decomposition is at least as large as the model term
+  across adjacent model generations. I have not measured it, and the suite above
+  is constructed rather than observed. Testing it means holding the model fixed
+  while varying harnesses one named dimension at a time — a real experiment, and
+  one better run on a team's own tasks than on a public benchmark.
+</Callout>
+
+## Limits
+
+Three honest ones.
+
+The hypothesis is unproven, as labelled. If a future model became reliable
+enough to recover from uninformative errors and to rebuild an evicted task
+specification unaided, the harness term would shrink and the argument with it. I
+expect that shrinkage to be partial rather than total.
+
+Very little here is novel, and what is not has literatures with names. Tool
+granularity and naming is affordance design in Donald Norman's sense, dressed in
+JSON. That a notation's usability decomposes into enumerable dimensions rather
+than taste is Green and Petre's Cognitive Dimensions of Notations. Error-message
+design has its own literature in programming education; Brett Becker and
+colleagues on compiler error messages is where I would start. A harness is also,
+structurally, an environment with a language model in it, which reinforcement
+learning has been shaping for decades. The enumeration is mine; the ideas
+underneath it are not.
+
+The framing has a failure mode of its own. A harness that compensates for a weak
+model becomes scaffolding a strong one has to work around, and every surface
+named here is a place to over-engineer. Writing the harness down makes its
+coupling to a model version visible, not absent.
+
+## Where this goes
+
+Next in this [pillar](/research) is the measurement problem the last section
+walked into: how to evaluate an agent when nobody can supply the ground truth
+its output would be scored against, which is the normal condition in
+reconciliation and control work rather than an edge case. After that, what a
+harness specification has to contain before an auditor will read it as evidence.
+
+If you are about to file a postmortem against the model, the question I would
+ask first is not *which model was this*. It is *can anyone here produce the
+harness that ran*.

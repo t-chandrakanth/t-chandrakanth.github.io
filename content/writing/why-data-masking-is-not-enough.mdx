@@ -1,0 +1,320 @@
+---
+title: "Why Data Masking Is Not Enough for Enterprise AI"
+description: "Masking removes the identifiers. It does not remove the structure, the logic, or the accumulation — and in an enterprise, those are the three things you actually cannot afford to hand over."
+date: "2026-08-25"
+pillar: "P3"
+order: 1
+quotable: "Masking is a transformation on fields. Confidentiality is a property of sessions."
+tags:
+  - enterprise AI privacy
+  - disclosure risk
+  - data masking
+  - threat modelling
+---
+
+A finance team wires an assistant into their systems. Legal asks the reasonable
+question — what happens to our data? — and engineering gives the reasonable
+answer: it is masked. Account numbers are tokenised. Names are replaced with
+surrogates. Amounts are bucketed. Nothing identifying reaches the model.
+
+Six weeks later someone asks the assistant why a particular month closed late.
+It answers: the two largest counterparties in that region settle on a
+fourteen-day cycle, one of them nets across subsidiaries before remitting, and
+the reconciliation rule that tolerates a three-day variance does not apply to
+netted remittances, so those items age into the exception queue.
+
+Every field in that answer was masked. The answer was not.
+
+## A redaction that redacted nothing
+
+The masking worked exactly as specified. No account number appeared. No legal
+entity was named. The surrogate keys held. If you audited the request payload
+you would find nothing that a data-loss-prevention rule would flag, because
+there was nothing in it to flag.
+
+What leaked was not a field. It was a *shape*: how many counterparties
+concentrate the volume, how they are related to each other, on what rhythm they
+pay, and which internal rule they collide with. A competitor who learned only
+that would know something worth knowing. An adversary who learned it would know
+where to push.
+
+This is the failure mode that keeps recurring in enterprise AI deployments, and
+it is not a masking bug. It is a category error. Masking is a control on the
+*representation* of data. The thing an enterprise needs to protect is mostly not
+in the representation.
+
+## Why more masking does not fix it
+
+The instinctive response is to mask harder — tokenise more fields, coarsen the
+buckets, strip the free text. This runs into a wall that the statistical
+disclosure control literature mapped out decades before anyone attached a
+language model to a warehouse.
+
+The first problem is that the useful signal and the sensitive signal are
+frequently the same signal. If you coarsen settlement timing enough to hide the
+fourteen-day cycle, you have also destroyed the assistant's ability to answer
+any question about settlement timing — which is what it was deployed to do.
+Masking trades utility for confidentiality along a single axis, and on that axis
+the enterprise use case sits uncomfortably close to the sensitive end.
+
+The second problem is that masking is *per-record* and the disclosure is
+*cross-record*. Replacing supplier `ACME-4471` with `S_00318` everywhere is
+consistent pseudonymisation. It is also a perfect structure-preserving map: the
+adjacency of the graph, the degree distribution, the concentration ratios, and
+the temporal pattern all survive the substitution unchanged. You have renamed
+the nodes and kept the network.
+
+The third problem is that masking is *stateless* and disclosure is *cumulative*.
+A masking function sees one payload. It has no way to know that this is the
+fortieth question in a sequence whose answers, taken together, reconstruct
+something no single answer contained.
+
+<Ledger
+  leftLabel="What masking is designed to stop"
+  rightLabel="What actually walks out"
+  left={
+    <ul>
+      <li>Identifiers in a request payload</li>
+      <li>Regulated fields reaching a third-party model</li>
+      <li>A single record being re-identified from one response</li>
+    </ul>
+  }
+  right={
+    <ul>
+      <li>The topology of who transacts with whom</li>
+      <li>The business logic the assistant has to recite to be useful</li>
+      <li>A composite assembled across forty separately-harmless answers</li>
+    </ul>
+  }
+/>
+
+## The reframe: disclosure is a property of the session
+
+The useful move is to stop asking *what is in this payload* and start asking
+*what does the counterparty know now that they did not know before*.
+
+That reframing is not new — it is how disclosure risk has been reasoned about in
+official statistics since the 1970s. What is new is the delivery mechanism. A
+statistical agency releases a table once and can reason about it as a fixed
+artifact. An enterprise assistant emits a fresh, query-shaped, natural-language
+release every few seconds, tailored to exactly what the asker wanted to know,
+for as long as the asker keeps asking.
+
+<KeyLine>
+  Masking is a transformation on fields. Confidentiality is a property of
+  sessions.
+</KeyLine>
+
+Once you accept that framing, the three failures above stop looking like three
+unrelated bugs and start looking like three axes of the same object. I have been
+calling the resulting framework **DRRC** — disclosure risk and rule
+confidentiality — and it sits in the [research programme](/research) alongside
+the reconciliation work it grew out of. The rest of this piece is the threat
+model, stated plainly enough to be argued with.
+
+## Three leaks masking cannot reach
+
+### Relationship disclosure
+
+Pseudonymisation preserves structure by construction. That is the point of it —
+consistent surrogates are what make the data still joinable, and joinable data
+is what makes it useful. But a graph whose node labels are surrogates and whose
+edges are intact is still the graph.
+
+Concretely, if an assistant can answer *which of our suppliers also supply our
+competitors* or *which counterparties cluster into the same settlement
+behaviour*, it is answering a question about edges. No node label is required.
+And the structural properties that make such a graph re-identifiable — a handful
+of very-high-degree nodes, an idiosyncratic bipartite pattern, a distinctive
+timing signature — are exactly the properties that survive every masking scheme
+that preserves referential integrity.
+
+### Rule disclosure
+
+The second leak is the one enterprises consistently underweight, because it does
+not look like data at all.
+
+An assistant that is useful in a finance function has to know the rules: what
+tolerance applies to which class of item, which exceptions route to which
+reviewer, what makes a match acceptable. Those rules are frequently the most
+valuable thing in the building. They are the encoded outcome of years of
+operational learning, and unlike the underlying data they are not protected by
+any regulation — nobody's rule set is personally identifiable information.
+
+So the rules sit outside the scope of the privacy programme, get loaded into
+context to make the assistant work, and are then recited on request, in fluent
+prose, to whoever asked. The rules in question are frequently the tolerance and
+exception logic that sits on top of a reconciliation process — which is worth
+reading about [on its own terms](/writing/reconciliation-is-a-graph-problem),
+because the reason those rules are valuable is the same reason they are
+complicated.
+
+### Cumulative disclosure
+
+The third leak is the one that defeats per-request review, and it is worth being
+precise about.
+
+Model the sensitive quantity as a random variable $X$ — the thing you do not
+want disclosed. Let $a_1, a_2, \dots, a_k$ be the answers the system has emitted
+so far. Conditioning never increases entropy, so
+
+$$
+H(X \mid a_1, \dots, a_k) \;\le\; H(X \mid a_1, \dots, a_{k-1})
+$$
+
+for every $k$. Uncertainty about $X$ is monotonically non-increasing across the
+session. It does not recover between requests.
+
+A per-request control tests the *increment*
+
+$$
+\Delta_k \;=\; H(X \mid a_{<k}) - H(X \mid a_{\le k})
+$$
+
+against some threshold, and passes every request for which $\Delta_k$ is small.
+But the quantity that actually determines whether you have disclosed $X$ is the
+*total*
+
+$$
+I(X; a_{\le k}) \;=\; H(X) - H(X \mid a_{\le k}) \;=\; \sum_{j \le k} \Delta_j
+$$
+
+and a sum of arbitrarily small terms is not arbitrarily small. Forty questions
+that each move the needle by two percent do not leave you with ninety-eight
+percent of your uncertainty intact. This is the same accounting that differential
+privacy formalises as a composition budget, and the same accounting that almost
+no enterprise AI deployment does at all.
+
+<Callout label="On what is being claimed here" tone="neutral">
+  The inequality above is textbook information theory, not a result. The point
+  is only that it applies to assistant sessions, and that a stateless per-request
+  filter is structurally incapable of seeing the quantity on the left. How to
+  *estimate* that quantity cheaply in production is a separate problem, and not
+  one I am writing about yet.
+</Callout>
+
+## A worked example
+
+<Synthetic />
+
+Take a synthetic supplier ledger: 400 suppliers, 12 buying entities, 18 months
+of invoices. Every identifier is replaced with a consistent surrogate, every
+amount is bucketed to the nearest 5%, and every date is jittered by up to two
+days. By any per-field audit, this data is masked.
+
+Now ask three questions that a masked-data policy would wave through, because
+none of them requests an identifier:
+
+<Figure
+  n={1}
+  caption="Left: masking replaces field values and leaves the record count, join keys and adjacency untouched. Right: the derived graph is identical under masking — same degree distribution, same concentration, same settlement rhythm. The identifiers changed; the structure did not."
+>
+  <svg viewBox="0 0 760 268" className="w-full h-auto" role="img" aria-label="Diagram: masked records on the left produce an identical supplier graph on the right">
+    <g fontFamily="var(--font-mono)" fontSize="9.5">
+      <text x="8" y="14" fill="var(--ink-faint)" letterSpacing="1.4">RECORDS — BEFORE</text>
+      <text x="196" y="14" fill="var(--ink-faint)" letterSpacing="1.4">AFTER MASKING</text>
+      <text x="452" y="14" fill="var(--ink-faint)" letterSpacing="1.4">DERIVED GRAPH — UNCHANGED</text>
+
+      <g fill="var(--ink-muted)">
+        <text x="8" y="44">ACME-4471</text><text x="8" y="66">ACME-4471</text>
+        <text x="8" y="88">BOREAL-22</text><text x="8" y="110">BOREAL-22</text>
+        <text x="8" y="132">CIRRUS-08</text><text x="8" y="154">ACME-4471</text>
+        <text x="8" y="176">BOREAL-22</text>
+        <text x="104" y="44">14 Jan</text><text x="104" y="66">28 Jan</text>
+        <text x="104" y="88">02 Feb</text><text x="104" y="110">16 Feb</text>
+        <text x="104" y="132">03 Feb</text><text x="104" y="154">11 Feb</text>
+        <text x="104" y="176">02 Mar</text>
+      </g>
+
+      <g fill="var(--ink-faint)">
+        <text x="196" y="44">S_00318</text><text x="196" y="66">S_00318</text>
+        <text x="196" y="88">S_00907</text><text x="196" y="110">S_00907</text>
+        <text x="196" y="132">S_00412</text><text x="196" y="154">S_00318</text>
+        <text x="196" y="176">S_00907</text>
+      </g>
+      <g fill="var(--rule-strong)">
+        <rect x="272" y="36" width="44" height="9" /><rect x="272" y="58" width="44" height="9" />
+        <rect x="272" y="80" width="44" height="9" /><rect x="272" y="102" width="44" height="9" />
+        <rect x="272" y="124" width="44" height="9" /><rect x="272" y="146" width="44" height="9" />
+        <rect x="272" y="168" width="44" height="9" />
+      </g>
+
+      <path d="M168 106h18m0 0-5-4m5 4-5 4" stroke="var(--ink-faint)" strokeWidth="1" fill="none" />
+      <path d="M336 106h22m0 0-5-4m5 4-5 4" stroke="var(--accent)" strokeWidth="1" fill="none" />
+
+      <g stroke="var(--rule-strong)" strokeWidth="1" fill="none">
+        <path d="M462 52 596 96" /><path d="M462 52 596 168" />
+        <path d="M462 118 596 96" /><path d="M462 118 596 132" />
+        <path d="M462 184 596 132" /><path d="M462 184 596 168" />
+        <path d="M462 52 596 132" />
+      </g>
+      <g fill="var(--accent)">
+        <circle cx="462" cy="52" r="5.5" /><circle cx="462" cy="118" r="4" /><circle cx="462" cy="184" r="4" />
+      </g>
+      <g fill="var(--paper)" stroke="var(--ink-faint)" strokeWidth="1">
+        <rect x="590" y="90" width="12" height="12" /><rect x="590" y="126" width="12" height="12" /><rect x="590" y="162" width="12" height="12" />
+      </g>
+      <g fill="var(--ink-faint)">
+        <text x="418" y="55">deg 3</text><text x="418" y="121">deg 2</text><text x="418" y="187">deg 2</text>
+        <text x="612" y="99">E1</text><text x="612" y="135">E2</text><text x="612" y="171">E3</text>
+      </g>
+      <text x="452" y="228" fill="var(--variance)" letterSpacing="1.2">CONCENTRATION, ADJACENCY AND RHYTHM ALL PRESERVED</text>
+      <path d="M452 236h268" stroke="var(--variance)" strokeWidth="1" opacity="0.4" />
+    </g>
+  </svg>
+</Figure>
+
+**"Which supplier accounts for the largest share of invoice volume for entity
+E1?"** The answer is a surrogate key. It is also a statement that one supplier
+dominates a specific entity, and the degree distribution that produced it is
+unchanged by masking. That is relationship disclosure.
+
+**"Why did this item not auto-match?"** To be useful the assistant explains the
+tolerance and the exception path. That is rule disclosure, and no masking scheme
+touches it, because the rule was never in the data.
+
+**"How does that share compare to the same month last year, and to the other
+eleven entities?"** Individually a trend question. In sequence with the previous
+two, it is the third term in a sum that is quietly converging on the supplier
+concentration profile of the entire business. That is cumulative disclosure.
+
+None of the three requests contained a protected field. All three were answered
+correctly. The masking never failed.
+
+## Limits
+
+Three honest ones.
+
+The framework above names failure modes; it does not price them. Saying that
+cumulative disclosure exists is easy, and every practitioner nods. Estimating
+$I(X; a_{\le k})$ over an open-domain natural-language session, cheaply enough
+to run inline, is the hard part, and I am not claiming to have solved it here.
+
+It is also not the case that masking is useless. Masking is a good control
+against exactly the threat it was designed for — regulated identifiers reaching
+systems that should not hold them — and dropping it would be a straightforward
+downgrade. The argument is that it is necessary and not sufficient, and that the
+gap between those two words is where enterprise deployments are currently
+sitting.
+
+Finally, the framing is mine and the failure modes are not. Relationship
+disclosure is graph de-anonymisation, cumulative disclosure is composition, and
+both have substantial literatures. What I think is under-served is the
+enterprise-confidentiality case — where the asset is a business relationship or
+a business rule rather than a person — because that case falls outside every
+privacy regulation that funds this research.
+
+## Where this goes
+
+Next in this pillar I take relationship disclosure on its own terms:
+[what an anonymised supplier graph actually gives away](/writing/relationship-privacy-supplier-networks),
+and why the structural properties that make a graph useful are the same ones
+that make it identifying. After that, rule confidentiality — the leak nobody has
+a control for, because it does not look like data. And if the question you are
+actually being asked is what evidence a control tester will accept for any of
+this, that is
+[a different conversation](/writing/ai-agents-in-sox-controlled-environments).
+
+If you deploy assistants inside a business with something to protect, the
+question I would ask first is not *what did we mask*. It is *what does the
+session know*.
