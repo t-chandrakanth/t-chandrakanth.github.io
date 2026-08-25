@@ -35,7 +35,7 @@ export function SiteHeader() {
               {site.name}
             </span>
             <span
-              className="font-kicker text-ink-faint hidden border-l border-rule pl-2.5 md:inline"
+              className="font-kicker text-ink-faint hidden border-l border-rule pl-2.5 xl:inline"
               aria-hidden="true"
             >
               {site.blogName}
@@ -43,7 +43,7 @@ export function SiteHeader() {
           </Link>
 
           <div className="flex items-center gap-6">
-            <nav aria-label="Primary" className="hidden sm:block">
+            <nav aria-label="Primary" className="hidden lg:block">
               <ul className="flex items-center gap-6">
                 {primaryNav.map((item) => {
                   const active = isActive(item.href);
@@ -77,7 +77,7 @@ export function SiteHeader() {
       {/* Small screens: the nav becomes its own ruled band rather than a hamburger. */}
       <nav
         aria-label="Primary, compact"
-        className="border-t border-rule sm:hidden"
+        className="border-t border-rule lg:hidden"
       >
         <ul className="flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {primaryNav.map((item) => {

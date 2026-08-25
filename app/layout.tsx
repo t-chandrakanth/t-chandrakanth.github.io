@@ -5,6 +5,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { sameAs, site } from "@/lib/site";
+// KaTeX first: globals.css overrides its display sizing.
+import "katex/dist/katex.min.css";
 import "./globals.css";
 
 const newsreader = Newsreader({

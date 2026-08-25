@@ -44,7 +44,7 @@ export default function AboutPage() {
       </header>
 
       <div className="mt-16 grid gap-14 lg:grid-cols-[minmax(0,47rem)_minmax(0,19rem)] lg:justify-between lg:gap-16">
-        <div className="max-w-[46rem]">
+        <div className="min-w-0 max-w-[46rem]">
           <div className="prose">
             <p>
               I have spent more than {years} years building the systems that move
@@ -188,7 +188,7 @@ export default function AboutPage() {
         </div>
 
         {/* ---------------- rail ---------------- */}
-        <aside className="lg:pt-2">
+        <aside className="min-w-0 lg:pt-2">
           <div className="lg:sticky lg:top-24">
             {headshot ? (
               <div className="border border-rule bg-paper-raised p-2">

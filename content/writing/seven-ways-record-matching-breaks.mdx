@@ -30,10 +30,14 @@ screens and applying a rule that would fit on an index card. The engine could
 not, and not because the engine is weak. It could not because it was asked a
 question that none of these items is an answer to.
 
-The queue is also only the visible half of the failure. The other half is inside
+The queue is only the visible half of the failure. The other half sits inside
 the 97%: items matched confidently to the wrong counterpart, which nobody will
-ever look at, because the entire point of an auto-match is that nobody looks
-at it.
+ever look at, because the point of an auto-match is that nobody looks.
+
+<Synthetic />
+
+The 97.0% above, the seven sketches further down and the table at the end are
+all invented. Nothing here is a measurement.
 
 ## Widening the rules does not converge
 
@@ -42,7 +46,7 @@ aggregated case. A wider window at period ends. Each of those is locally correct
 and the aggregate is a rule set that grows faster than the problem it covers.
 
 Start from what the engine computes. For a ledger item $a$ and a settlement
-record $b$ it evaluates a conjunction
+record $b$ it evaluates three tests and requires all of them
 
 $$
 m(a, b) \;=\; \big[k(a) = k(b)\big] \cdot \big[\lvert v(a) - v(b) \rvert \le \epsilon\big] \cdot \big[\lvert t(a) - t(b) \rvert \le \delta\big]
@@ -85,8 +89,8 @@ window*: the two events happened close enough together on one shared measure of
 time. *One-to-one*: the correspondence between ledger items and settlement
 records is a bijection on the matched subset — one invoice, one payment.
 Underneath all three sits a fourth, *stable key*, which is the only one anybody
-recognises as an assumption, and therefore the only one with a remediation
-already in the product.
+recognises as an assumption, and therefore the only one with a standard remedy
+already attached to it.
 
 Enterprise settlement is not a bijection. It is a many-to-many correspondence
 between sets, sometimes with sign changes, sometimes straddling a reporting
@@ -97,9 +101,9 @@ $$
 A \subseteq \mathcal{A}, \quad B \subseteq \mathcal{B} \quad \text{with} \quad \Big\lvert \sum_{a \in A} v(a) \;-\; \sum_{b \in B} v(b) \Big\rvert \;\le\; \epsilon
 $$
 
-which is subset-sum in a business suit, one of Karp's original twenty-one
-NP-complete problems. Tolerance is a parameter of the wrong model, so no setting
-of it arrives at the right one.
+which is subset-sum in a business suit — the problem Karp listed as Knapsack
+among his original twenty-one. Tolerance is a parameter of the wrong model, so
+no setting of it arrives at the right one.
 
 <KeyLine>The residual is not the hard tail of the same problem. It is seven different problems the matcher was never posed.</KeyLine>
 
@@ -114,11 +118,6 @@ That gap is why the tolerance always ends up attached to the wrong parameter. A
 split settlement is a cardinality failure reported as an amount mismatch, so an
 amount tolerance is what gets added, and an amount tolerance cannot fix
 cardinality. It only widens $\epsilon$ until the wrong things match.
-
-<Synthetic />
-
-Every amount in the seven sketches below, and every figure in the worked example
-after them, is invented.
 
 ### 1. Split settlement
 

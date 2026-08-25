@@ -242,7 +242,7 @@ movement in the table is rewriting on the tail: 0.66 to 0.84.
 
 <Figure
   n={1}
-  caption="The cascade drawn twice on one axis. Above: candidate counts, tapering from the full catalogue to the ten results shown. Below: the latency budget, drawn to the same horizontal scale, so each stage's width is the milliseconds it costs. A relevant item outside the k = 400 cut leaves the pipeline at stage 2 and cannot be recovered by anything to its right — which is where 52% of the budget is spent."
+  caption="The cascade drawn twice against one horizontal axis. Above: candidate counts, tapering from the full catalogue to the ten results shown. Below: the latency budget on the same scale, so each stage's width is the milliseconds it costs. A relevant item outside the k = 400 cut leaves the pipeline at stage 2, and nothing to the right of that cut can recover it — which is where the widest bar in the budget sits."
 >
   <svg viewBox="0 0 760 282" className="w-full h-auto" role="img" aria-label="Diagram: a four-stage retail search funnel showing candidate counts falling from 180,000 to 400 to 100 to 10, with the retrieval recall ceiling marked and a latency budget bar drawn to the same horizontal scale showing the reranker consuming 58 of 111 milliseconds">
     <g fontFamily="var(--font-mono)" fontSize="9">
@@ -284,14 +284,14 @@ movement in the table is rewriting on the tail: 0.66 to 0.84.
 
       <g stroke="var(--rule-strong)" strokeWidth="1" opacity="0.55" fill="none">
         <path d="M268 154V190" />
-        <path d="M345 145V190" />
-        <path d="M600 135V190" />
+        <path d="M320 154V190" />
+        <path d="M654 133V190" />
       </g>
-      <g fill="var(--ink-faint)" textAnchor="middle" letterSpacing="1.1">
-        <text x="94" y="200">180,000 SKU</text>
-        <text x="268" y="200">k = 400</text>
-        <text x="345" y="200">TOP 100</text>
-        <text x="600" y="200">TOP 10</text>
+      <g fill="var(--ink-faint)" letterSpacing="1.1">
+        <text x="94" y="200" textAnchor="middle">180,000 SKU</text>
+        <text x="264" y="200" textAnchor="end">k = 400</text>
+        <text x="324" y="200" textAnchor="start">TOP 100</text>
+        <text x="654" y="200" textAnchor="middle">TOP 10</text>
       </g>
 
       <rect x="60" y="212" width="69" height="22" fill="var(--rule-strong)" />

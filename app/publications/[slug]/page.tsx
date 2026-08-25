@@ -128,7 +128,7 @@ export default async function PublicationPage({
         </header>
 
         <div className="mt-14 grid gap-14 lg:grid-cols-[minmax(0,46rem)_minmax(0,21rem)] lg:justify-between lg:gap-14">
-          <div>
+          <div className="min-w-0">
             {/* ---------------- abstract ---------------- */}
             <section>
               <SectionHead n={1} label="Abstract" />
@@ -230,7 +230,7 @@ export default async function PublicationPage({
           </div>
 
           {/* ---------------- rail ---------------- */}
-          <aside className="lg:pt-2">
+          <aside className="min-w-0 lg:pt-2">
             <div className="space-y-10 lg:sticky lg:top-24">
               {p.setup?.length ? (
                 <div>

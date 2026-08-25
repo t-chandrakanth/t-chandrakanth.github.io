@@ -39,6 +39,10 @@ unapplied cash against a customer who is square. Somebody will spend a morning
 undoing it, and if they are tired they will force-match the 41,000 remittance to
 the 40,000 invoice and write off a 1,000 variance that never existed.
 
+<Synthetic />
+
+The account above is invented, and so is every figure that follows it.
+
 ## Why better matching does not fix it
 
 The instinct is that the scoring is too crude. Widen the tolerance band. Add
@@ -69,8 +73,8 @@ Underneath both is an assumption nobody wrote down. Pairwise matching presumes a
 bijection between two sets of records: each obligation has one movement, each
 movement has one obligation, and reconciliation is the job of finding the
 pairing. Splits, aggregations, fees and cross-period timing all violate it. They
-are also, in every ledger I have looked at, where the money and the effort are.
-I have written elsewhere about
+are also the population that costs the most to clear, because an item nobody
+disputes still has to be taken apart by hand. I have written elsewhere about
 [the ways record matching breaks](/writing/seven-ways-record-matching-breaks);
 this one survives every fix applied to the others.
 
@@ -171,10 +175,11 @@ pairwise score approximates it, and it is exactly the information a per-pair
 acceptance rule throws away. It is the same species of hard identity that
 [learned models must satisfy rather than approximate](/writing/neural-models-and-accounting-identities).
 
-To be usable on a real period, the formulation needs an exception node: a column
-$\varnothing$ with score zero and unbounded capacity that absorbs anything which
-cannot be settled. The queue then becomes an *output* of the optimisation with a
-stated cost, rather than the residue of everything the matcher declined.
+To be usable on a real period, the formulation needs two exception nodes: a
+dummy movement that absorbs obligation value nothing settled, and a dummy
+obligation that absorbs cash nothing explains. Both score zero and neither is
+capped. The queue then becomes an *output* of the optimisation with a stated
+cost, rather than the residue of everything the matcher declined.
 Adjustments and fees enter as bounded nodes with a penalty, so the solver may
 create a 12.50 fee node to close a group at a small cost instead of surrendering
 five items.
@@ -203,16 +208,26 @@ items nobody disputes.
 
 Drop $X$ and keep $Y$, and what remains is a transportation problem: min-cost
 flow on a bipartite network with supplies $b_j$, demands $a_i$ and arc costs
-$1 - s_{ij}$. That is the Hitchcock–Koopmans formulation from the 1940s, the
-constraint matrix is totally unimodular, the linear relaxation is integral at
-the optimum, and network simplex solves instances with hundreds of thousands of
-arcs. Keeping $X$ with a per-edge charge gives the fixed-charge transportation
-problem, which is NP-hard, and in practice is approximated by penalising edge
-count in the objective and accepting a good solution rather than a proven one.
+$1 - s_{ij}$. Minimising that cost and maximising $\sum s_{ij} y_{ij}$ are the
+same problem, because the two objectives differ by $\sum_i a_i$, and
+conservation holds that constant. This is the Hitchcock–Koopmans formulation
+from the 1940s. Its constraint matrix is totally unimodular, so when $a_i$ and
+$b_j$ are whole cents — and a ledger holds nothing else — an optimal basis
+allocates whole cents too, and nothing has to be rounded before it is posted.
+
+One property of that formulation is worth having for its own sake. A basic
+solution is a spanning tree of the bipartite graph, so at most $m + n - 1$ arcs
+carry value: with four obligations and three movements, six arcs, however many
+candidates the scorer generated. The optimum cannot shred a period into
+arbitrarily many part-allocations, which is the objection a reviewer raises
+first. Network simplex handles instances with hundreds of thousands of arcs.
+
+Keeping $X$ with a per-edge charge gives the fixed-charge transportation
+problem, which is NP-hard. In practice it is approximated by penalising edge
+count inside the objective and accepting a good solution rather than a proven
+one.
 
 ## A worked example
-
-<Synthetic />
 
 One account, one currency, one weekly period. Four obligations and three
 movements, all inside a ten-day window. The candidate generator kept eight edges
@@ -222,7 +237,7 @@ scoring above a floor of 0.15.
   n={1}
   caption="Solid accent edges are the globally optimal allocation, labelled with the value assigned along each one: OBL-1 is settled by two movements (25.0k + 15.0k = 40.0k) and MOV-3 settles three obligations (25.0k + 9.4k + 6.6k = 41.0k). The dashed struck edge is the pairing a one-to-one engine takes first because the amounts agree to the penny; it is feasible but ten per cent below the optimum, and it consumes the value that belonged to OBL-1. Faint edges are candidates the optimiser rejected."
 >
-  <svg viewBox="0 0 800 300" className="w-full h-auto" role="img" aria-label="Bipartite graph of four obligations and three movements. Eight scored candidate edges are drawn. Five solid edges form the globally optimal allocation, in which one obligation is split across two movements and one movement is aggregated across three obligations. One dashed edge, struck through, is the exact-amount pairing a greedy one-to-one engine selects first, which scores ten per cent below the optimum.">
+  <svg viewBox="0 0 800 300" className="w-full h-auto" role="img" aria-label="Bipartite graph: four obligations on the left, three movements on the right, eight scored candidate edges between them. Five solid edges form the optimal allocation, splitting one obligation across two movements and aggregating three obligations into one movement. A dashed edge, struck through, marks the exact-amount pair a one-to-one engine takes first.">
     <g fontFamily="var(--font-mono)" fontSize="9.5">
 
       <g fill="var(--ink-faint)" letterSpacing="1.2">
@@ -356,11 +371,13 @@ which is ten per cent worse. The engine's own accepted set — one edge, five
 exceptions — is worth 22.00, or forty per cent of the recoverable objective.
 
 The coincidence that traps the engine is not exotic. Round-numbered invoices,
-approval limits at round thresholds and weekly netting make exact amount
-collisions common on any account with real volume. A pairwise scorer is most
-confident exactly where it is most likely to be wrong, because amount equality
-is its strongest single feature and amount equality is what a split
-manufactures.
+approval limits set at round thresholds and weekly netting all push amounts onto
+the same coarse grid, so a split whose parts collide with some other open item
+is a structural consequence rather than bad luck. How often that happens on a
+real book is an empirical question I have not answered. The mechanism is the
+point. A pairwise scorer is most confident exactly where it is most likely to be
+wrong, because amount equality is its strongest single feature and amount
+equality is what a split manufactures.
 
 ## Limits
 
@@ -368,11 +385,11 @@ Three honest ones.
 
 The mathematics is neither mine nor new. Transportation and assignment problems
 date to Hitchcock and Koopmans in the 1940s and the Hungarian algorithm to Kuhn
-in 1955; the case for resolving entities jointly rather than one pair at a time
-belongs to Bhattacharya and Getoor's collective entity resolution, and back to
-Fellegi and Sunter. Only the framing is mine: reconciliation as a fixed-charge
-transportation problem whose one-to-one restriction is what rule engines
-implement.
+in 1955. The case for resolving entities jointly rather than one pair at a time
+is Bhattacharya and Getoor's collective entity resolution, which sits downstream
+of Fellegi and Sunter's probabilistic record linkage. Only the framing is mine:
+reconciliation as a fixed-charge transportation problem whose one-to-one
+restriction is what rule engines implement.
 
 A global optimiser is only as good as $s_{ij}$, and it fails differently from a
 greedy one. A bad pairwise score gives a locally wrong match that looks odd on

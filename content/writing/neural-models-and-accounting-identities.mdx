@@ -80,11 +80,10 @@ evidence that satisfies one is
 
 Stop asking how small the violation can be made. Ask where it can be made
 impossible. Those are different questions with different answers, and the second
-has only four candidate sites: the training
-objective, the forward pass, the raw output vector, and whatever happens
-downstream of the model before a number reaches the ledger. Each site yields a
-different *kind* of guarantee — statistical, structural, algebraic, procedural —
-and the kinds are not interchangeable.
+has only four candidate sites: the training objective, the raw output vector,
+whatever happens downstream before a number reaches the ledger, and the forward
+pass itself. Each site yields a different *kind* of guarantee — statistical,
+algebraic, procedural, structural — and the kinds are not interchangeable.
 
 <KeyLine>
   A constraint in the loss function is a preference. A constraint in the
@@ -210,8 +209,8 @@ lands on it by construction.
 
 So the last operation before posting has to be a lattice-aware allocation — the
 largest-remainder method or a cousin of it — which drags in the apportionment
-paradoxes Balinski and Young catalogued for legislative seats. An exact
-guarantee proved one step upstream of rounding is not an exact guarantee.
+paradoxes Balinski and Young catalogued for legislative seats. Nothing proved
+above the rounding step promises anything about what lands below it.
 
 ## A worked example
 
@@ -226,7 +225,7 @@ so that the distributional side-effects are visible rather than smeared.
   n={1}
   caption="The four injection points as a pipeline. Rows are stages a prediction passes through; each column intervenes at exactly one of them, and the thin rules mark the stages it leaves untouched. The lower block reports what each intervention guarantees and the residual it leaves on the synthetic allocation below — first in exact arithmetic, then after rounding to cents, which is the only arithmetic the ledger has. The residual under the objective column is stipulated, not trained; the other three are arithmetic on the table that follows."
 >
-  <svg viewBox="0 0 760 296" className="w-full h-auto" role="img" aria-label="Diagram: four columns for objective, projection, repair and architecture, showing which pipeline stage each one acts on and the residual violation each one leaves">
+  <svg viewBox="0 0 760 300" className="w-full h-auto" role="img" aria-label="Diagram: four columns — training objective, inference-time projection, post-processing repair and architectural parameterisation — each marked against the one pipeline stage it acts on, with the guarantee it gives, the price it charges, and the residual violation it leaves in exact arithmetic and in cents">
     <g fontFamily="var(--font-mono)" fontSize="9">
 
       <g fill="var(--ink-muted)" fontSize="9.5" letterSpacing="1.3">
@@ -256,25 +255,25 @@ so that the distributional side-effects are visible rather than smeared.
         <path d="M602 44h148" /><path d="M602 104h148" /><path d="M602 134h148" /><path d="M602 164h148" />
       </g>
 
-      <rect x="128" y="33" width="148" height="22" fill="none" stroke="var(--variance)" strokeWidth="1.2" />
-      <text x="202" y="47.5" textAnchor="middle" fontSize="8.5" fill="var(--variance)">+ λ ||Ax - b||^2</text>
+      <rect x="128" y="33" width="148" height="22" fill="none" stroke="var(--rule-strong)" strokeWidth="1.2" />
+      <text x="202" y="47.5" textAnchor="middle" fontSize="8.5" fill="var(--ink-muted)">+ λ ||Ax - b||^2</text>
 
-      <rect x="286" y="93" width="148" height="22" fill="none" stroke="var(--accent)" strokeWidth="1.2" />
-      <text x="360" y="107.5" textAnchor="middle" fontSize="8.5" fill="var(--accent)">x - A^T(AA^T)^-1(Ax - b)</text>
+      <rect x="286" y="93" width="148" height="22" fill="none" stroke="var(--rule-strong)" strokeWidth="1.2" />
+      <text x="360" y="107.5" textAnchor="middle" fontSize="8.5" fill="var(--ink-muted)">x - A^T(AA^T)^-1(Ax - b)</text>
 
-      <rect x="444" y="123" width="148" height="22" fill="none" stroke="var(--pending)" strokeWidth="1.2" />
-      <text x="518" y="137.5" textAnchor="middle" fontSize="8.5" fill="var(--pending)">plug into one line</text>
+      <rect x="444" y="123" width="148" height="22" fill="none" stroke="var(--rule-strong)" strokeWidth="1.2" />
+      <text x="518" y="137.5" textAnchor="middle" fontSize="8.5" fill="var(--ink-muted)">plug into one line</text>
 
-      <rect x="602" y="63" width="148" height="22" fill="none" stroke="var(--accent)" strokeWidth="1.2" />
-      <text x="676" y="77.5" textAnchor="middle" fontSize="8.5" fill="var(--accent)">b · softmax(z)</text>
+      <rect x="602" y="63" width="148" height="22" fill="none" stroke="var(--rule-strong)" strokeWidth="1.2" />
+      <text x="676" y="77.5" textAnchor="middle" fontSize="8.5" fill="var(--ink-muted)">b · softmax(z)</text>
 
       <path d="M0 186h750" stroke="var(--rule-strong)" strokeWidth="1" />
 
       <g fill="var(--ink-faint)" letterSpacing="1.2">
         <text x="18" y="207">GUARANTEES</text>
-        <text x="18" y="241">PRICE</text>
-        <text x="18" y="265">RESIDUAL, REAL</text>
-        <text x="18" y="285">RESIDUAL, CENTS</text>
+        <text x="18" y="238">PRICE</text>
+        <text x="18" y="260">RESIDUAL, REAL</text>
+        <text x="18" y="278">RESIDUAL, CENTS</text>
       </g>
 
       <g fill="var(--ink-muted)" fontSize="8.5">
@@ -289,21 +288,25 @@ so that the distributional side-effects are visible rather than smeared.
       </g>
 
       <g fill="var(--ink-faint)" fontSize="8.5">
-        <text x="128" y="241">correctness</text>
-        <text x="286" y="241">a solve, and distortion</text>
-        <text x="444" y="241">auditability</text>
-        <text x="602" y="241">expressiveness</text>
+        <text x="128" y="238">correctness</text>
+        <text x="286" y="238">a solve, and distortion</text>
+        <text x="444" y="238">auditability</text>
+        <text x="602" y="238">expressiveness</text>
       </g>
 
       <g fontSize="10">
-        <text x="128" y="265" fill="var(--variance)">2.14</text>
-        <text x="286" y="265" fill="var(--accent)">0.000</text>
-        <text x="444" y="265" fill="var(--accent)">0.00</text>
-        <text x="602" y="265" fill="var(--accent)">0.000</text>
-        <text x="128" y="285" fill="var(--variance)">2.14</text>
-        <text x="286" y="285" fill="var(--variance)">+0.01</text>
-        <text x="444" y="285" fill="var(--accent)">0.00</text>
-        <text x="602" y="285" fill="var(--variance)">-0.01</text>
+        <text x="128" y="260" fill="var(--variance)">2.14</text>
+        <text x="286" y="260" fill="var(--ink-muted)">0.000</text>
+        <text x="444" y="260" fill="var(--ink-muted)">0.00</text>
+        <text x="602" y="260" fill="var(--ink-muted)">0.000</text>
+        <text x="128" y="278" fill="var(--variance)">2.14</text>
+        <text x="286" y="278" fill="var(--variance)">+0.01</text>
+        <text x="444" y="278" fill="var(--ink-muted)">0.00</text>
+        <text x="602" y="278" fill="var(--variance)">-0.01</text>
+      </g>
+
+      <g fontSize="8" letterSpacing="0.9" fill="var(--ink-faint)">
+        <text x="18" y="293">COLOURED FIGURES ARE VIOLATIONS THAT SURVIVE THE INTERVENTION</text>
       </g>
     </g>
   </svg>
@@ -324,7 +327,7 @@ arithmetic, and it is exact.
 | BU-5 | 480,100.00 | 480,100.00 | 480,096.54 | 480,082.69 | 480,097.53 |
 | **Sum** | 4,812,600.00 | 4,812,617.31 | 4,812,600.01 | 4,812,600.00 | 4,812,599.99 |
 
-Three things in that table are worth pausing on.
+Four things in that table are worth pausing on.
 
 The projection worked and made the answer worse. Before it, one line was wrong
 by 17.31 and four were exactly right; after it, all five are wrong, and total

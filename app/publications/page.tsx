@@ -212,7 +212,7 @@ export default function PublicationsPage() {
         </header>
 
         <div className="mt-16 grid gap-14 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-20">
-          <div className="max-w-[48rem]">
+          <div className="min-w-0 max-w-[48rem]">
             {SECTIONS.map((s) => {
               const items = byKind(s.kind);
               return (
@@ -239,7 +239,7 @@ export default function PublicationsPage() {
             })}
           </div>
 
-          <aside className="lg:pt-2">
+          <aside className="min-w-0 lg:pt-2">
             <div className="lg:sticky lg:top-24">
               <Kicker className="border-t border-rule-strong pt-3">Indexed at</Kicker>
               <ul className="mt-4 space-y-2.5">

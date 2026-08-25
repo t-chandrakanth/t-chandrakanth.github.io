@@ -147,7 +147,7 @@ export default async function PostPage({
         {/* ---------- body ---------- */}
         <Shell width="wide" className="mt-14">
           <div className="mx-auto grid max-w-[64rem] lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] lg:gap-14">
-            <aside className="mb-12 lg:mb-0">
+            <aside className="min-w-0 mb-12 lg:mb-0">
               <div className="lg:sticky lg:top-24">
                 <ReadingRail sections={post.sections} />
                 {post.quotable ? (
@@ -158,7 +158,7 @@ export default async function PostPage({
               </div>
             </aside>
 
-            <div id="article-body" className="prose max-w-[46rem]">
+            <div id="article-body" className="prose min-w-0 max-w-[46rem]">
               <MDXContent />
             </div>
           </div>

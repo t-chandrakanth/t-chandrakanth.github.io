@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "katex/dist/katex.min.css";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -397,7 +396,8 @@ p, li { text-wrap: pretty; }
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   font-variant-numeric: lining-nums tabular-nums;
-  margin: 2em 0;
+  margin: 0;
+  min-width: 30rem;
 }
 .prose thead th {
   text-align: left;
