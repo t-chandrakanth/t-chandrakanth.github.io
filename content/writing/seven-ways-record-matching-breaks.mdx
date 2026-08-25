@@ -1,6 +1,6 @@
 ---
 title: "Seven Ways Deterministic Record Matching Breaks at Enterprise Scale"
-description: "A matcher that auto-matches 97% of items is not 97% correct. The residual is seven recurring structural classes, and each tolerance rule added to absorb one buys silence rather than accuracy."
+description: "A matcher that clears 97% of items is not 97% right. The residual is seven recurring structural classes, and every tolerance rule added to absorb one buys silence rather than accuracy."
 date: "2026-08-25"
 pillar: "P1"
 order: 3
@@ -13,127 +13,123 @@ tags:
   - rule engines
 ---
 
-The dashboard says 97% auto-match. The number is true. It is also the least
-informative number in the building.
+The control report says 97.0% auto-match. The number is true. It is also the
+least informative number on the page.
 
-Behind it, a month of items that did not match sits in a queue, and the queue
-does not behave like a tail. A tail is the same problem, harder. This is not
-that. Pull fifty items off the top and the same handful of shapes come back over
-and over: an invoice settled in two instalments, one wire covering thirty-one
-invoices net of two credit notes, a receipt three pounds light after a currency
-conversion, an item booked on the last day of a period and settled on the first
-day of the next.
+Underneath it sits a month of items that did not match, and the queue does not
+behave the way a residual is supposed to behave. A residual should be the hard
+tail of the same distribution — the same problem, only worse. Pull fifty items
+off the top of this one and you do not find hard cases. You find the same handful
+of shapes, over and over: an invoice settled in two transfers, one wire covering
+thirty-one invoices net of two credit notes, a receipt three pounds light after
+somebody's bank took a spread, an item booked on the last day of a period and
+settled on the first day of the next.
 
-None of these is a hard case. Every one of them is a case an analyst resolves in
-minutes by reading two screens and applying a rule they could write down on an
-index card. The matcher could not, because the matcher was asked a question that
-none of these items is an answer to.
+Not one of those is difficult. An analyst clears each in minutes by opening two
+screens and applying a rule that would fit on an index card. The engine could
+not, and not because the engine is weak. It could not because it was asked a
+question that none of these items is an answer to.
 
-And the queue is only the visible half. The other half of the failure is inside
-the 97%: items the engine matched confidently to the wrong counterpart, which
-nobody will ever look at, because the entire point of an auto-match is that
-nobody looks at it.
+The queue is also only the visible half of the failure. The other half is inside
+the 97%: items matched confidently to the wrong counterpart, which nobody will
+ever look at, because the entire point of an auto-match is that nobody looks
+at it.
 
-## Why widening the rules does not converge
+## Widening the rules does not converge
 
-The instinct is to add tolerance. A tolerance for the currency case. A subset
-rule for the aggregated case. A special window for period ends. Each of these is
-locally correct, and the aggregate is a rule set that grows faster than the
-problem it covers.
+The instinct is tolerance. A band for the currency case. A subset rule for the
+aggregated case. A wider window at period ends. Each of those is locally correct,
+and the aggregate is a rule set that grows faster than the problem it covers.
 
-Start from what a deterministic matcher actually computes. For a candidate pair
-of records $a$ (a ledger item) and $b$ (a settlement record) it evaluates a
-conjunction
+Start from what the engine computes. For a ledger item $a$ and a settlement
+record $b$ it evaluates a conjunction
 
 $$
 m(a, b) \;=\; \big[k(a) = k(b)\big] \;\wedge\; \big[\lvert v(a) - v(b) \rvert \le \epsilon\big] \;\wedge\; \big[\lvert t(a) - t(b) \rvert \le \delta\big]
 $$
 
-where $k$ is the reference key, $v$ the signed amount, $t$ the date, and each
+where $k$ is the reference key, $v$ the signed amount and $t$ the date, and each
 square bracket is one when the condition inside it holds. It then resolves the
 surviving pairs into an assignment subject to $\sum_b x_{ab} \le 1$ and
 $\sum_a x_{ab} \le 1$: at most one $b$ per $a$, at most one $a$ per $b$.
 
-Widening a tolerance does not make a match more likely to be right. It makes
-more pairs eligible. If settlement records for the counterparty arrive with local
-density $\rho$ per unit of currency per unit of time near $(v(a), t(a))$, the
+Widening a tolerance does not make a match more likely to be right. It makes more
+pairs eligible. If settlement records for the counterparty arrive with local
+density $\rho$ per unit of value per unit of time near $(v(a), t(a))$, the
 expected size of the candidate set for $a$ is
 
 $$
 \mathbb{E}\,\lvert C(a) \rvert \;\approx\; 4\,\epsilon\,\delta\,\rho
 $$
 
-which is the product of the two tolerance widths. Double the amount tolerance
-and double the window, and the candidate set quadruples. The engine still has to
-choose one, and it chooses by whatever secondary ordering it was configured with,
-which is usually date, which is usually arbitrary.
+the product of the two window widths. Double the amount band and double the date
+window and the candidate set quadruples. The engine still has to choose one, and
+it chooses by whatever secondary ordering it was configured with, which is
+usually date, which is usually arbitrary.
 
-The rule set is not converging either. With $c$ recurring classes, and items that
-can present any subset of them at once — a short-paid invoice, netted into an
-aggregated remittance, across a period boundary, in a second currency — a rule
-set that adjudicates class by class has $2^c - 1$ contexts it must be correct in.
-At $c = 7$ that is 127, and the seventh rule is written by someone who has never
+Nor does the rule set converge. With $c$ recurring classes, and items free to
+present several at once — a short-paid invoice, netted into an aggregated
+remittance, across a period boundary, in a second currency — a rule set that
+adjudicates class by class has $2^c - 1$ contexts it must be correct in. At
+$c = 7$ that is 127, and the seventh rule is written by somebody who has never
 read the first.
 
 ## What the matcher assumes without saying so
 
-Three assumptions are doing all the work in that expression, and none of them
-appears anywhere in the configuration.
+Three assumptions do all the work in that expression, and none of them appears
+anywhere in the configuration.
 
-The first is *same value*: the amount on one side equals the amount on the other.
-The second is *same window*: the two events happened close enough together on a
-single measure of time. The third, and the one that is almost never articulated,
-is *one-to-one*: the correspondence between ledger items and settlement records
-is a bijection on the matched subset. One invoice, one payment.
+*Same value*: the amount on one side equals the amount on the other. *Same
+window*: the two events happened close enough together on one shared measure of
+time. *One-to-one*: the correspondence between ledger items and settlement
+records is a bijection on the matched subset — one invoice, one payment.
+Underneath all three sits a fourth, *stable key*, which is the only one anybody
+recognises as an assumption, and therefore the only one with a remediation
+already in the product.
 
 Enterprise settlement is not a bijection. It is a many-to-many correspondence
-between sets, sometimes with sign changes, sometimes spanning a reporting
-boundary, and the keys that identify its members are rewritten in transit. Stated
-properly, the object being recovered is a pair of subsets
+between sets, sometimes with sign changes, sometimes straddling a reporting
+boundary, whose members are re-keyed in transit. Written honestly, the object
+being recovered is a pair of subsets
 
 $$
 A \subseteq \mathcal{A}, \quad B \subseteq \mathcal{B} \quad \text{with} \quad \Big\lvert \sum_{a \in A} v(a) \;-\; \sum_{b \in B} v(b) \Big\rvert \;\le\; \epsilon
 $$
 
-which is subset-sum wearing a business suit, one of Karp's original twenty-one
-NP-complete problems. A rule engine cannot approximate its way there by adding
-tolerances, because tolerance is a parameter of the wrong model.
+which is subset-sum in a business suit, one of Karp's original twenty-one
+NP-complete problems. Tolerance is a parameter of the wrong model, so no setting
+of it arrives at the right one.
 
 <KeyLine>The residual is not the hard tail of the same problem. It is seven different problems the matcher was never posed.</KeyLine>
-
-The seven classes below are not seven bugs. They are the seven ways enterprise
-settlement routinely violates one of three assumptions the matcher was never told
-it was making.
 
 ## The seven classes
 
 A matcher applies its predicate in a fixed order: block on the reference key to
-build a candidate set, compare amounts, compare dates, then resolve what survives
-into a one-to-one assignment. Four gates. An item is reported at the first gate
-that rejects it, and that gate is frequently not the assumption that actually
-broke.
+build a candidate set, compare amounts, compare dates, resolve the survivors
+one-to-one. Four gates. An item is reported at the first gate that rejects it,
+and that gate is frequently not the assumption that actually broke.
 
-That gap is why the tolerance always gets attached to the wrong place. A split
-settlement is a cardinality failure reported as an amount mismatch, so an amount
-tolerance is what gets added, and an amount tolerance does not fix cardinality.
-It only widens $\epsilon$ until the wrong things match.
+That gap is why the tolerance always ends up attached to the wrong parameter. A
+split settlement is a cardinality failure reported as an amount mismatch, so an
+amount tolerance is what gets added, and an amount tolerance cannot fix
+cardinality. It only widens $\epsilon$ until the wrong things match.
 
 Every amount in the seven sketches below is invented.
 
 ### 1. Split settlement
 
 An invoice for 88,400.00 is settled by two transfers: 60,000.00 on the 14th and
-28,400.00 on the 22nd. Both carry the invoice reference. Both are perfectly
-legible to a human.
+28,400.00 on the 22nd. Both carry the invoice reference. Both are obvious to
+anyone who looks at them.
 
 The key gate passes, because the reference survived. The value gate rejects both
 transfers, because neither equals the invoice. The engine emits three exceptions
-for one event: two unapplied receipts and one invoice still open at 88,400.00.
-Nobody reading the queue can see that they are the same item, because the queue
-is a list of records, not a list of events.
+for one event: two unapplied receipts and one invoice still open at its full face
+value. Nobody reading the queue can see that the three are the same thing,
+because a queue is a list of records, not a list of events.
 
 The assumption that broke is one-to-one. The gate that fired was value. Widening
-$\epsilon$ far enough to cover a 28,400.00 gap is not a tolerance, it is an
+$\epsilon$ far enough to swallow a 28,400.00 gap is not a tolerance but an
 abdication, so nobody does it, and the class stays in the queue permanently.
 
 ### 2. Aggregated remittance
@@ -141,97 +137,100 @@ abdication, so nobody does it, and the class stays in the queue permanently.
 A single wire of 412,905.66 settles thirty-one invoices, net of two credit notes,
 from a counterparty that pays on a fortnightly cycle. The remittance advice
 arrives separately, as a spreadsheet attached to an email, in a layout the sender
-changes without notice. Sometimes it does not arrive.
+changes without telling anyone. Sometimes it does not arrive.
 
-The wire has no usable key: the reference field carries the payer's own batch
-number. The value gate rejects it against every open invoice on the account. What
-the engine reports is one exception. What is actually unresolved is thirty-three.
+The reference field on the wire carries the payer's own batch number, so the key
+gate has nothing usable to block on and the engine falls back to the account.
+Every open item on the account becomes a candidate, and the value gate rejects
+all of them. One exception is reported. Thirty-three items are unresolved.
 
-Some engines add a subset rule that looks for the combination of open items
-summing to the wire. With four hundred open items on the account this is
-subset-sum, and engines that attempt it either cap the search depth, which misses
-the true combination, or accept the first combination within tolerance, which
-finds a false one.
+Some engines answer with a subset rule that hunts for the combination of open
+items summing to the wire. On an account with four hundred open items that is
+subset-sum, and an engine attempting it must either cap the search depth, which
+misses the true combination, or accept the first combination inside tolerance,
+which finds a false one and closes it.
 
 ### 3. Currency conversion and rounding drift
 
 An invoice is raised for 47,318.20 in the counterparty's currency. The payer
-converts at their own rate on their own value date, the receiving bank applies a
+converts at their own rate on their own value date, the receiving bank takes a
 spread, and the sub-ledger was revalued at the month-end rate. The receipt lands
 3.41 away from the carrying amount. The same class covers allocation remainders:
 a 100.00 charge split three ways is 33.33, 33.33 and 33.34, and the third one
 never matches anything.
 
 Here the violated assumption and the firing gate agree. Value equality is
-genuinely false, and the value gate says so. This is the only class of the seven
+genuinely false, and the value gate says so. This is the only one of the seven
 where a tolerance is the correct instrument.
 
 It is also the class that poisons the other six. Set $\epsilon$ to 5.00 to absorb
-the drift and every open item within 5.00 of the receipt becomes a candidate. On
-a high-volume account that is not one item.
+the drift and every open item within 5.00 of a receipt becomes a candidate. On a
+high-volume account that is never one item.
 
 ### 4. Timing across a period boundary
 
 A payment is initiated on the 31st, value-dated the 1st, and posted to the bank
-statement on the 2nd. The corresponding ledger item was booked in the period that
-closed on the 31st. Nothing is wrong with any of these dates. They are four
-different and individually correct answers to the question *when*.
+statement on the 2nd. The ledger item it settles was booked in the period that
+closed on the 31st. Nothing is wrong with any of those dates. They are four
+correct answers to the question *when*, from four systems that were each asked a
+slightly different question.
 
 The window gate rejects the pair at $\delta = 3$ days and accepts it at
-$\delta = 10$. That looks like a free fix and is not, because a ten-day window at
-a period boundary reaches into a period that is already closed, already reported
-and already signed. The tolerance that repairs the match breaks the accounting,
-and it does so quietly, because a matched item generates no exception and nobody
-re-opens a closed period to go and check.
+$\delta = 10$. That looks like a free fix. It is not: a ten-day window at a
+period boundary reaches back into a period that is closed, reported and signed.
+The tolerance that repairs the match breaks the accounting, and it does so
+quietly, because a matched item raises no exception and nobody reopens a closed
+period to check.
 
 ### 5. Reference-field mutation
 
 An invoice leaves the billing system as `INV-2026-0088412`. The payment file
 format truncates the reference to twelve characters. The counterparty's payables
-system substitutes their own purchase-order number. What arrives in the bank
+system substitutes its own purchase-order number. What arrives in the bank
 statement narrative is `PO 44120/88412 PART`.
 
-This class fails differently from the others. It does not produce a bad
-candidate, it produces *no* candidate, because the key gate is also the blocking
-step. The symptom is a null result, which is why this class is systematically
-over-represented in queues triaged by exception message rather than by cause.
+This class fails differently from the rest. It does not produce a bad candidate,
+it produces *no* candidate, because the key gate is also the blocking step: the
+item never enters a comparison at all. The symptom is a null result, which is why
+the class is systematically over-represented in queues triaged by exception
+message rather than by cause.
 
-Approximate string matching recovers a large share of it, and that recovery is
-precisely what the record-linkage literature has been about since Newcombe's work
-on automatic linkage of vital records in 1959 and the Fellegi and Sunter
-probabilistic framework in 1969. It also introduces the failure that literature
-spends most of its time on: a confident match to a neighbouring reference.
+Approximate string comparison recovers much of it — which is what the
+record-linkage literature has been about since Newcombe's automatic linkage of
+vital records in 1959 and the Fellegi and Sunter probabilistic framework in 1969.
+It also introduces the failure that literature spends most of its time on: a
+confident match to a neighbouring reference.
 
 ### 6. Partial settlement and short pay
 
 An invoice for 12,600.00 is paid at 12,180.00. The 420.00 difference is not
 drift. It is a deduction: a damaged-goods claim, an unearned early-payment
 discount, a disputed freight charge, a promotional allowance the counterparty has
-decided to take.
+decided to take without asking.
 
-Structurally this is class 3. The value gate rejects it, the assumption violated
-is value equality, and the two shapes are indistinguishable to the engine. The
-difference is intent, and intent is not a field.
+Structurally this is class 3. The value gate rejects it, value equality is what
+broke, and the two shapes are indistinguishable to the engine. The difference
+between them is intent, and intent is not a field.
 
-That is why this is a control problem and not a matching problem. Any amount
+Which is why this is a control problem rather than a matching problem. Any amount
 tolerance wide enough to absorb currency drift absorbs small deductions too, and
-absorbs them silently. The item closes, the receivable clears, and the write-off
+absorbs them silently. The item closes, the receivable clears, and a write-off
 never reaches anyone with the authority to approve it. The engine has not made a
 matching error. It has made a policy decision on nobody's behalf.
 
 ### 7. Reversal and rebook
 
-An item is posted, reversed the following day, and reposted with corrected coding
+An item is posted, reversed the next day, and reposted with corrected coding
 under a new document number. Three records, one economic event, and a net of zero
 across the first two.
 
-The payment, when it arrives, references the original document, which is now
-closed. The key gate rejects it. But the violation underneath is arity: three
-ledger records correspond to one settlement, and the matcher has no
-representation for that at all.
+The payment, when it arrives, quotes the original document, which is now closed.
+The key gate rejects it. But the violation underneath is arity: three ledger
+records correspond to one settlement, and the engine has no representation for
+that at all.
 
 The degradation here is the worst in the taxonomy. If the rebook carries the same
-amount as the original, which it usually does because only the coding changed,
+amount as the original — and it usually does, because only the coding changed —
 then the reversal is a perfect amount-and-date match for some *other* open item
 of the same value. The engine can close two items, both wrongly, and because the
 pair nets to zero every control total still agrees. A balance identity is a
@@ -242,13 +241,16 @@ necessary condition and not a sufficient one, which is a
 
 <Synthetic />
 
-The population below is invented. It is internally consistent — counts sum,
-minutes are counts multiplied by a median handling time — and it is calibrated
-against nothing. Treat its shape as a hypothesis about where effort concentrates,
-not as a measurement.
+The population below is invented. It is internally consistent — the counts sum,
+and the minutes are counts multiplied by a median handling time — and it is
+calibrated against nothing at all. Treat its shape as a hypothesis about where
+effort concentrates, not as a measurement.
 
 One monthly cycle on a mid-sized receivables book: 240,000 items presented to the
-matcher, 232,800 auto-matched, 7,200 exceptions. The headline is 97.0%.
+matcher, 232,800 auto-matched, 7,200 exceptions. The headline is 97.0%. The same
+seven shapes turn up on bank, intercompany and custody reconciliations with
+different weights on each class, which is the part of the taxonomy I would defend
+hardest.
 
 | # | Class | Items | Share of items | Median min | Share of minutes |
 |---|---|---|---|---|---|
@@ -261,41 +263,42 @@ matcher, 232,800 auto-matched, 7,200 exceptions. The headline is 97.0%.
 | 7 | Reversal and rebook | 265 | 3.7% | 31 | 12.1% |
 | — | Unclassified | 95 | 1.3% | 45 | 6.3% |
 
-That is 7,200 items and 67,710 analyst minutes, or 1,128 hours. Over a
+That is 7,200 items and 67,710 analyst minutes, or 1,128 hours. Across a
 twenty-one day cycle it is a little over seven full-time analysts, and every one
-of them is working the three percent.
+of them is working the three percent. Two classes alone — aggregated remittance
+and reference-field mutation — are 22.2% of the items and 47.4% of the minutes.
 
 <Figure
   n={1}
-  caption="Each class enters the matcher on the left and travels through the four gates in the order the engine applies them. The ring marks the gate that actually rejects the item; the cross marks the assumption that was violated. In classes 1, 2 and 7 the ring sits upstream of the cross — the engine reports an amount or a key failure when the real break is arity, which is why the remediation is always a tolerance on the wrong parameter. The right-hand bars are each class's share of exception items against its share of analyst minutes; the two orderings are close to inverted."
+  caption="Each class enters the matcher on the left and travels through the four gates in the order the engine applies them. A ring marks the gate that reports the failure; a cross marks the assumption that was actually violated. For split settlement, aggregated remittance and reversal-and-rebook the ring sits upstream of the cross — the engine reports a value or key failure when the real break is arity — which is why the remediation always lands on the wrong parameter. The marker at right says what widening a tolerance does to each class: absorb it correctly, in exactly one case; fail to reach it, in one more; or convert it into a silent wrong match, in the remaining five. The paired bars set each class's share of exception items against its share of analyst minutes, and the two orderings are close to inverted."
 >
 
-  <svg viewBox="0 0 760 300" className="w-full h-auto" role="img" aria-label="Diagram: seven exception classes shown as lanes running through a matcher's four gates — identity, value, window and cardinality — marking for each class which gate reports the failure, which structural assumption was actually violated, whether the item lands in the exception queue or becomes a silent wrong match, and its share of items versus its share of analyst minutes.">
+  <svg viewBox="0 0 760 300" className="w-full h-auto" role="img" aria-label="Diagram: seven exception classes drawn as lanes running left to right through the four gates a deterministic matcher applies in order — key, value, window and one-to-one resolution. On each lane a ring marks the gate that reports the failure and a cross marks the assumption that was actually violated; for split settlement, aggregated remittance and reversal-and-rebook the ring sits upstream of the cross. A marker per class shows whether widening a tolerance cannot reach it, corrects it, or silently converts it into a wrong match, and paired bars compare each class's share of exception items with its share of analyst minutes.">
     <g fontFamily="var(--font-mono)">
 
       <g fontSize="8.5" letterSpacing="1.4" fill="var(--ink-faint)">
-        <text x="8" y="20">EXCEPTION CLASS</text>
-        <text x="180" y="20">MATCHER PREDICATE, IN APPLICATION ORDER</text>
-        <text x="614" y="20">MODE</text>
-        <text x="662" y="20">SHARE</text>
+        <text x="8" y="16">EXCEPTION CLASS</text>
+        <text x="196" y="16">GATES, IN APPLICATION ORDER</text>
+        <text x="568" y="16">TOL</text>
+        <text x="602" y="16">SHARE OF ITEMS / MINUTES</text>
       </g>
 
-      <g fontSize="9" textAnchor="middle" letterSpacing="1.2">
-        <text x="250" y="38" fill="var(--ink-muted)">IDENTITY</text>
-        <text x="352" y="38" fill="var(--ink-muted)">VALUE</text>
-        <text x="454" y="38" fill="var(--ink-muted)">WINDOW</text>
-        <text x="556" y="38" fill="var(--ink-muted)">CARDINALITY</text>
+      <g fontSize="9" textAnchor="middle" letterSpacing="1.2" fill="var(--ink-muted)">
+        <text x="250" y="40">KEY</text>
+        <text x="342" y="40">VALUE</text>
+        <text x="434" y="40">WINDOW</text>
+        <text x="526" y="40">ARITY</text>
       </g>
-      <g fontSize="8.5" textAnchor="middle" letterSpacing="0.6" fill="var(--ink-faint)">
-        <text x="250" y="50">k(a) = k(b)</text>
-        <text x="352" y="50">v(a) = v(b)</text>
-        <text x="454" y="50">dt WITHIN d</text>
-        <text x="556" y="50">ONE TO ONE</text>
+      <g fontSize="8" textAnchor="middle" letterSpacing="0.5" fill="var(--ink-faint)">
+        <text x="250" y="51">k(a) = k(b)</text>
+        <text x="342" y="51">dv WITHIN e</text>
+        <text x="434" y="51">dt WITHIN d</text>
+        <text x="526" y="51">ONE TO ONE</text>
       </g>
 
-      <g stroke="var(--rule)" strokeWidth="1" strokeDasharray="2 4">
-        <path d="M250 56V240" /><path d="M352 56V240" />
-        <path d="M454 56V240" /><path d="M556 56V240" />
+      <g stroke="var(--rule)" strokeWidth="1" strokeDasharray="2 4" fill="none">
+        <path d="M250 58V236" /><path d="M342 58V236" />
+        <path d="M434 58V236" /><path d="M526 58V236" />
       </g>
 
       <g fill="var(--ink-muted)" strokeWidth="1">
@@ -303,131 +306,137 @@ of them is working the three percent.
         <g>
           <text x="8" y="79.5" fontSize="8.5" fill="var(--ink-faint)">1</text>
           <circle cx="30" cy="76" r="2.6" />
-          <g stroke="var(--rule-strong)" fill="none"><path d="M32 75.4 50 71" /><path d="M32 76.6 50 81" /></g>
+          <g stroke="var(--rule-strong)" fill="none"><path d="M33 75.2 49 71" /><path d="M33 76.8 49 81" /></g>
           <circle cx="52" cy="71" r="2.6" /><circle cx="52" cy="81" r="2.6" />
           <text x="62" y="79.5" fontSize="9">SPLIT SETTLEMENT</text>
-          <path d="M180 76H344" stroke="var(--rule-strong)" fill="none" />
-          <path d="M360 76H548" stroke="var(--variance)" strokeDasharray="2 3" opacity="0.55" fill="none" />
-          <path d="M564 76H608" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
-          <circle cx="352" cy="76" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
-          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M552.5 72.5 559.5 79.5" /><path d="M559.5 72.5 552.5 79.5" /></g>
-          <rect x="618" y="72" width="8" height="8" fill="var(--pending)" />
-          <rect x="640" y="70" width="63" height="3.5" fill="var(--rule-strong)" />
-          <rect x="640" y="77.5" width="40" height="3.5" fill="var(--accent)" />
+          <path d="M196 76H334" stroke="var(--rule-strong)" fill="none" />
+          <path d="M350 76H518" stroke="var(--variance)" strokeDasharray="2 3" opacity="0.55" fill="none" />
+          <path d="M534 76H570" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
+          <circle cx="342" cy="76" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
+          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M522.5 72.5 529.5 79.5" /><path d="M529.5 72.5 522.5 79.5" /></g>
+          <rect x="580" y="72" width="8" height="8" fill="var(--pending)" />
+          <rect x="602" y="70" width="82" height="3.5" fill="var(--rule-strong)" />
+          <rect x="602" y="77.5" width="52" height="3.5" fill="var(--accent)" />
         </g>
 
         <g>
           <text x="8" y="103.5" fontSize="8.5" fill="var(--ink-faint)">2</text>
-          <circle cx="30" cy="95" r="2.6" /><circle cx="30" cy="105" r="2.6" />
-          <g stroke="var(--rule-strong)" fill="none"><path d="M32 95.6 50 100" /><path d="M32 104.4 50 100" /></g>
+          <circle cx="30" cy="94" r="2.4" /><circle cx="30" cy="100" r="2.4" /><circle cx="30" cy="106" r="2.4" />
+          <g stroke="var(--rule-strong)" fill="none"><path d="M33 94.8 49 99.4" /><path d="M33 100H49" /><path d="M33 105.2 49 100.6" /></g>
           <circle cx="52" cy="100" r="2.6" />
           <text x="62" y="103.5" fontSize="9">AGGREGATED REMIT</text>
-          <path d="M180 100H344" stroke="var(--rule-strong)" fill="none" />
-          <path d="M360 100H548" stroke="var(--variance)" strokeDasharray="2 3" opacity="0.55" fill="none" />
-          <path d="M564 100H608" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
-          <circle cx="352" cy="100" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
-          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M552.5 96.5 559.5 103.5" /><path d="M559.5 96.5 552.5 103.5" /></g>
-          <rect x="618" y="96" width="8" height="8" fill="var(--pending)" />
-          <rect x="640" y="94" width="46" height="3.5" fill="var(--rule-strong)" />
-          <rect x="640" y="101.5" width="107" height="3.5" fill="var(--accent)" />
+          <path d="M196 100H334" stroke="var(--rule-strong)" fill="none" />
+          <path d="M350 100H518" stroke="var(--variance)" strokeDasharray="2 3" opacity="0.55" fill="none" />
+          <path d="M534 100H570" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
+          <circle cx="342" cy="100" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
+          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M522.5 96.5 529.5 103.5" /><path d="M529.5 96.5 522.5 103.5" /></g>
+          <path d="M584 95.5 589.5 104.5 578.5 104.5Z" fill="var(--variance)" />
+          <rect x="602" y="94" width="60" height="3.5" fill="var(--rule-strong)" />
+          <rect x="602" y="101.5" width="140" height="3.5" fill="var(--accent)" />
         </g>
 
         <g>
           <text x="8" y="127.5" fontSize="8.5" fill="var(--ink-faint)">3</text>
           <circle cx="30" cy="124" r="2.6" /><circle cx="52" cy="124" r="2.6" />
-          <g stroke="var(--rule-strong)" fill="none"><path d="M33 124H39" /><path d="M43 124H49" /></g>
-          <text x="62" y="127.5" fontSize="9">FX / ROUNDING</text>
-          <path d="M180 124H344" stroke="var(--rule-strong)" fill="none" />
-          <path d="M360 124H608" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
-          <circle cx="352" cy="124" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
-          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M348.5 120.5 355.5 127.5" /><path d="M355.5 120.5 348.5 127.5" /></g>
-          <path d="M623 119 628.5 128 617.5 128Z" fill="var(--variance)" />
-          <rect x="640" y="118" width="99" height="3.5" fill="var(--rule-strong)" />
-          <rect x="640" y="125.5" width="21" height="3.5" fill="var(--accent)" />
+          <g stroke="var(--rule-strong)" fill="none"><path d="M33 124H38" /><path d="M44 124H49" /></g>
+          <circle cx="41" cy="124" r="1.6" fill="var(--variance)" stroke="none" />
+          <text x="62" y="127.5" fontSize="9">FX / ROUNDING DRIFT</text>
+          <path d="M196 124H334" stroke="var(--rule-strong)" fill="none" />
+          <path d="M350 124H570" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
+          <circle cx="342" cy="124" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
+          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M338.5 120.5 345.5 127.5" /><path d="M345.5 120.5 338.5 127.5" /></g>
+          <circle cx="584" cy="124" r="4" fill="var(--accent)" stroke="none" />
+          <rect x="602" y="118" width="129" height="3.5" fill="var(--rule-strong)" />
+          <rect x="602" y="125.5" width="27" height="3.5" fill="var(--accent)" />
         </g>
 
         <g>
           <text x="8" y="151.5" fontSize="8.5" fill="var(--ink-faint)">4</text>
           <circle cx="30" cy="148" r="2.6" /><circle cx="52" cy="148" r="2.6" />
           <path d="M33 148H49" stroke="var(--rule-strong)" fill="none" />
-          <path d="M41 141V155" stroke="var(--rule-strong)" strokeDasharray="2 2" fill="none" />
+          <path d="M41 141V155" stroke="var(--variance)" strokeDasharray="2 2" fill="none" />
           <text x="62" y="151.5" fontSize="9">PERIOD BOUNDARY</text>
-          <path d="M180 148H446" stroke="var(--rule-strong)" fill="none" />
-          <path d="M462 148H608" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
-          <circle cx="454" cy="148" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
-          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M450.5 144.5 457.5 151.5" /><path d="M457.5 144.5 450.5 151.5" /></g>
-          <path d="M623 143 628.5 152 617.5 152Z" fill="var(--variance)" />
-          <rect x="640" y="142" width="49" height="3.5" fill="var(--rule-strong)" />
-          <rect x="640" y="149.5" width="21" height="3.5" fill="var(--accent)" />
+          <path d="M196 148H426" stroke="var(--rule-strong)" fill="none" />
+          <path d="M442 148H570" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
+          <circle cx="434" cy="148" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
+          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M430.5 144.5 437.5 151.5" /><path d="M437.5 144.5 430.5 151.5" /></g>
+          <path d="M584 143.5 589.5 152.5 578.5 152.5Z" fill="var(--variance)" />
+          <rect x="602" y="142" width="64" height="3.5" fill="var(--rule-strong)" />
+          <rect x="602" y="149.5" width="27" height="3.5" fill="var(--accent)" />
         </g>
 
         <g>
           <text x="8" y="175.5" fontSize="8.5" fill="var(--ink-faint)">5</text>
           <circle cx="30" cy="172" r="2.6" />
-          <circle cx="52" cy="172" r="2.6" fill="none" stroke="var(--ink-faint)" />
           <path d="M33 172H49" stroke="var(--rule-strong)" strokeDasharray="2 2" fill="none" />
-          <text x="62" y="175.5" fontSize="9">REF MUTATION</text>
-          <path d="M180 172H242" stroke="var(--rule-strong)" fill="none" />
-          <path d="M258 172H608" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
+          <circle cx="52" cy="172" r="2.6" fill="none" stroke="var(--variance)" strokeWidth="1" />
+          <text x="62" y="175.5" fontSize="9">REFERENCE MUTATION</text>
+          <path d="M196 172H242" stroke="var(--rule-strong)" fill="none" />
+          <path d="M258 172H570" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
           <circle cx="250" cy="172" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
           <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M246.5 168.5 253.5 175.5" /><path d="M253.5 168.5 246.5 175.5" /></g>
-          <path d="M623 167 628.5 176 617.5 176Z" fill="var(--variance)" />
-          <rect x="640" y="166" width="29" height="3.5" fill="var(--rule-strong)" />
-          <rect x="640" y="173.5" width="53" height="3.5" fill="var(--accent)" />
+          <path d="M584 167.5 589.5 176.5 578.5 176.5Z" fill="var(--variance)" />
+          <rect x="602" y="166" width="38" height="3.5" fill="var(--rule-strong)" />
+          <rect x="602" y="173.5" width="69" height="3.5" fill="var(--accent)" />
         </g>
 
         <g>
           <text x="8" y="199.5" fontSize="8.5" fill="var(--ink-faint)">6</text>
           <circle cx="30" cy="196" r="2.6" />
           <path d="M33 196H49" stroke="var(--rule-strong)" fill="none" />
-          <circle cx="52" cy="196" r="2" />
-          <circle cx="52" cy="203" r="1.9" fill="none" stroke="var(--variance)" />
-          <text x="62" y="199.5" fontSize="9">SHORT PAY</text>
-          <path d="M180 196H344" stroke="var(--rule-strong)" fill="none" />
-          <path d="M360 196H608" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
-          <circle cx="352" cy="196" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
-          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M348.5 192.5 355.5 199.5" /><path d="M355.5 192.5 348.5 199.5" /></g>
-          <path d="M623 191 628.5 200 617.5 200Z" fill="var(--variance)" />
-          <rect x="640" y="190" width="35" height="3.5" fill="var(--rule-strong)" />
-          <rect x="640" y="197.5" width="33" height="3.5" fill="var(--accent)" />
+          <circle cx="52" cy="193.5" r="2.2" />
+          <circle cx="52" cy="200.5" r="1.8" fill="none" stroke="var(--variance)" strokeWidth="1" />
+          <text x="62" y="199.5" fontSize="9">PARTIAL / SHORT PAY</text>
+          <path d="M196 196H334" stroke="var(--rule-strong)" fill="none" />
+          <path d="M350 196H570" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
+          <circle cx="342" cy="196" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
+          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M338.5 192.5 345.5 199.5" /><path d="M345.5 192.5 338.5 199.5" /></g>
+          <path d="M584 191.5 589.5 200.5 578.5 200.5Z" fill="var(--variance)" />
+          <rect x="602" y="190" width="45" height="3.5" fill="var(--rule-strong)" />
+          <rect x="602" y="197.5" width="43" height="3.5" fill="var(--accent)" />
         </g>
 
         <g>
           <text x="8" y="223.5" fontSize="8.5" fill="var(--ink-faint)">7</text>
-          <circle cx="30" cy="220" r="2.6" />
-          <g stroke="var(--rule-strong)" fill="none"><path d="M32 219.2 50 214" /><path d="M33 220H49" /><path d="M32 220.8 50 226" /></g>
-          <circle cx="52" cy="214" r="2.6" /><circle cx="52" cy="220" r="2.6" /><circle cx="52" cy="226" r="2.6" />
+          <circle cx="30" cy="214" r="2.4" />
+          <circle cx="30" cy="220" r="2.4" fill="none" stroke="var(--variance)" strokeWidth="1" />
+          <circle cx="30" cy="226" r="2.4" />
+          <g stroke="var(--rule-strong)" fill="none"><path d="M33 214.8 49 219.4" /><path d="M33 225.2 49 220.6" /></g>
+          <circle cx="52" cy="220" r="2.6" />
           <text x="62" y="223.5" fontSize="9">REVERSAL / REBOOK</text>
-          <path d="M180 220H242" stroke="var(--rule-strong)" fill="none" />
-          <path d="M258 220H548" stroke="var(--variance)" strokeDasharray="2 3" opacity="0.55" fill="none" />
-          <path d="M564 220H608" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
+          <path d="M196 220H242" stroke="var(--rule-strong)" fill="none" />
+          <path d="M258 220H518" stroke="var(--variance)" strokeDasharray="2 3" opacity="0.55" fill="none" />
+          <path d="M534 220H570" stroke="var(--ink-faint)" strokeDasharray="1 4" opacity="0.4" fill="none" />
           <circle cx="250" cy="220" r="6" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
-          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M552.5 216.5 559.5 223.5" /><path d="M559.5 216.5 552.5 223.5" /></g>
-          <rect x="618" y="216" width="8" height="8" fill="var(--pending)" />
-          <rect x="640" y="214" width="12" height="3.5" fill="var(--rule-strong)" />
-          <rect x="640" y="221.5" width="41" height="3.5" fill="var(--accent)" />
+          <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M522.5 216.5 529.5 223.5" /><path d="M529.5 216.5 522.5 223.5" /></g>
+          <path d="M584 215.5 589.5 224.5 578.5 224.5Z" fill="var(--variance)" />
+          <rect x="602" y="214" width="16" height="3.5" fill="var(--rule-strong)" />
+          <rect x="602" y="221.5" width="53" height="3.5" fill="var(--accent)" />
         </g>
 
       </g>
 
       <path d="M8 248H752" stroke="var(--rule)" strokeWidth="1" />
 
-      <g fontSize="8.5" letterSpacing="1" fill="var(--ink-faint)">
-        <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M26 258.5 33 265.5" /><path d="M33 258.5 26 265.5" /></g>
-        <text x="42" y="265">ASSUMPTION VIOLATED</text>
-        <circle cx="180" cy="262" r="5" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
-        <text x="190" y="265">GATE THAT FIRES</text>
-        <rect x="286" y="258" width="8" height="8" fill="var(--pending)" />
-        <text x="300" y="265">QUEUED</text>
-        <path d="M356 257 361.5 266 350.5 266Z" fill="var(--variance)" />
-        <text x="368" y="265">SILENT WRONG MATCH</text>
-        <rect x="482" y="260.5" width="10" height="3.5" fill="var(--rule-strong)" />
-        <text x="498" y="265">SHARE OF ITEMS</text>
-        <rect x="584" y="260.5" width="10" height="3.5" fill="var(--accent)" />
-        <text x="600" y="265">SHARE OF ANALYST MINUTES</text>
+      <g fontSize="8.5" letterSpacing="0.8" fill="var(--ink-faint)">
+        <circle cx="14" cy="261" r="5" fill="none" stroke="var(--pending)" strokeWidth="1.4" />
+        <text x="24" y="264">GATE THAT REPORTS</text>
+        <g stroke="var(--variance)" strokeWidth="1.5" strokeLinecap="round" fill="none"><path d="M146.5 257.5 153.5 264.5" /><path d="M153.5 257.5 146.5 264.5" /></g>
+        <text x="162" y="264">ASSUMPTION VIOLATED</text>
+        <rect x="300" y="259.5" width="10" height="3.5" fill="var(--rule-strong)" />
+        <text x="316" y="264">SHARE OF EXCEPTION ITEMS</text>
+        <rect x="482" y="259.5" width="10" height="3.5" fill="var(--accent)" />
+        <text x="498" y="264">SHARE OF ANALYST MINUTES</text>
       </g>
 
-      <text x="26" y="285" fontSize="8.5" letterSpacing="1" fill="var(--accent)">IN CLASSES 1, 2 AND 7 THE GATE THAT FIRES SITS UPSTREAM OF THE ASSUMPTION THAT BROKE</text>
+      <g fontSize="8.5" letterSpacing="0.8" fill="var(--ink-faint)">
+        <rect x="10" y="275" width="8" height="8" fill="var(--pending)" />
+        <text x="28" y="282">TOLERANCE CANNOT REACH IT</text>
+        <circle cx="204" cy="279" r="4" fill="var(--accent)" />
+        <text x="214" y="282">TOLERANCE IS THE CORRECT FIX</text>
+        <path d="M406 274.5 411.5 283.5 400.5 283.5Z" fill="var(--variance)" />
+        <text x="418" y="282">TOLERANCE SILENCES IT AS A WRONG MATCH</text>
+      </g>
 
     </g>
   </svg>
@@ -442,13 +451,13 @@ queue and 31.8% of the effort. A dashboard that ranks classes by queue depth
 ranks them almost exactly backwards, and an automation programme that follows the
 dashboard spends its budget on the cheapest class in the book.
 
-The second is what the table does not contain. Draw 1,000 items at random from
-the 232,800 that auto-matched and have an analyst re-derive each one from source.
+The second is what the table cannot contain. Draw 1,000 items at random from the
+232,800 that auto-matched and have an analyst re-derive each one from source.
 Suppose six come back wrong. That is a point estimate of 0.6%, with a 95%
 interval of roughly 0.2% to 1.3%, and 0.6% of 232,800 is about 1,400 items —
-more than four of the seven exception classes, in a population that by
-construction nobody inspects. There is no queue for these. The only way to see
-them is to go looking, which is the
+larger than six of the seven exception classes taken individually, in a
+population that by construction nobody inspects. There is no queue for these. The
+only way to see them is to go looking, which is the
 [evaluation-without-ground-truth problem](/writing/evaluating-agents-without-ground-truth)
 wearing different clothes.
 
@@ -462,25 +471,26 @@ boundaries blur — a short-paid invoice, netted into an aggregated remittance,
 across a period boundary is three classes and one item — and until that
 assignment is automatic the taxonomy is a way of thinking rather than a control.
 
-The classes are not mine. Record linkage has a sixty-year literature: Newcombe's
-automatic linkage of vital records, the Fellegi and Sunter probabilistic
-framework, Winkler's string comparators and expectation-maximisation estimation
-at the US Census Bureau, Christen's synthesis of blocking and entity resolution.
-The many-to-many amount problem is subset-sum, and one-to-one resolution is the
-assignment problem Kuhn solved in 1955. What I claim is the framing: that these
-seven failure modes are violations of exactly three unstated assumptions, and
-that the gate reporting a failure is often not the assumption that broke.
+The classes are not mine, and neither is most of the machinery. Record linkage
+has a sixty-year literature: Newcombe on automatic linkage of vital records, the
+Fellegi and Sunter probabilistic model, Winkler's string comparators and
+expectation-maximisation estimation at the US Census Bureau, Christen's synthesis
+of blocking and entity resolution. The many-to-many amount problem is subset-sum,
+and one-to-one resolution is the assignment problem Kuhn solved in 1955. What I
+claim is the framing: that these seven are violations of a small fixed set of
+unstated assumptions, and that the gate reporting a failure is usually not the
+assumption that broke.
 
-The numbers are the weakest part of the piece. The item counts are plausible; the
+The numbers are the weakest part. The item counts are plausible; the
 analyst-minute distribution is a guess, and it is the guess the whole argument
 about misallocated effort rests on.
 
 ## Where this goes
 
-The next piece in this pillar takes the reframe seriously. If the object being
-recovered is a correspondence between subsets, across systems and across time,
-then reconciliation is
-[a graph problem](/writing/reconciliation-is-a-graph-problem), and the seven
+The next piece in this pillar takes the reframe at its word. If what the engine
+should be recovering is a correspondence between subsets, across systems and
+across time, then reconciliation is
+[a graph problem](/writing/reconciliation-is-a-graph-problem) and the seven
 classes are seven edge types rather than seven exceptions. The rest of the pillar
 sits on the [research page](/research).
 
