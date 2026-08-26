@@ -2,19 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Kicker, SectionHead, Shell, Stamp } from "@/components/primitives";
 import { pillars } from "@/content/pillars";
-import { projects, statusMeta, thesis } from "@/content/research";
+import { projects, projectsByPillar, statusMeta, thesis } from "@/content/research";
 import { postsByPillar } from "@/lib/posts";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Research programme",
   description:
-    "A research programme on trustworthy AI for regulated finance: graph-based reconciliation, constraint-aware learning under accounting identities, disclosure risk beyond masking, and governance evidence a control tester can accept.",
+    "A research programme on autonomous systems that have to be right: agent harness design, evaluation without ground truth, disclosure risk beyond masking, constrained learning, and the control evidence an AI-mediated process has to emit.",
   alternates: { canonical: "/research" },
 };
 
 export default function ResearchPage() {
-  const researchPillars = pillars.filter((p) => p.research);
+  // Every pillar is part of the programme; the ones with active projects lead.
+  const withProjects = pillars.filter((p) => projectsByPillar(p.id).length > 0);
+  const rest = pillars.filter((p) => projectsByPillar(p.id).length === 0);
+  const ordered = [...withProjects, ...rest];
 
   return (
     <Shell width="wide" className="pt-14 pb-24 sm:pt-20">
@@ -71,12 +74,13 @@ export default function ResearchPage() {
       <section className="mt-24">
         <SectionHead
           n={1}
-          label="Five pillars"
-          intro="The programme is organised around five research pillars. A sixth writing pillar covers applied systems work that informs the research without being part of it."
+          label="Pillars"
+          intro="Six pillars, ordered by where the active work sits. Applied systems work is part of the programme rather than adjacent to it — the domain is where the ideas get tested, and a strand with no artifact yet says so."
         />
         <ol className="grid gap-x-10 md:grid-cols-2 lg:grid-cols-3">
-          {researchPillars.map((p) => {
+          {ordered.map((p) => {
             const n = postsByPillar(p.id).length;
+            const np = projectsByPillar(p.id).length;
             return (
               <li key={p.id} className="border-t border-rule py-6">
                 <div className="flex items-baseline gap-3">
@@ -92,8 +96,13 @@ export default function ResearchPage() {
                     {n} {n === 1 ? "essay" : "essays"} →
                   </Link>
                 ) : (
-                  <Kicker className="text-ink-faint/60 mt-3.5">No essays yet</Kicker>
+                  <Kicker className="text-ink-faint mt-3.5">No essays yet</Kicker>
                 )}
+                {np > 0 ? (
+                  <Kicker className="text-ink-faint mt-1.5">
+                    {np} {np === 1 ? "project" : "projects"}
+                  </Kicker>
+                ) : null}
               </li>
             );
           })}

@@ -88,7 +88,7 @@ export function Synthetic({ generator }: { generator?: string }) {
 }
 
 /** Two-column comparison used for "obvious fix vs. what actually happens". */
-export function Ledger({
+export function Compare({
   left,
   right,
   leftLabel = "Assumed",
@@ -112,3 +112,6 @@ export function Ledger({
     </div>
   );
 }
+
+/** Former name. Kept so essays written before the rename keep compiling. */
+export const Ledger = Compare;

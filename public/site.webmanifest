@@ -1,6 +1,6 @@
 {
-  "name": "Resume",
-  "short_name": "t-chandrakanth",
+  "name": "Chandrakanth Thadkapally",
+  "short_name": "Thadkapally",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -15,7 +15,7 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#000000",
-  "background_color": "#000000",
+  "theme_color": "#fbf9f5",
+  "background_color": "#fbf9f5",
   "display": "standalone"
 }

@@ -8,14 +8,18 @@
 
 export const site = {
   name: "Chandrakanth Thadkapally",
-  shortName: "C. Thadkapally",
-  blogName: "The Reconciliation Layer",
-  tagline: "Trustworthy AI for systems that have to be right.",
+  blogName: "The Control Loop",
+  tagline: "Enterprise AI agents for systems that have to be right.",
+  /**
+   * Professional identity, taken verbatim from the LinkedIn summary
+   * ("I am a Senior Technical Lead with over 12 years of experience…").
+   * The exact current job title lives in content/cv.ts and is what /cv shows.
+   */
   role: "Senior Technical Lead",
-  location: "Joplin, Missouri",
-  email: "chandrakanth.appdev@gmail.com",
+  location: "Bentonville, Arkansas",
+  email: "chandrakanththadkapally@gmail.com",
   description:
-    "Research and writing on trustworthy AI for regulated finance — graph-based reconciliation, constrained machine learning, enterprise AI privacy, and governed agentic systems.",
+    "Engineering leadership and applied AI — enterprise agent architecture, autonomous coding systems, and the evaluation and control evidence that makes them safe to run in retail and payments.",
   url:
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
     "https://chandrakanth.dev",
@@ -40,8 +44,8 @@ export const profiles: Profile[] = [
   },
   {
     label: "LinkedIn",
-    href: "https://www.linkedin.com/in/chandrakanth-ck-b94724136",
-    handle: "chandrakanth-ck",
+    href: "https://www.linkedin.com/in/chandrakanth-thadkapally",
+    handle: "chandrakanth-thadkapally",
     sameAs: true,
   },
   // TODO: create these, then paste the URLs in. Leave empty until they exist.
@@ -59,6 +63,7 @@ export const sameAs = () =>
 /** Top navigation. Hard cap of six — everything else lives in the footer. */
 export const primaryNav = [
   { label: "Writing", href: "/writing" },
+  { label: "Work", href: "/work" },
   { label: "Research", href: "/research" },
   { label: "Publications", href: "/publications" },
   { label: "CV", href: "/cv" },
@@ -70,7 +75,8 @@ export const footerNav = [
     heading: "Work",
     links: [
       { label: "Writing", href: "/writing" },
-      { label: "Research program", href: "/research" },
+      { label: "Systems built", href: "/work" },
+      { label: "Research programme", href: "/research" },
       { label: "Publications", href: "/publications" },
     ],
   },
@@ -94,3 +100,10 @@ export const footerNav = [
 
 export const disclaimer =
   "Views are my own and do not represent my employer. All examples use synthetic data.";
+
+/** Current employer, stated once. Used by JSON-LD and the CV header. */
+export const currentEmployer = {
+  name: "Walmart Global Tech",
+  title: "Senior Software Engineer",
+  since: "2025-11",
+} as const;

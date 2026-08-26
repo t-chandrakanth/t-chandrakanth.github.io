@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { sameAs, site } from "@/lib/site";
+import { currentEmployer, sameAs, site } from "@/lib/site";
 // KaTeX first: globals.css overrides its display sizing.
 import "katex/dist/katex.min.css";
 import "./globals.css";
@@ -90,13 +90,29 @@ function PersonJsonLd() {
     email: `mailto:${site.email}`,
     jobTitle: site.role,
     description: site.description,
-    address: { "@type": "PostalAddress", addressLocality: "Joplin", addressRegion: "MO", addressCountry: "US" },
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Bentonville",
+      addressRegion: "AR",
+      addressCountry: "US",
+    },
+    worksFor: {
+      "@type": "Organization",
+      name: currentEmployer.name,
+    },
+    alumniOf: {
+      "@type": "CollegeOrUniversity",
+      name: "University of Central Missouri",
+    },
     knowsAbout: [
-      "Graph-based financial reconciliation",
-      "Neuro-symbolic and constraint-aware machine learning",
-      "Enterprise AI privacy and disclosure risk",
+      "Enterprise AI agents and agent architecture",
+      "Agent harness design and tool interfaces",
+      "Evaluation of autonomous systems without ground truth",
       "AI governance and control evidence",
-      "Agent engineering and evaluation",
+      "Enterprise AI privacy and disclosure risk",
+      "Event-driven distributed systems",
+      "Payment reconciliation at scale",
+      "Retail and e-commerce platform engineering",
     ],
     sameAs: sameAs(),
   };

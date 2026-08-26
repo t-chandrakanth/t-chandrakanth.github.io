@@ -5,22 +5,22 @@ import { liveProfiles, site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: `Get in touch with ${site.name} — collaboration, peer review, speaking, and questions about reconciliation, constrained modelling and AI governance.`,
+  description: `Get in touch with ${site.name} — collaboration, peer review, speaking, and questions about agent architecture, evaluation, and AI systems in audited environments.`,
   alternates: { canonical: "/contact" },
 };
 
 const WANTS = [
   {
     h: "Collaboration",
-    b: "Especially if you have run reconciliation, exception management or control testing at scale and think some part of what I have written is wrong. Disagreement from practitioners is the most useful mail I get.",
+    b: "Especially if you have run agents against real systems — not a demo — and think some part of what I have written is wrong. Disagreement from practitioners is the most useful mail I get.",
   },
   {
     h: "Peer review and programme committees",
-    b: "I review in graph learning for financial systems, constrained and neuro-symbolic modelling, and AI governance and privacy. Send the venue, the deadline and the volume.",
+    b: "I review in agent engineering and evaluation, constrained and neuro-symbolic modelling, AI governance and privacy, and graph learning for financial systems. Send the venue, the deadline and the volume.",
   },
   {
     h: "Speaking",
-    b: "Talks on reconciliation as a graph problem, disclosure risk beyond masking, and what a control tester actually asks of an AI-mediated process. Copy-ready bios are on the about page.",
+    b: "Talks on designing the agent harness, evaluating systems with no ground truth, and what a control tester actually asks of an AI-mediated process. Copy-ready bios are on the about page.",
   },
   {
     h: "Press and citation",

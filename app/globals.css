@@ -3,8 +3,8 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ============================================================
-   THE RECONCILIATION LAYER — design system
-   Register: ledger paper + technical chrome.
+   THE CONTROL LOOP — design system
+   Register: working paper + technical chrome.
    Two families only: Newsreader (editorial serif), IBM Plex Mono
    (machine chrome). Everything structural is a hairline rule.
    ============================================================ */
@@ -227,17 +227,6 @@ p, li { text-wrap: pretty; }
 @keyframes reveal-up {
   from { opacity: 0; transform: translateY(0.7rem); }
   to   { opacity: 1; transform: none; }
-}
-
-/* Ledger ruling: faint horizontal lines, like accounting paper. */
-.ledger-lines {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent calc(1.75rem - 1px),
-    var(--rule) calc(1.75rem - 1px),
-    var(--rule) 1.75rem
-  );
 }
 
 /* Underline system: hairline that thickens and shifts on hover. */

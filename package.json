@@ -2,7 +2,7 @@
   "name": "chandrakanth-thadkapally-site",
   "version": "1.0.0",
   "private": true,
-  "description": "Chandrakanth Thadkapally — research portfolio and The Reconciliation Layer.",
+  "description": "Chandrakanth Thadkapally — engineering portfolio, research programme, and The Control Loop.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

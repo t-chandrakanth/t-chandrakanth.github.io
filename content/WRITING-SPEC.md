@@ -1,4 +1,4 @@
-# House style — The Reconciliation Layer
+# House style — The Control Loop
 
 This file is the contract every post on this site is written against. It exists
 so that a piece written six months from now still sounds like the one written

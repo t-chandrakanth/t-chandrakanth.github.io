@@ -1,6 +1,6 @@
 # chandrakanth.dev
 
-Personal research site and technical journal — **The Reconciliation Layer**.
+Personal engineering and research site — **The Control Loop**.
 Next.js 16 (App Router) + TypeScript + Tailwind v4 + MDX, deployed on Vercel.
 
 ## Run it
@@ -24,6 +24,7 @@ Node 20+ required.
 | `components/mdx.tsx` | Components available inside every post without an import. |
 | `content/writing/*.mdx` | The posts. One file per essay. |
 | `content/pillars.ts` | The six content pillars. Every post declares exactly one. |
+| `content/work.ts` | Systems built, by domain. Backs `/work`. |
 | `content/research.ts` | The research programme and its status vocabulary. |
 | `content/publications.ts` | The citable record. |
 | `content/cv.ts` | Roles, education, expertise. |
@@ -33,7 +34,6 @@ Node 20+ required.
 | `lib/posts.ts` | Reads and validates post frontmatter at build time. |
 | `lib/og.tsx` | Social card renderer. |
 | `assets/fonts/` | TTFs used by the OG image renderer (not served). |
-| `legacy/` | The previous static résumé page, kept for reference. |
 
 ## Adding a post
 

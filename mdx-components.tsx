@@ -1,5 +1,5 @@
 import type { MDXComponents } from "mdx/types";
-import { Callout, Figure, KeyLine, Ledger, Synthetic } from "@/components/mdx";
+import { Callout, Compare, Figure, KeyLine, Ledger, Synthetic } from "@/components/mdx";
 
 /**
  * Components available to every MDX file without an import, plus the
@@ -11,6 +11,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     Callout,
     KeyLine,
     Synthetic,
+    Compare,
     Ledger,
     // Markdown tables have no natural width limit. Without a scrolling
     // wrapper a wide one stretches the whole page on a phone.

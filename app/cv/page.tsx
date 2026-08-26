@@ -2,19 +2,27 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PrintButton } from "@/components/print-button";
 import { Kicker, SectionHead, Shell } from "@/components/primitives";
-import { awards, education, expertise, roles, service, speaking } from "@/content/cv";
+import {
+  awards,
+  currentPosition,
+  education,
+  expertise,
+  roleSpan,
+  roles,
+  service,
+  speaking,
+} from "@/content/cv";
 import { duration, formatMonth } from "@/lib/format";
 import { liveProfiles, site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Curriculum vitae",
-  description: `Curriculum vitae for ${site.name} — senior technical lead. Roles described by scope and scale, education, areas of depth, speaking and service.`,
+  description: `Curriculum vitae for ${site.name} — engineering leadership across retail, payments, healthcare and telecom. Roles described by scope and scale.`,
   alternates: { canonical: "/cv" },
 };
 
 export default function CVPage() {
-  const first = roles[roles.length - 1];
-  const totalYears = new Date().getUTCFullYear() - Number(first.start.split("-")[0]);
+  const current = currentPosition();
 
   return (
     <Shell width="wide" className="pt-14 pb-24 sm:pt-20">
@@ -30,9 +38,10 @@ export default function CVPage() {
           className="text-ink-muted reveal mt-6 max-w-[58ch] text-[1.0625rem] leading-relaxed"
           style={{ animationDelay: "120ms" }}
         >
-          {site.role} · {site.location} · {totalYears} years in transaction-processing
-          systems. Roles below are described by scope and scale. No employer
-          internals appear here.
+          {current.title}, {current.org} · {site.location}. Engineering across
+          retail commerce, payments and financial operations, healthcare staffing,
+          HCM and telecom. Roles below are described by scope and scale — no
+          employer internals appear here.
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 print:hidden">
           <a href={`mailto:${site.email}`} className="font-kicker text-ink-faint hover:text-accent transition-colors">
@@ -57,22 +66,39 @@ export default function CVPage() {
       <section className="mt-20">
         <SectionHead n={1} label="Experience" />
         <ol className="border-t border-rule-strong">
-          {roles.map((r) => (
-            <li key={`${r.org}-${r.start}`} className="border-b border-rule py-9">
+          {roles.map((r) => {
+            const span = roleSpan(r);
+            return (
+            <li key={r.org} className="border-b border-rule py-9">
               <div className="grid gap-x-10 gap-y-4 lg:grid-cols-[minmax(0,11rem)_minmax(0,1fr)]">
                 <div>
                   <Kicker className="tabular-nums">
-                    {formatMonth(r.start)} — {r.end === "Present" ? "Present" : formatMonth(r.end)}
+                    {formatMonth(span.start)} —{" "}
+                    {span.end === "Present" ? "Present" : formatMonth(span.end)}
                   </Kicker>
                   <Kicker className="text-ink-faint/70 mt-1.5">
-                    {duration(r.start, r.end)}
+                    {duration(span.start, span.end)}
                   </Kicker>
                 </div>
                 <div>
                   <h3 className="text-[clamp(1.2rem,1.05rem+0.6vw,1.5rem)] leading-[1.22] tracking-[-0.015em]">
-                    {r.title}
+                    {r.org}
                   </h3>
-                  <p className="text-accent mt-1.5 text-[1.0625rem]">{r.org}</p>
+                  <ol className="mt-2.5 space-y-1">
+                    {r.positions.map((pos) => (
+                      <li
+                        key={pos.title + pos.start}
+                        className="flex flex-col gap-x-3 gap-y-0.5 sm:flex-row sm:items-baseline"
+                      >
+                        <span className="text-accent text-[1.0625rem]">{pos.title}</span>
+                        <Kicker className="text-ink-faint tabular-nums">
+                          {formatMonth(pos.start)} —{" "}
+                          {pos.end === "Present" ? "Present" : formatMonth(pos.end)}
+                          {pos.location ? ` · ${pos.location}` : ""}
+                        </Kicker>
+                      </li>
+                    ))}
+                  </ol>
                   <p className="text-ink-muted mt-3.5 max-w-[62ch] text-[0.975rem] leading-relaxed">
                     {r.summary}
                   </p>
@@ -89,7 +115,8 @@ export default function CVPage() {
                 </div>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ol>
       </section>
 

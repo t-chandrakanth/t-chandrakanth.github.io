@@ -45,9 +45,9 @@ export const thesis = {
   statement:
     "The systems that most need machine learning are the ones least able to tolerate a plausible answer.",
   body: [
-    "Financial reconciliation, regulatory reporting and control testing share a property that most machine-learning benchmarks quietly assume away: being approximately right is not a partial success, it is a failure with an audit trail. A model that matches 97% of payments has not solved 97% of the problem — it has produced a population of exceptions that a human now has to work, and it has done so without explaining itself.",
-    "My work sits at the intersection three fields keep leaving empty. Graph learning has the right representation for correspondence but is rarely evaluated under accounting constraints. Neuro-symbolic methods have the right machinery for hard identities but are rarely tested at enterprise scale. AI governance has the right vocabulary for control but is almost always written as policy rather than as something you can measure and hand to a tester.",
-    "The program below is an attempt to close those gaps in a single direction of travel: representations that fit the domain, constraints that hold by construction, confidentiality that is measured rather than asserted, and evidence that survives contact with an auditor.",
+    "An agent that is right most of the time is not a system, it is a demo. The moment an autonomous process touches money, inventory or a control, being approximately right stops being partial credit and becomes a finding with an audit trail. That constraint is what the current wave of agent engineering keeps discovering late, and it is the constraint I have spent a decade building systems under.",
+    "My work sits where three fields keep leaving a gap. Agent engineering has produced remarkable capability and almost no vocabulary for verification — the harness, not the model, explains most of the variance, and nobody designs it deliberately. Constrained and neuro-symbolic methods have the right machinery for hard identities but are rarely tested at enterprise scale. AI governance has the right words for control but is almost always written as policy rather than as something a tester can test.",
+    "The programme below runs in one direction of travel: harnesses that fail loudly instead of quietly, constraints that hold by construction, confidentiality that is measured rather than asserted, and evidence that survives contact with an auditor. Payments and reconciliation are where I work these ideas out in the concrete, because it is the domain least willing to accept a confident guess — but the argument is about autonomous systems generally, not about ledgers.",
   ],
 };
 
@@ -75,7 +75,7 @@ export const projects: ResearchProject[] = [
     code: "RG",
     title: "ReconGraph — reconciliation as a graph problem",
     short: "Reconciliation as a graph problem",
-    pillar: "P1",
+    pillar: "P4",
     status: "in-progress",
     question:
       "What does reconciliation accuracy mean once you stop assuming records pair off one-to-one?",
@@ -96,7 +96,7 @@ export const projects: ResearchProject[] = [
     code: "NR",
     title: "NeuroRecon — constraint-aware learning under accounting identities",
     short: "Learning under accounting identities",
-    pillar: "P2",
+    pillar: "P5",
     status: "in-progress",
     question:
       "Where should a hard constraint be enforced when the model's output must balance exactly?",
@@ -132,7 +132,7 @@ export const projects: ResearchProject[] = [
     code: "CF",
     title: "Context Firewall — least-privilege context for agents",
     short: "Least-privilege context for agents",
-    pillar: "P4",
+    pillar: "P2",
     status: "in-progress",
     question:
       "Why does an agent see the whole context window when a human in the same role would need an access request?",
@@ -147,7 +147,7 @@ export const projects: ResearchProject[] = [
     code: "BCLS",
     title: "BCLS — making context leakage a measurable quantity",
     short: "Context leakage as a measurable quantity",
-    pillar: "P4",
+    pillar: "P2",
     status: "in-progress",
     question:
       "If you cannot put a number on what an agent leaked, on what basis did you approve it?",
@@ -162,7 +162,7 @@ export const projects: ResearchProject[] = [
     code: "AICEP",
     title: "AICEP — an evidence package for AI controls",
     short: "An evidence package for AI controls",
-    pillar: "P4",
+    pillar: "P2",
     status: "in-progress",
     question:
       "What would you hand a control tester who has never accepted 'the model decided' as a control?",

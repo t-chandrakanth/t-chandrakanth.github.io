@@ -1,6 +1,10 @@
 /**
  * Content pillars. Every post belongs to exactly one. If a draft fits none of
  * these, it is not a post for this site.
+ *
+ * Order is meaningful: P1 sorts first everywhere, so the sequence below is the
+ * site's stated centre of gravity. Agents lead; the payments and reconciliation
+ * work is one strand of the programme, not its identity.
  */
 
 export type PillarId = "P1" | "P2" | "P3" | "P4" | "P5" | "P6";
@@ -11,28 +15,24 @@ export type Pillar = {
   name: string;
   short: string;
   blurb: string;
-  /** Whether this pillar is one of the five research pillars (P6 is applied breadth). */
-  research: boolean;
 };
 
 export const pillars: Pillar[] = [
   {
     id: "P1",
-    slug: "financial-graph-intelligence",
-    name: "Financial graph intelligence",
-    short: "Graph intelligence",
+    slug: "agent-engineering",
+    name: "Agent engineering",
+    short: "Agent engineering",
     blurb:
-      "Treating reconciliation, lineage and transaction correspondence as problems over heterogeneous temporal graphs rather than pairwise string matching.",
-    research: true,
+      "The harness around the model — tool surfaces, context assembly, control loops, and how you evaluate an agent when no gold label exists.",
   },
   {
     id: "P2",
-    slug: "neuro-symbolic",
-    name: "Neuro-symbolic & constrained ML",
-    short: "Constrained ML",
+    slug: "governed-agentic-ai",
+    name: "Governed agentic AI",
+    short: "AI governance",
     blurb:
-      "Models that must satisfy hard identities — conservation, balance, double entry — and the four places a constraint can actually be enforced.",
-    research: true,
+      "Making agent behaviour auditable where it matters: least-privilege context, approval gates that are not theatre, and evidence a control tester will accept.",
   },
   {
     id: "P3",
@@ -41,34 +41,30 @@ export const pillars: Pillar[] = [
     short: "AI privacy",
     blurb:
       "Confidentiality failures that survive masking: relationship leakage, rule leakage, and disclosure that accumulates across sessions rather than within one.",
-    research: true,
   },
   {
     id: "P4",
-    slug: "governed-agentic-ai",
-    name: "Governed agentic AI",
-    short: "AI governance",
+    slug: "payments-and-reconciliation",
+    name: "Payments & reconciliation",
+    short: "Payments",
     blurb:
-      "Making agent behaviour auditable in controlled environments: least-privilege context, measurable leakage, and evidence a control tester can actually accept.",
-    research: true,
+      "Transaction correspondence, settlement and lineage treated as problems over heterogeneous temporal graphs rather than pairwise string matching.",
   },
   {
     id: "P5",
-    slug: "agent-engineering",
-    name: "Agent engineering",
-    short: "Agent engineering",
+    slug: "constrained-ml",
+    name: "Constrained & neuro-symbolic ML",
+    short: "Constrained ML",
     blurb:
-      "The harness around the model — composition, evaluation without ground truth, rollback, and the tool surface agents actually have to live with.",
-    research: true,
+      "Models that must satisfy hard identities — conservation, balance, double entry — and the four places a constraint can actually be enforced.",
   },
   {
     id: "P6",
-    slug: "applied-systems",
-    name: "Retail & fintech AI systems",
-    short: "Applied systems",
+    slug: "retail-and-commerce",
+    name: "Retail & commerce systems",
+    short: "Commerce",
     blurb:
-      "Applied write-ups from production-scale retail and financial systems: search architecture, risk scoring, and vendor exposure.",
-    research: false,
+      "Applied write-ups from production-scale commerce platforms: search architecture, catalogue retrieval, and the parts of a retail stack that carry load.",
   },
 ];
 

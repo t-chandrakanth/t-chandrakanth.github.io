@@ -9,14 +9,14 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = {
   title: site.blogName,
   description:
-    "Essays on graph-based financial reconciliation, constrained machine learning, enterprise AI privacy, governed agentic systems and agent engineering. One substantial piece every two weeks.",
+    "Essays on agent engineering, governed agentic AI, enterprise AI privacy, payments and reconciliation, constrained machine learning, and retail commerce systems. One substantial piece every two weeks.",
   alternates: { canonical: "/writing", types: { "application/rss+xml": `${site.url}/feed.xml` } },
   openGraph: {
     type: "website",
     url: `${site.url}/writing`,
     title: `${site.blogName} — ${site.name}`,
     description:
-      "Essays on graph-based financial reconciliation, constrained machine learning, enterprise AI privacy and governed agentic systems.",
+      "Essays on agent engineering, governed agentic AI, enterprise AI privacy, and the systems that are not allowed to be approximately right.",
   },
 };
 
@@ -69,9 +69,11 @@ export default function WritingPage() {
             className="text-ink-muted reveal mt-6 max-w-[58ch] text-[1.0625rem] leading-relaxed"
             style={{ animationDelay: "120ms" }}
           >
-            One substantial essay every two weeks, on the systems that are not
-            allowed to be approximately right. Every piece belongs to exactly one
-            pillar, uses only synthetic data, and states what it does not know.
+            One substantial essay every two weeks, on autonomous systems and the
+            places that are not allowed to be approximately right — agent
+            harnesses, evaluation without a gold label, and what an AI-mediated
+            process has to prove. Every piece belongs to exactly one pillar, uses
+            only synthetic data, and states what it does not know.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2">
             <a href="/feed.xml" className="font-kicker text-ink-faint hover:text-accent transition-colors">

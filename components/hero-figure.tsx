@@ -1,64 +1,62 @@
 /**
- * The site's one large graphic: two ledgers and the ties between them.
+ * The site's one large graphic: an agent control loop.
  *
- * Five clean correspondences, one split (a single debit answered by two
- * credits), one item with no counterpart. That asymmetry is the argument —
- * reconciliation is not a bijection, and the interesting mass sits in the
- * cases that are not.
+ * Plan, act, observe, verify — and the branch that matters is the one that
+ * fails the gate. Passing work leaves the loop and commits; failing work stays
+ * inside it and goes round again. What an agent does when it is wrong is the
+ * whole design, so that is what the picture is of.
  *
- * Both columns are left-aligned at the tie line so every endpoint meets a
- * record rather than floating in the gutter. Pure CSS animation, no JS, and it
- * degrades to a static figure under prefers-reduced-motion.
+ * Pure CSS animation, no JS, and it degrades to a static figure under
+ * prefers-reduced-motion.
  */
 
-const ROW_H = 38;
-const TOP = 26;
+const L = 80;   // loop left
+const R = 280;  // loop right
+const T = 72;   // loop top
+const B = 232;  // loop bottom
+const MX = (L + R) / 2;
+const MY = (T + B) / 2;
 
-const LEFT_W = [74, 92, 62, 84, 70, 96, 66];
-const RIGHT_W = [68, 88, 58, 52, 50, 80, 72];
-
-const LX = 112; // where left ties leave the page
-const RX = 246; // where right ties arrive
-const L_ORIGIN = 22;
-const R_ORIGIN = 252;
-
-const rowY = (i: number) => TOP + i * ROW_H;
-
-/** [leftIndex, rightIndex, kind] */
-const TIES: [number, number, "match" | "split"][] = [
-  [0, 0, "match"],
-  [1, 1, "match"],
-  [2, 2, "match"],
-  [3, 3, "split"],
-  [3, 4, "split"],
-  [5, 5, "match"],
-  [6, 6, "match"],
+const STATIONS: { x: number; y: number; label: string; anchor: "middle" | "start" | "end"; lx: number; ly: number }[] = [
+  { x: MX, y: T, label: "PLAN", anchor: "middle", lx: MX, ly: T - 14 },
+  { x: R, y: MY, label: "ACT", anchor: "start", lx: R + 10, ly: MY - 4 },
+  { x: MX, y: B, label: "OBSERVE", anchor: "middle", lx: MX, ly: B + 20 },
+  { x: L, y: MY, label: "VERIFY", anchor: "end", lx: L - 10, ly: MY - 4 },
 ];
 
-const UNMATCHED = 4;
+/** Clockwise direction markers, one per quadrant. */
+const ARROWS = [
+  { x: 236, y: 90, r: 42 },
+  { x: 236, y: 214, r: 138 },
+  { x: 124, y: 214, r: 222 },
+  { x: 124, y: 90, r: 318 },
+];
 
 export function HeroFigure({ className = "" }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 360 306"
+      viewBox="0 0 360 300"
       className={className}
       role="img"
-      aria-label="Two ledgers joined by correspondence ties: five clean matches, one payment split across two credits, and one item with no counterpart."
+      aria-label="An agent control loop: plan, act, observe, verify. Work that passes the verification gate leaves the loop and commits; work that fails it stays inside and is retried."
     >
       <defs>
         <style>{`
-          @keyframes tie-draw { to { stroke-dashoffset: 0; } }
+          @keyframes loop-draw { to { stroke-dashoffset: 0; } }
           @keyframes node-in { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: none; } }
-          @keyframes row-in { from { opacity: 0; transform: translateX(var(--dx)); } to { opacity: 1; transform: none; } }
-          @keyframes pulse-soft { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
-          .hf-row { animation: row-in 700ms cubic-bezier(.22,1,.36,1) both; }
-          .hf-tie { stroke-dasharray: 200; stroke-dashoffset: 200; animation: tie-draw 1000ms cubic-bezier(.65,0,.35,1) both; }
-          .hf-node { transform-box: fill-box; transform-origin: center; animation: node-in 460ms cubic-bezier(.34,1.56,.64,1) both; }
-          .hf-open { animation: pulse-soft 3.4s ease-in-out infinite; }
+          @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+          @keyframes travel { to { stroke-dashoffset: -740; } }
+          @keyframes gate-pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+          .cl-loop { stroke-dasharray: 740; stroke-dashoffset: 740; animation: loop-draw 1400ms cubic-bezier(.65,0,.35,1) both; }
+          .cl-run { stroke-dasharray: 26 714; stroke-dashoffset: 0; animation: travel 5.5s linear infinite; animation-delay: 1500ms; }
+          .cl-node { transform-box: fill-box; transform-origin: center; animation: node-in 460ms cubic-bezier(.34,1.56,.64,1) both; }
+          .cl-fade { animation: fade-in 620ms ease both; }
+          .cl-gate { animation: gate-pulse 3.2s ease-in-out infinite; }
           @media (prefers-reduced-motion: reduce) {
-            .hf-row, .hf-tie, .hf-node, .hf-open {
+            .cl-loop, .cl-run, .cl-node, .cl-fade, .cl-gate {
               animation: none !important;
               stroke-dashoffset: 0 !important;
+              stroke-dasharray: none !important;
               opacity: 1 !important;
               transform: none !important;
             }
@@ -66,118 +64,154 @@ export function HeroFigure({ className = "" }: { className?: string }) {
         `}</style>
       </defs>
 
-      <g stroke="var(--rule)" strokeWidth="1">
-        <path d="M18 14v280" />
-        <path d="M344 14v280" />
+      {/* context feeding plan */}
+      <g className="cl-fade" style={{ animationDelay: "900ms" }}>
+        <rect x={MX - 34} y={38} width={68} height={5} fill="var(--rule-strong)" opacity="0.6" />
+        <rect x={MX - 34} y={46} width={40} height={3} fill="var(--rule)" />
+        <path d={`M${MX} ${54}v${T - 58}`} stroke="var(--ink-faint)" strokeWidth="1" strokeDasharray="2 3" />
+        <text
+          x={MX}
+          y={30}
+          textAnchor="middle"
+          fontFamily="var(--font-mono)"
+          fontSize="7.5"
+          letterSpacing="1.4"
+          fill="var(--ink-faint)"
+        >
+          CONTEXT
+        </text>
       </g>
 
-      <g
-        fontFamily="var(--font-mono)"
-        fontSize="7.5"
-        letterSpacing="1.4"
-        fill="var(--ink-faint)"
-      >
-        <text x="18" y="9">SOURCE A</text>
-        <text x="344" y="9" textAnchor="end">SOURCE B</text>
+      {/* the loop */}
+      <rect
+        className="cl-loop"
+        x={L}
+        y={T}
+        width={R - L}
+        height={B - T}
+        rx="34"
+        fill="none"
+        stroke="var(--rule-strong)"
+        strokeWidth="1.25"
+      />
+      {/* a unit of work travelling the loop */}
+      <rect
+        className="cl-run"
+        x={L}
+        y={T}
+        width={R - L}
+        height={B - T}
+        rx="34"
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+
+      {ARROWS.map((a, i) => (
+        <path
+          key={i}
+          className="cl-fade"
+          style={{ animationDelay: `${1500 + i * 90}ms` }}
+          d="M-4 -3.4 L3.6 0 L-4 3.4 Z"
+          transform={`translate(${a.x} ${a.y}) rotate(${a.r})`}
+          fill="var(--rule-strong)"
+        />
+      ))}
+
+      {STATIONS.map((st, i) => (
+        <g key={st.label}>
+          <circle
+            className="cl-node"
+            cx={st.x}
+            cy={st.y}
+            r="4.5"
+            fill="var(--paper)"
+            stroke="var(--accent)"
+            strokeWidth="1.6"
+            style={{ animationDelay: `${1000 + i * 130}ms` }}
+          />
+          <text
+            className="cl-fade"
+            style={{ animationDelay: `${1080 + i * 130}ms` }}
+            x={st.lx}
+            y={st.ly}
+            textAnchor={st.anchor}
+            fontFamily="var(--font-mono)"
+            fontSize="8.5"
+            letterSpacing="1.5"
+            fill="var(--ink-muted)"
+          >
+            {st.label}
+          </text>
+        </g>
+      ))}
+
+      {/* tool surface hanging off ACT */}
+      <g className="cl-fade" style={{ animationDelay: "1700ms" }}>
+        {[0, 1, 2].map((i) => (
+          <rect key={i} x={R + 10} y={MY + 12 + i * 9} width={26 - i * 5} height={3.5} fill="var(--rule-strong)" opacity="0.7" />
+        ))}
+        <text
+          x={R + 10}
+          y={MY + 52}
+          fontFamily="var(--font-mono)"
+          fontSize="7.5"
+          letterSpacing="1.4"
+          fill="var(--ink-faint)"
+        >
+          TOOLS
+        </text>
       </g>
 
-      {LEFT_W.map((w, i) => (
-        <g
-          key={`l${i}`}
-          className="hf-row"
-          style={{ ["--dx" as string]: "-10px", animationDelay: `${i * 55}ms` }}
+      {/* the gate at VERIFY: pass leaves the loop, fail goes round again */}
+      <g className="cl-gate">
+        <rect x={L - 7} y={MY - 7} width={14} height={14} fill="none" stroke="var(--verified)" strokeWidth="1.2" />
+      </g>
+
+      <g className="cl-fade" style={{ animationDelay: "1900ms" }}>
+        <path
+          d={`M${L - 9} ${MY + 6} L34 ${MY + 34}`}
+          stroke="var(--verified)"
+          strokeWidth="1.3"
+          fill="none"
+        />
+        <path d="M-4 -3.4 L3.6 0 L-4 3.4 Z" transform={`translate(34 ${MY + 34}) rotate(150)`} fill="var(--verified)" />
+        <text
+          x={22}
+          y={MY + 50}
+          fontFamily="var(--font-mono)"
+          fontSize="7.5"
+          letterSpacing="1.4"
+          fill="var(--verified)"
         >
-          <rect x={L_ORIGIN} y={rowY(i)} width={w} height={9} fill="var(--rule-strong)" opacity="0.55" />
-          <rect x={L_ORIGIN} y={rowY(i) + 13} width={w * 0.5} height={4} fill="var(--rule)" />
-        </g>
-      ))}
+          COMMIT
+        </text>
+      </g>
 
-      {RIGHT_W.map((w, i) => (
-        <g
-          key={`r${i}`}
-          className="hf-row"
-          style={{ ["--dx" as string]: "10px", animationDelay: `${180 + i * 55}ms` }}
-        >
-          <rect x={R_ORIGIN} y={rowY(i)} width={w} height={9} fill="var(--rule-strong)" opacity="0.55" />
-          <rect x={R_ORIGIN} y={rowY(i) + 13} width={w * 0.5} height={4} fill="var(--rule)" />
-        </g>
-      ))}
-
-      {TIES.map(([li, ri, kind], i) => {
-        const y1 = rowY(li) + 4.5;
-        const y2 = rowY(ri) + 4.5;
-        const mid = (LX + RX) / 2;
-        return (
-          <path
-            key={`t${i}`}
-            className="hf-tie"
-            d={`M${LX} ${y1} C${mid} ${y1}, ${mid} ${y2}, ${RX} ${y2}`}
-            fill="none"
-            stroke={kind === "split" ? "var(--pending)" : "var(--accent)"}
-            strokeWidth={kind === "split" ? 1 : 1.3}
-            style={{ animationDelay: `${620 + i * 120}ms` }}
-          />
-        );
-      })}
-
-      {TIES.map(([li, ri], i) => (
-        <g key={`n${i}`}>
-          <circle
-            className="hf-node"
-            cx={LX}
-            cy={rowY(li) + 4.5}
-            r="2.4"
-            fill="var(--accent)"
-            style={{ animationDelay: `${760 + i * 120}ms` }}
-          />
-          <circle
-            className="hf-node"
-            cx={RX}
-            cy={rowY(ri) + 4.5}
-            r="2.4"
-            fill="var(--accent)"
-            style={{ animationDelay: `${860 + i * 120}ms` }}
-          />
-        </g>
-      ))}
-
-      {/* the split, labelled above its own origin so it clears the tie above */}
-      <text
-        x={LX + 9}
-        y={rowY(3) - 5}
-        fontFamily="var(--font-mono)"
-        fontSize="7"
-        letterSpacing="1.3"
-        fill="var(--pending)"
-      >
-        SPLIT 1:2
-      </text>
-
-      {/* the unmatched item — the whole point of the picture */}
-      <g className="hf-open">
-        <circle
-          cx={LX}
-          cy={rowY(UNMATCHED) + 4.5}
-          r="3.6"
-          fill="var(--paper)"
+      {/* failing work stays in the loop: an explicit upward arrow on the
+          left edge, so "fail" reads as "go round again" rather than "stop". */}
+      <g className="cl-fade" style={{ animationDelay: "2050ms" }}>
+        <path
+          d={`M${L} ${MY - 16}v-22`}
           stroke="var(--variance)"
-          strokeWidth="1.2"
+          strokeWidth="1.3"
+          strokeDasharray="3 3"
         />
         <path
-          d={`M${LX + 7} ${rowY(UNMATCHED) + 4.5}h34`}
-          stroke="var(--variance)"
-          strokeWidth="1"
-          strokeDasharray="2 3"
+          d="M-4 -3.4 L3.6 0 L-4 3.4 Z"
+          transform={`translate(${L} ${T + 52}) rotate(-90)`}
+          fill="var(--variance)"
         />
         <text
-          x={LX + 9}
-          y={rowY(UNMATCHED) + 21}
+          x={L + 11}
+          y={T + 62}
           fontFamily="var(--font-mono)"
-          fontSize="7"
-          letterSpacing="1.3"
+          fontSize="7.5"
+          letterSpacing="1.4"
           fill="var(--variance)"
         >
-          NO COUNTERPART
+          RETRY
         </text>
       </g>
     </svg>

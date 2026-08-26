@@ -19,6 +19,8 @@ export default function HomePage() {
   const posts = allPosts();
   const recent = posts.slice(0, 4);
   const active = projects.filter((p) => p.status === "in-progress").slice(0, 3);
+  const [givenName, ...family] = site.name.split(" ");
+  const newest = posts[0]?.date;
   const papers = detailedPublications();
 
   return (
@@ -36,9 +38,9 @@ export default function HomePage() {
                 className="display reveal mt-5 text-[clamp(2.6rem,1.5rem+4.6vw,5rem)]"
                 style={{ animationDelay: "60ms" }}
               >
-                Chandrakanth
+                {givenName}
                 <br />
-                Thadkapally
+                {family.join(" ")}
               </h1>
 
               <p
@@ -57,11 +59,11 @@ export default function HomePage() {
                 className="text-ink-muted reveal mt-7 max-w-[54ch] text-[1.0625rem] leading-relaxed"
                 style={{ animationDelay: "240ms" }}
               >
-                I am a senior technical lead working on the parts of enterprise
-                systems where a plausible answer is not good enough: financial
-                reconciliation, machine learning under hard accounting
-                constraints, and what an AI agent is allowed to know inside a
-                business that has something to protect.
+                I build enterprise AI agents, and the architecture that makes
+                them safe to run. Twelve years across retail commerce, payments,
+                healthcare staffing, HCM and telecom taught me the same lesson
+                each time: the interesting engineering is not the model, it is
+                the ring of code around it and the evidence it leaves behind.
               </p>
 
               <p
@@ -71,6 +73,10 @@ export default function HomePage() {
                 This site is the working record — essays under{" "}
                 <Link href="/writing" className="link-rule text-ink">
                   {site.blogName}
+                </Link>
+                , the{" "}
+                <Link href="/work" className="link-rule text-ink">
+                  systems I have built
                 </Link>
                 , the{" "}
                 <Link href="/research" className="link-rule text-ink">
@@ -113,9 +119,9 @@ export default function HomePage() {
             <div className="reveal" style={{ animationDelay: "160ms" }}>
               <HeroFigure className="mx-auto h-auto w-full max-w-[26rem] lg:max-w-none" />
               <p className="font-kicker text-ink-faint mt-5 border-t border-rule pt-3 leading-relaxed normal-case tracking-normal [font-size:0.75rem]">
-                Two ledgers, seven items, five clean ties. One payment answered by
-                two credits; one item with no counterpart at all. The exceptions
-                are the subject.
+                Plan, act, observe, verify. The loop only earns trust at the gate,
+                and the branch that matters is the one that fails it — what an
+                agent does when it is wrong is the whole design.
               </p>
             </div>
           </div>
@@ -129,7 +135,7 @@ export default function HomePage() {
             {[
               { k: "Role", v: site.role },
               { k: "Based in", v: site.location },
-              { k: "Focus", v: "Trustworthy AI for regulated finance" },
+              { k: "Focus", v: "Enterprise AI agents & architecture" },
               { k: "Open to", v: "Collaboration, review, speaking" },
             ].map((row, i) => (
               <div
@@ -152,8 +158,8 @@ export default function HomePage() {
           <SectionHead
             n={1}
             label="Writing"
-            title="The Reconciliation Layer"
-            intro="One substantial piece every two weeks. Each one belongs to a single pillar, ships with an original diagram and a worked example on synthetic data, and states its own limits."
+            title={site.blogName}
+            intro="One substantial piece every two weeks on agents, evaluation, and the systems that are not allowed to be approximately right. Each belongs to a single pillar, ships with an original diagram and a worked example on synthetic data, and states its own limits."
             action={
               <Link href="/writing" className="font-kicker text-ink-faint hover:text-accent transition-colors">
                 All {posts.length} →
@@ -230,7 +236,9 @@ export default function HomePage() {
             <div className="mt-16 border border-rule">
               <div className="flex items-center justify-between gap-4 border-b border-rule bg-paper-raised px-5 py-3">
                 <Kicker>Active projects</Kicker>
-                <Kicker className="text-ink-faint">Status as at {formatDate("2026-08-25")}</Kicker>
+                {newest ? (
+                  <Kicker className="text-ink-faint">Status as at {formatDate(newest)}</Kicker>
+                ) : null}
               </div>
               <ul>
                 {active.map((p) => (
@@ -294,10 +302,11 @@ export default function HomePage() {
             </div>
             <div className="text-ink-muted max-w-[52ch] text-[1.0625rem] leading-relaxed">
               <p>
-                I read everything sent to me about reconciliation at scale,
-                constraint-aware modelling, and AI governance that a control
-                tester would actually accept. Review requests, collaboration and
-                speaking enquiries are all welcome.
+                I read everything sent to me about agent architecture, evaluation
+                without ground truth, and putting autonomous systems into places
+                that get audited. Review requests, collaboration and speaking
+                enquiries are all welcome — and disagreement from people who have
+                run this in production is the most useful mail I get.
               </p>
               <Link
                 href="/contact"

@@ -6,13 +6,13 @@ import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
 import { DataRow, Kicker, SectionHead, Shell } from "@/components/primitives";
 import { bios, bioLengths } from "@/content/bios";
-import { expertise, roles } from "@/content/cv";
+import { currentPosition, expertise, roles } from "@/content/cv";
 import { liveProfiles, site } from "@/lib/site";
 import { duration } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "About",
-  description: `${site.name} — senior technical lead working on trustworthy AI for regulated finance. Narrative biography, scope of work, areas of depth, and copy-ready bios for organisers.`,
+  description: `${site.name} — engineering leader building enterprise AI agents. Narrative biography, scope of work across retail, payments and enterprise systems, areas of depth, and copy-ready bios for organisers.`,
   alternates: { canonical: "/about" },
 };
 
@@ -20,8 +20,7 @@ const HEADSHOT = "/headshot.jpg";
 const hasHeadshot = () => fs.existsSync(path.join(process.cwd(), "public", "headshot.jpg"));
 
 export default function AboutPage() {
-  const current = roles[0];
-  const years = new Date().getUTCFullYear() - 2014;
+  const current = currentPosition();
   const headshot = hasHeadshot();
 
   return (
@@ -47,81 +46,70 @@ export default function AboutPage() {
         <div className="min-w-0 max-w-[46rem]">
           <div className="prose">
             <p>
-              I have spent more than {years} years building the systems that move
-              money and records between organisations — retail commerce
-              platforms, healthcare claims processing, vendor management,
-              ticketing. Different industries, one recurring shape: two parties
-              believe different things about the same event, and something has
-              to decide which belief is right.
+              I have spent over a decade building the systems that move money and
+              records between organisations — retail commerce platforms, payment
+              reconciliation, healthcare staffing, HCM and payroll, telecom
+              provisioning. Different industries, one recurring shape: two systems
+              believe different things about the same event, and something has to
+              decide which belief is right.
             </p>
             <p>
-              For most of that time the deciding was done by rules. Rules are
-              excellent at the cases somebody anticipated. They degrade quietly
-              on the cases nobody did, and the degradation does not announce
-              itself — it arrives as a slowly growing exception queue that a
-              team of people works down every month, and the size of that queue
-              becomes the cost of the system rather than a signal about it.
+              For most of that time the deciding was done by rules, and by people
+              working the cases the rules could not. Rules are excellent at what
+              somebody anticipated. They degrade quietly on what nobody did, and
+              the degradation does not announce itself — it arrives as a slowly
+              growing exception queue, and the size of that queue becomes the cost
+              of the system rather than a signal about it.
             </p>
             <p>
-              Machine learning is the obvious response and, applied naively, the
-              wrong one. A model that gets 97% of matches right in a domain
-              where the sum of the parts is definitionally the whole has not
-              solved 97% of the problem. It has produced a population of
-              exceptions with no explanation attached, and it has broken the one
-              property the finance function actually depends on: that the
-              numbers reconcile exactly, and that you can say why.
+              What has changed is that we can now put a model in that seat, and
+              increasingly an agent: something that plans, calls tools, and acts
+              without a human between each step. That is the most interesting
+              engineering problem I have worked on and the one with the least
+              settled practice around it.
             </p>
             <p>
-              That gap is what I work on now. It has three parts, and I have
-              found that they are the same problem seen from different angles.
+              Most of the attention goes to the model. Almost none goes to the ring
+              of code around it — the tool surface, what gets into the context
+              window and why, the control loop, what happens when a call fails.
+              I have come to think that ring, the{" "}
+              <Link href="/writing/the-agent-harness">harness</Link>, explains more
+              of the variance between two teams&rsquo; results than the choice of
+              model does. It is also the part nobody designs deliberately.
             </p>
             <p>
-              The first is <strong>representation</strong>. Reconciliation is
-              modelled almost everywhere as pairwise matching, which assumes a
-              one-to-one correspondence that real settlement does not have.
-              Split payments, aggregated remittances, partial settlement and
-              out-of-order timing are not edge cases; they are the ordinary case,
-              and they are naturally a graph. I write about that under{" "}
-              <Link href="/writing?pillar=P1">financial graph intelligence</Link>.
+              The second gap is verification. An agent that is right most of the
+              time is a demo, not a system, and in most real work there is no gold
+              label to check it against —{" "}
+              <Link href="/writing/evaluating-agents-without-ground-truth">
+                two experienced reviewers disagree
+              </Link>
+              , so accuracy is undefined before you start. The third is control and
+              confidentiality: what did the system disclose, and what evidence
+              exists that it operated correctly. Data masking answers neither. An
+              AI policy answers neither.
             </p>
             <p>
-              The second is <strong>constraint</strong>. Accounting identities
-              are not soft preferences you can regularise towards. A learned
-              model has to satisfy them exactly, and there are only four places
-              in a pipeline where a hard constraint can actually be enforced.
-              Which one you choose determines what you give up.
+              I work these questions out in payments and reconciliation, because it
+              is the domain least willing to accept a confident guess. My current
+              work at Walmart Global Tech is payment reconciliation and retail
+              correction at scale — event-driven services, financial data pipelines,
+              and the analytics surface finance uses to confirm that transactions
+              are accurate. It produced two manuscripts,{" "}
+              <Link href="/publications/recongraph">ReconGraph</Link> and{" "}
+              <Link href="/publications/neurorecon">NeuroRecon</Link>, both complete
+              and neither submitted anywhere yet.
             </p>
             <p>
-              The third is <strong>confidentiality and control</strong>. Once you
-              put a model between a person and the ledger, two new questions
-              appear that the machine-learning literature mostly does not ask:
-              what did the system disclose, and what evidence exists that it
-              operated correctly. Data masking answers neither. An AI policy
-              answers neither. I have been working on both — on disclosure risk
-              that survives masking, and on what an AI-mediated control has to
-              emit before a control tester will accept it.
-            </p>
-            <p>
-              Two manuscripts came out of the first two strands —{" "}
-              <Link href="/publications/recongraph">ReconGraph</Link>, on
-              reconciliation as probabilistic inference over a heterogeneous
-              temporal graph, and{" "}
-              <Link href="/publications/neurorecon">NeuroRecon</Link>, on putting
-              accounting constraints into the training objective rather than into
-              a filter that runs afterwards. Both are complete and neither has
-              been submitted anywhere yet; the abstracts, methods and full result
-              tables are on this site.
-            </p>
-            <p>
-              I write here because the intersection is underpopulated. There is
-              excellent work in graph learning, excellent work in neuro-symbolic
-              methods, and a great deal of writing about AI governance. There is
-              very little that takes all three seriously at once, in a domain
-              where being approximately right is a finding.
+              The breadth matters more than it looks. A commerce catalogue, a
+              staffing platform, a payroll run and a settlement file are the same
+              problem wearing different clothes, and having built all four is what
+              makes the pattern visible. What generalises is the shape of the
+              failure, not the schema.
             </p>
             <p>
               Everything on this site uses synthetic data, describes classes of
-              problem rather than any specific employer's systems, and states
+              problem rather than any specific employer&rsquo;s systems, and states
               what it does not know. If you work on any of this, I would like to
               hear from you.
             </p>
@@ -136,18 +124,28 @@ export default function AboutPage() {
             />
             <dl>
               <DataRow label="Current role">
-                {current.title}, {current.org} — since {current.start.split("-")[0]} (
-                {duration(current.start, current.end)}). {current.summary}
+                {current.title}, {current.org} — since November 2025.{" "}
+                {roles[0].summary}
+              </DataRow>
+              <DataRow label="Focus">
+                Enterprise AI agents and AI architecture — harness design, tool
+                surfaces, evaluation without ground truth, and the control evidence
+                an autonomous process has to emit before anyone can rely on it.
               </DataRow>
               <DataRow label="Scope">
-                Technical direction and architecture for platform engineering across
-                multiple delivery teams; design review, technical strategy and
-                engineer development.
+                Technical direction and architecture across multiple delivery teams;
+                design review, technical strategy, and engineer development. Twelve
+                years across application development, senior individual contribution
+                and technical leadership.
               </DataRow>
-              <DataRow label="Domain">
-                High-volume transaction systems — commerce, healthcare claims,
-                vendor management and financial operations — where correctness is
-                audited rather than assumed.
+              <DataRow label="Domains">
+                Retail and e-commerce, and payments and financial operations, are
+                where I go deepest. Earlier work spans healthcare staffing, HCM and
+                payroll, and telecom provisioning — see{" "}
+                <Link href="/work" className="link-rule text-ink">
+                  systems built
+                </Link>
+                .
               </DataRow>
               <DataRow label="Research">
                 Independent, self-directed, and published here. See the{" "}

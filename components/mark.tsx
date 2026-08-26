@@ -1,6 +1,8 @@
 /**
- * The identity mark: two ledger columns, one tie between them.
- * That is the whole thesis of the site in nine strokes.
+ * The identity mark: a closed loop with a gate on it.
+ *
+ * Work goes round until it passes the gate. That is the whole thesis of the
+ * site in a handful of strokes.
  */
 export function Mark({
   size = 22,
@@ -18,17 +20,30 @@ export function Mark({
       aria-hidden="true"
       className={className}
     >
-      <path d="M4 3.5v17M20 3.5v17" stroke="currentColor" strokeWidth="1" opacity="0.45" />
-      <path d="M4 8h3M4 12.5h3M4 17h3" stroke="currentColor" strokeWidth="1" opacity="0.45" />
-      <path d="M17 8h3M17 12.5h3M17 17h3" stroke="currentColor" strokeWidth="1" opacity="0.45" />
+      <rect
+        x="3.5"
+        y="4.5"
+        width="17"
+        height="15"
+        rx="5.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        opacity="0.5"
+      />
       <path
-        d="M6.6 8.4 17.4 16.6"
+        d="M20.5 9.2v5.6"
         stroke="var(--accent)"
-        strokeWidth="1.4"
+        strokeWidth="1.6"
         strokeLinecap="round"
       />
-      <circle cx="6.4" cy="8.2" r="1.5" fill="var(--accent)" />
-      <circle cx="17.6" cy="16.8" r="1.5" fill="var(--accent)" />
+      <path
+        d="M14.2 4.5h2.2"
+        stroke="var(--paper)"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <circle cx="3.5" cy="12" r="2" fill="var(--accent)" />
+      <path d="M9.6 4.5 12.4 4.5" stroke="currentColor" strokeWidth="1.3" opacity="0.5" />
     </svg>
   );
 }

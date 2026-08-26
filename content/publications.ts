@@ -75,7 +75,7 @@ export const publications: Publication[] = [
       "ReconGraph: Probabilistic Consistency Inference over Heterogeneous Temporal Graphs for Enterprise Financial Reconciliation",
     short: "ReconGraph",
     authors: ["Chandrakanth Thadkapally"],
-    pillar: "P1",
+    pillar: "P4",
     note: "Manuscript complete. Not submitted; no venue or submission date set.",
     abstract:
       "Enterprise reconciliation is not a record-pair problem. A single economic event can produce an order, an invoice, a shipment, a receipt, a payment, a settlement, a commission, an adjustment and a ledger posting, written by different systems on different clocks. ReconGraph represents these artefacts as a heterogeneous temporal graph and infers a globally consistent reconciliation subgraph over it, rather than accepting or rejecting candidate pairs independently. Relation- and time-specific message passing combines attribute, amount, temporal, neighbourhood and business-rule evidence; a factorised consistency layer penalises violations of quantity conservation, temporal ordering, debit–credit balance and link cardinality. On RECONBENCH — a synthetic benchmark constructed from the public IBM AMLSim / AML-Data ecosystem — ReconGraph reaches 0.949 link F1, 0.944 graph-consistency accuracy and 0.892 anomaly recall, while reducing the false-reconciliation rate to 0.033, a 32.7% reduction against the strongest graph-matching baseline. Ablation, calibration, robustness and scaling studies isolate the contribution of the accounting constraints. The result is a reconciliation decision that is auditable as a subgraph with residuals attached, rather than an isolated similarity score.",
@@ -164,7 +164,7 @@ export const publications: Publication[] = [
       "NeuroRecon: Constraint-Aware Neuro-Symbolic Learning for Enterprise Financial Reconciliation",
     short: "NeuroRecon",
     authors: ["Chandrakanth Thadkapally"],
-    pillar: "P2",
+    pillar: "P5",
     note: "Manuscript complete. Not submitted; no venue or submission date set.",
     abstract:
       "Enterprise reconciliation requires more than recognising that two records look alike: an accepted match must also satisfy monetary conservation, event ordering, double-entry balance, link cardinality and organisation-specific rules. NeuroRecon is a constraint-aware neuro-symbolic framework that learns transaction similarity and financial validity together rather than sequentially. Heterogeneous ledger, bank, invoice, fee and adjustment records are represented as a typed transaction graph; a graph encoder proposes candidate groups while differentiable penalties turn accounting and business rules into training signal; constrained decoding emits one-to-one, one-to-many, many-to-one and many-to-many reconciliations with per-constraint evidence trails for analyst review. On a controlled benchmark following the public BenchRec schema, and against five matching strategies under identifier corruption, missing records, amount noise, aggregation and reversals, NeuroRecon reaches 94.6% F1 with a 0.6% constraint-violation rate and the best calibration in the comparison. At 75% identifier corruption it retains 80.6% F1, 25.9 points above the pairwise neural model. Ablation shows the amount, balance, cardinality, temporal and business constraints contribute complementary rather than redundant gains. The finding is that financial structure belongs in training, not in an inference-time rule filter.",
