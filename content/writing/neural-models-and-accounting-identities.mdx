@@ -35,6 +35,11 @@ different direction. This is not a bug in the sense of something that can be
 found and removed. It is the absence of a property the model was never built to
 have.
 
+<Synthetic />
+
+The pool, the five units and the table further down are constructed. The
+arithmetic on them is exact; the model behind them does not exist.
+
 ## Why the penalty term does not fix it
 
 The obvious response is to tell the model about the constraint. Write the
@@ -78,12 +83,12 @@ evidence that satisfies one is
 
 ## The reframe
 
-Stop asking how small the violation can be made. Ask where it can be made
-impossible. Those are different questions with different answers, and the second
-has only four candidate sites: the training objective, the raw output vector,
-whatever happens downstream before a number reaches the ledger, and the forward
-pass itself. Each site yields a different *kind* of guarantee — statistical,
-algebraic, procedural, structural — and the kinds are not interchangeable.
+How small the violation can be made is the wrong question. Where it can be made
+impossible is the right one, and that question has only four candidate answers:
+the training objective, the raw output vector, whatever happens downstream
+before a number reaches the ledger, and the forward pass itself. Each site
+yields a different *kind* of guarantee — statistical, algebraic, procedural,
+structural — and the kinds are not interchangeable.
 
 <KeyLine>
   A constraint in the loss function is a preference. A constraint in the
@@ -138,8 +143,8 @@ a single sum constraint, $A = \mathbf{1}^{\top}$, and the formula collapses to
 subtracting $\frac{1}{n}(\mathbf{1}^{\top}x - b)$ from each line. If one
 component carried all the error and the other four were exactly right, the
 projection makes four correct numbers wrong to make one wrong number less wrong.
-Total absolute error, in that case, is multiplied by $2(n-1)/n$ — it goes up,
-not down, while the statement starts balancing.
+Total absolute error, in that case, is multiplied by $2(n-1)/n$, which exceeds
+one for every $n > 2$. Error goes up. The statement starts balancing.
 
 There is a fix, and it is not mine. The weighted projection
 
@@ -180,14 +185,14 @@ general, take any particular solution $x_p$ with $Ax_p = b$ and a basis $N$ for
 the null space of $A$, and emit
 
 $$
-x \;=\; x_p + N u, \qquad Ax = Ax_p + ANu = b
+x \;=\; x_p + N u, \qquad Ax \;=\; Ax_p + ANu \;=\; b + 0 \;=\; b
 $$
 
-for every $u$ the network can produce. This is the only one of the four where
-the guarantee is a property of the function class rather than of the training
-run, the data, or a downstream step. It costs nothing at inference and it is
-differentiable, so the model trains against the constraint rather than around
-it.
+for every $u$ the network can produce, because $AN = 0$ is what makes $N$ a null
+space basis. This is the only one of the four where the guarantee is a property
+of the function class rather than of the training run, the data, or a downstream
+step. It costs one matrix multiply at inference, and it is differentiable, so
+the model trains against the constraint rather than around it.
 
 What it costs is expressiveness, and the cost is exactly measurable: the output
 is confined to an affine subspace of dimension $n - m$. The model cannot
@@ -212,9 +217,24 @@ largest-remainder method or a cousin of it — which drags in the apportionment
 paradoxes Balinski and Young catalogued for legislative seats. Nothing proved
 above the rounding step promises anything about what lands below it.
 
-## A worked example
+### The four sites compose
 
-<Synthetic />
+Nothing above says pick one. The sites act at different moments — training, the
+forward pass, inference, posting — so they stack, and the interesting question
+is which stack still holds when one step is skipped.
+
+Two of the four are exact only over the reals, and neither survives rounding on
+its own; both want a lattice-aware allocation underneath them. What separates
+them is fragility. A projection is a separate piece of code, and a separate
+piece of code can be disabled for one batch, retried after a failure, or applied
+after the wrong transform, and the guarantee leaves with it. A parameterisation
+cannot be switched off without changing the model that was signed off. Repair is
+the mirror image: exact in the ledger's own arithmetic by construction, and
+exact about a figure that has stopped being an allocation. The objective
+composes with all three and guarantees nothing in any combination, which is the
+argument for treating it as regularisation rather than as a control.
+
+## A worked example
 
 A pool of 4,812,600.00 is allocated across five units. The true allocation is
 known by construction. The raw model reproduces four components exactly and
@@ -267,7 +287,7 @@ so that the distributional side-effects are visible rather than smeared.
       <rect x="602" y="63" width="148" height="22" fill="none" stroke="var(--rule-strong)" strokeWidth="1.2" />
       <text x="676" y="77.5" textAnchor="middle" fontSize="8.5" fill="var(--ink-muted)">b · softmax(z)</text>
 
-      <path d="M0 186h750" stroke="var(--rule-strong)" strokeWidth="1" />
+      <path d="M6 186h744" stroke="var(--rule-strong)" strokeWidth="1" />
 
       <g fill="var(--ink-faint)" letterSpacing="1.2">
         <text x="18" y="207">GUARANTEES</text>

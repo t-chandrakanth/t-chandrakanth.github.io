@@ -80,9 +80,10 @@ this one survives every fix applied to the others.
 
 ## The reframe
 
-Stop asking which movement corresponds to which obligation. Ask instead for the
-assignment of value across the whole account and period that is most consistent
-with the evidence and still obeys the arithmetic.
+A period is not a list of pairs to adjudicate. It is a quantity of value that has
+to land somewhere, and the job is to choose where it lands across the whole
+account at once — in the way most consistent with the evidence, and still
+obedient to the arithmetic.
 
 That is a different mathematical object. The candidates form a heterogeneous
 temporal graph — several kinds of node, several kinds of edge, every edge
@@ -209,8 +210,8 @@ items nobody disputes.
 Drop $X$ and keep $Y$, and what remains is a transportation problem: min-cost
 flow on a bipartite network with supplies $b_j$, demands $a_i$ and arc costs
 $1 - s_{ij}$. Minimising that cost and maximising $\sum s_{ij} y_{ij}$ are the
-same problem, because the two objectives differ by $\sum_i a_i$, and
-conservation holds that constant. This is the Hitchcock–Koopmans formulation
+same problem, because the two objectives differ by $\sum_i a_i$, which the
+conservation identity fixes. This is the Hitchcock–Koopmans formulation
 from the 1940s. Its constraint matrix is totally unimodular, so when $a_i$ and
 $b_j$ are whole cents — and a ledger holds nothing else — an optimal basis
 allocates whole cents too, and nothing has to be rounded before it is posted.
@@ -219,8 +220,9 @@ One property of that formulation is worth having for its own sake. A basic
 solution is a spanning tree of the bipartite graph, so at most $m + n - 1$ arcs
 carry value: with four obligations and three movements, six arcs, however many
 candidates the scorer generated. The optimum cannot shred a period into
-arbitrarily many part-allocations, which is the objection a reviewer raises
-first. Network simplex handles instances with hundreds of thousands of arcs.
+arbitrarily many part-allocations, which is the first thing anybody responsible
+for the close will want to know. Network simplex handles instances with hundreds
+of thousands of arcs.
 
 Keeping $X$ with a per-edge charge gives the fixed-charge transportation
 problem, which is NP-hard. In practice it is approximated by penalising edge
@@ -406,17 +408,16 @@ that remains a hypothesis.
 
 ## Where this goes
 
-The next piece in this pillar takes apart the edge, not the assignment: the
-seven distinct ways a candidate correspondence goes wrong, and why five of them
-are invisible to any similarity function computed on a pair. After that, the
-uncomfortable corollary — the same graph that makes reconciliation solvable is
-also a
+The next piece in this pillar takes apart the edge rather than the assignment:
+the seven distinct ways a candidate correspondence goes wrong, and why three of
+them are invisible to any similarity function computed on a pair. After that,
+the uncomfortable corollary. The same graph that makes reconciliation solvable
+is also a
 [map of who transacts with whom](/writing/relationship-privacy-supplier-networks),
-which is a confidentiality problem the moment a model is trained on it. Where
-each of these sits relative to the others is on the
-[research page](/research).
+which becomes a confidentiality problem the moment a model is trained on it. The
+[research page](/research) carries the running order.
 
-The question I would hold onto is the one the conservation constraint forces.
-If your reconciliation engine cannot tell you which items it left in the queue
-*because the evidence was weak* and which it left *because its own structure
-forbade the answer*, it does not know either.
+Hold onto the question the conservation constraint forces. If your
+reconciliation engine cannot tell you which items it left in the queue *because
+the evidence was weak* and which it left *because its own structure forbade the
+answer*, it does not know either.

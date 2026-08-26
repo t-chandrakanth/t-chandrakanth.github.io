@@ -36,14 +36,15 @@ ever look at, because the point of an auto-match is that nobody looks.
 
 <Synthetic />
 
-The 97.0% above, the seven sketches further down and the table at the end are
-all invented. Nothing here is a measurement.
+The 97.0% above, the seven sketches below and the table at the end are all
+invented.
 
 ## Widening the rules does not converge
 
-The instinct is tolerance. A band for the currency case. A subset rule for the
-aggregated case. A wider window at period ends. Each of those is locally correct,
-and the aggregate is a rule set that grows faster than the problem it covers.
+Each shape in that list gets a rule written for it. A band for the currency case.
+A subset search for the aggregated case. A wider window at period ends. Every one
+is locally correct, and the aggregate is a rule set that grows faster than the
+problem it covers.
 
 Start from what the engine computes. For a ledger item $a$ and a settlement
 record $b$ it evaluates three tests and requires all of them
@@ -198,10 +199,8 @@ item never enters a comparison at all. The symptom is a null result, which is wh
 the class is systematically over-represented in queues triaged by exception
 message rather than by cause.
 
-Approximate string comparison recovers much of it — which is what the
-record-linkage literature has been about since Newcombe's automatic linkage of
-vital records in 1959 and the Fellegi and Sunter probabilistic framework in 1969.
-It also introduces the failure that literature spends most of its time on: a
+Approximate string comparison recovers much of it. It also introduces the
+failure the record-linkage literature spends most of its own time on: a
 confident match to a neighbouring reference.
 
 ### 6. Partial settlement and short pay
@@ -242,16 +241,15 @@ necessary condition and not a sufficient one, which is a
 
 ## A worked example
 
-The population below is internally consistent — the counts sum, and the minutes
-are counts multiplied by a median handling time — and it is calibrated against
-nothing at all. Treat its shape as a hypothesis about where effort concentrates,
-not as a measurement.
+The population below is internally consistent — the counts sum, the minutes are
+counts times a median handling time — and calibrated against nothing. Treat its
+shape as a hypothesis about where effort concentrates.
 
 One monthly cycle on a mid-sized receivables book: 240,000 items presented to the
-matcher, 232,800 auto-matched, 7,200 exceptions. The headline is 97.0%. The same
-seven shapes turn up on bank, intercompany and custody reconciliations with
-different weights on each class, which is the part of the taxonomy I would defend
-hardest.
+matcher, 232,800 auto-matched, 7,200 exceptions. The headline is 97.0%. I would
+expect the same seven shapes on bank, intercompany and custody reconciliations
+with different weights on each class, and that portability is the part of the
+taxonomy I would defend hardest.
 
 | # | Class | Items | Share of items | Median min | Share of minutes |
 |---|---|---|---|---|---|
@@ -271,10 +269,9 @@ and reference-field mutation — are 22.2% of the items and 47.4% of the minutes
 
 <Figure
   n={1}
-  caption="Each class enters the matcher on the left and travels through the four gates in the order the engine applies them. A ring marks the gate that reports the failure; a cross marks the assumption that was actually violated. For split settlement, aggregated remittance and reversal-and-rebook the ring sits upstream of the cross — the engine reports a value or key failure when the real break is arity — which is why the remediation always lands on the wrong parameter. The marker at right says what widening a tolerance does to each class: absorb it correctly, in exactly one case; fail to reach it, in one more; or convert it into a silent wrong match, in the remaining five. The paired bars set each class's share of exception items against its share of analyst minutes, and the two orderings are close to inverted."
+  caption="Each class enters on the left and travels through the four gates in the order the engine applies them. A ring marks the gate that reports the failure; a cross marks the assumption that actually broke. For split settlement, aggregated remittance and reversal-and-rebook the ring sits upstream of the cross, which is why the remediation lands on the wrong parameter. The marker at right says what widening a tolerance does: absorb the class correctly, in one case; fail to reach it, in one more; convert it into a silent wrong match, in the other five. The paired bars set share of exception items against share of analyst minutes, and the two orderings are close to inverted."
 >
-
-  <svg viewBox="0 0 760 300" className="w-full h-auto" role="img" aria-label="Diagram: seven exception classes drawn as lanes running left to right through the four gates a deterministic matcher applies in order — key, value, window and one-to-one resolution. On each lane a ring marks the gate that reports the failure and a cross marks the assumption that was actually violated; for split settlement, aggregated remittance and reversal-and-rebook the ring sits upstream of the cross. A marker per class shows whether widening a tolerance cannot reach it, corrects it, or silently converts it into a wrong match, and paired bars compare each class's share of exception items with its share of analyst minutes.">
+  <svg viewBox="0 0 760 300" className="w-full h-auto" role="img" aria-label="Seven exception classes drawn as lanes running through four gates: key, value, window and one-to-one resolution. On each lane a ring marks the gate that reports the failure and a cross marks the assumption that broke. A marker per class shows whether a wider tolerance cannot reach it, fixes it, or silently converts it into a wrong match. Paired bars compare each class's share of exception items with its share of analyst minutes.">
     <g fontFamily="var(--font-mono)">
 
       <g fontSize="8.5" letterSpacing="1.4" fill="var(--ink-faint)">
@@ -292,8 +289,8 @@ and reference-field mutation — are 22.2% of the items and 47.4% of the minutes
       </g>
       <g fontSize="8" textAnchor="middle" letterSpacing="0.5" fill="var(--ink-faint)">
         <text x="250" y="51">k(a) = k(b)</text>
-        <text x="342" y="51">dv WITHIN e</text>
-        <text x="434" y="51">dt WITHIN d</text>
+        <text x="342" y="51">|Δv| ≤ ε</text>
+        <text x="434" y="51">|Δt| ≤ δ</text>
         <text x="526" y="51">ONE TO ONE</text>
       </g>
 
@@ -438,10 +435,8 @@ and reference-field mutation — are 22.2% of the items and 47.4% of the minutes
         <path d="M406 274.5 411.5 283.5 400.5 283.5Z" fill="var(--variance)" />
         <text x="418" y="282">TOLERANCE SILENCES IT AS A WRONG MATCH</text>
       </g>
-
     </g>
   </svg>
-
 </Figure>
 
 Two things in that table matter more than the headline.

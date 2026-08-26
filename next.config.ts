@@ -7,7 +7,21 @@ const nextConfig: NextConfig = {
   pageExtensions: ["ts", "tsx", "mdx"],
   ...(isStaticExport
     ? { output: "export" as const, images: { unoptimized: true } }
-    : {}),
+    : {
+        // Fold www onto the apex. Canonical tags already point at the apex, but
+        // serving both hostnames 200 is a duplicate-content invitation.
+        // `redirects()` is unsupported under `output: "export"`, hence the guard.
+        async redirects() {
+          return [
+            {
+              source: "/:path*",
+              has: [{ type: "host" as const, value: "www.chandrakanth.dev" }],
+              destination: "https://chandrakanth.dev/:path*",
+              permanent: true,
+            },
+          ];
+        },
+      }),
 };
 
 /**
