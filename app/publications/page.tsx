@@ -94,7 +94,7 @@ function Entry({ p, index }: { p: Publication; index: number }) {
           </p>
 
           {p.venue || p.year ? (
-            <p className="text-ink-muted mt-1.5 text-[0.925rem] italic">
+            <p className="text-ink-muted mt-1.5 text-[0.925rem] ">
               {p.venue}
               {p.venue && p.year ? ", " : ""}
               {p.year}
@@ -117,7 +117,7 @@ function Entry({ p, index }: { p: Publication; index: number }) {
             {detail ? (
               <Link
                 href={detail}
-                className="font-kicker text-accent hover:text-accent-hi transition-colors"
+                className="link-action transition-colors"
               >
                 Abstract, method &amp; results →
               </Link>
@@ -128,7 +128,7 @@ function Entry({ p, index }: { p: Publication; index: number }) {
                 href={`https://doi.org/${p.doi}`}
                 target="_blank"
                 rel="noopener"
-                className="font-kicker text-ink-faint hover:text-accent transition-colors"
+                className="link-action transition-colors"
               >
                 DOI
               </a>
@@ -138,7 +138,7 @@ function Entry({ p, index }: { p: Publication; index: number }) {
                 href={p.pdf}
                 target="_blank"
                 rel="noopener"
-                className="font-kicker text-ink-faint hover:text-accent transition-colors"
+                className="link-action transition-colors"
               >
                 PDF
               </a>
@@ -148,7 +148,7 @@ function Entry({ p, index }: { p: Publication; index: number }) {
                 href={p.code}
                 target="_blank"
                 rel="noopener"
-                className="font-kicker text-ink-faint hover:text-accent transition-colors"
+                className="link-action transition-colors"
               >
                 Code
               </a>
@@ -230,7 +230,7 @@ export default function PublicationsPage() {
                       ))}
                     </ol>
                   ) : (
-                    <p className="text-ink-muted border-y border-rule py-7 text-[0.975rem] leading-relaxed italic">
+                    <p className="text-ink-muted border-y border-rule py-7 text-[0.975rem] leading-relaxed ">
                       {s.empty}
                     </p>
                   )}
@@ -280,7 +280,7 @@ export default function PublicationsPage() {
                 </p>
               </div>
 
-              <p className="text-ink-faint mt-10 border-t border-rule pt-3 text-[0.8125rem] leading-relaxed italic">
+              <p className="text-ink-faint mt-10 border-t border-rule pt-3 text-[0.8125rem] leading-relaxed ">
                 Self-published essays are not peer-reviewed scholarly articles,
                 and this page does not present them as such.
               </p>

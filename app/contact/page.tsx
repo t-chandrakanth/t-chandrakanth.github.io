@@ -55,14 +55,14 @@ export default function ContactPage() {
         <div>
           <a
             href={`mailto:${site.email}?subject=${subject}`}
-            className="group block border border-ink-muted/40 bg-paper-raised p-8 no-underline transition-colors hover:border-ink sm:p-10"
+            className="group block rounded-[18px] border border-rule bg-paper-raised p-8 no-underline transition-colors hover:border-rule-strong hover:bg-paper-sunk sm:p-10"
           >
             <Kicker className="text-ink-faint">Email</Kicker>
-            <span className="display text-ink mt-3 block break-all text-[clamp(1.4rem,1rem+1.8vw,2.4rem)] transition-colors group-hover:text-accent">
+            <span className="display text-ink mt-3 block text-[clamp(1.15rem,0.85rem+1.4vw,1.9rem)] [overflow-wrap:anywhere] transition-colors group-hover:text-accent">
               {site.email}
             </span>
             <span
-              className="font-kicker text-ink-faint mt-5 inline-flex items-center gap-2"
+              className="link-action mt-5 inline-flex items-center gap-2"
               aria-hidden="true"
             >
               Compose
@@ -136,7 +136,7 @@ export default function ContactPage() {
               </p>
             </div>
 
-            <p className="text-ink-faint mt-10 border-t border-rule pt-3 text-[0.8125rem] leading-relaxed italic">
+            <p className="text-ink-faint mt-10 border-t border-rule pt-3 text-[0.8125rem] leading-relaxed ">
               Based in {site.location}, US Central time.
             </p>
           </div>

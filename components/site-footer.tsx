@@ -29,7 +29,7 @@ export function SiteFooter() {
                     href={p.href}
                     rel="me noopener"
                     target="_blank"
-                    className="font-kicker text-ink-faint hover:text-accent transition-colors"
+                    className="link-action transition-colors"
                   >
                     {p.label}
                     <span aria-hidden="true" className="ml-1 opacity-60">↗</span>
@@ -70,7 +70,7 @@ export function SiteFooter() {
         </div>
 
         <div className="border-t border-rule py-7">
-          <p className="text-ink-faint max-w-[70ch] text-[0.8125rem] leading-relaxed italic">
+          <p className="text-ink-faint max-w-[70ch] text-[0.8125rem] leading-relaxed ">
             {disclaimer}
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-x-8 gap-y-2">
@@ -78,7 +78,7 @@ export function SiteFooter() {
               © {year} {site.name}
             </Kicker>
             <Kicker className="text-right">
-              Set in Newsreader &amp; IBM Plex Mono
+              Set in San Francisco &amp; SF Mono
             </Kicker>
           </div>
         </div>

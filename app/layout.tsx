@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Newsreader, IBM_Plex_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SiteHeader } from "@/components/site-header";
@@ -9,19 +9,18 @@ import { currentEmployer, sameAs, site } from "@/lib/site";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 
-const newsreader = Newsreader({
+/**
+ * San Francisco is the real face on every Apple device — the system
+ * stack in globals.css resolves it first, and Apple does not license
+ * it as a webfont. Inter is only the stand-in for everyone else, so
+ * it sits behind SF in the stack and costs Apple users nothing.
+ * Mono is fully system-resolved (SF Mono / Menlo / Consolas).
+ */
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-newsreader",
+  variable: "--font-inter",
   axes: ["opsz"],
-  style: ["normal", "italic"],
-});
-
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-plex-mono",
-  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -70,8 +69,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fbf9f5" },
-    { media: "(prefers-color-scheme: dark)", color: "#111010" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };
 
@@ -126,7 +125,7 @@ function PersonJsonLd() {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${newsreader.variable} ${plexMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <PersonJsonLd />

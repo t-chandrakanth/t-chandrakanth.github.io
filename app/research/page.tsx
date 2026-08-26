@@ -56,14 +56,14 @@ export default function ResearchPage() {
               ] as const
             ).map(([key, meaning]) => (
               <div key={key} className="flex flex-col gap-1.5 border-t border-rule pt-3 sm:flex-row sm:gap-4">
-                <dt className="shrink-0 sm:w-[7.5rem]">
+                <dt className="shrink-0 sm:w-[9.5rem]">
                   <Stamp tone={statusMeta[key].tone}>{statusMeta[key].label}</Stamp>
                 </dt>
                 <dd className="text-ink-faint text-[0.85rem] leading-relaxed">{meaning}</dd>
               </div>
             ))}
           </dl>
-          <p className="text-ink-faint mt-6 border-t border-rule pt-3 text-[0.8125rem] leading-relaxed italic">
+          <p className="text-ink-faint mt-6 border-t border-rule pt-3 text-[0.8125rem] leading-relaxed ">
             No status on this page is promoted ahead of its evidence. If something
             says “in progress”, it is in progress.
           </p>
@@ -84,14 +84,14 @@ export default function ResearchPage() {
             return (
               <li key={p.id} className="border-t border-rule py-6">
                 <div className="flex items-baseline gap-3">
-                  <span className="font-kicker text-accent tabular-nums">{p.id}</span>
+                  <span className="font-kicker text-ink-faint tabular-nums">{p.id}</span>
                   <h3 className="flex-1 text-[1.1rem] leading-snug tracking-[-0.012em]">{p.name}</h3>
                 </div>
                 <p className="text-ink-muted mt-2.5 text-[0.925rem] leading-relaxed">{p.blurb}</p>
                 {n > 0 ? (
                   <Link
                     href={`/writing?pillar=${p.id}`}
-                    className="font-kicker text-ink-faint hover:text-accent mt-3.5 inline-block transition-colors"
+                    className="link-action mt-3.5 inline-block transition-colors"
                   >
                     {n} {n === 1 ? "essay" : "essays"} →
                   </Link>
@@ -127,7 +127,7 @@ export default function ResearchPage() {
                     <span className="font-kicker text-ink-faint tabular-nums">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <span className="font-kicker text-accent lg:mt-2 lg:block">{p.code}</span>
+                    <span className="font-kicker text-ink-faint lg:mt-2 lg:block">{p.code}</span>
                     <span className="lg:mt-3 lg:block">
                       <Stamp tone={statusMeta[p.status].tone}>{statusMeta[p.status].label}</Stamp>
                     </span>
@@ -137,7 +137,7 @@ export default function ResearchPage() {
                     <h3 className="text-[clamp(1.2rem,1.05rem+0.6vw,1.5rem)] leading-[1.22] tracking-[-0.015em]">
                       {p.title}
                     </h3>
-                    <p className="text-ink mt-3 max-w-[58ch] text-[1.0625rem] leading-snug italic">
+                    <p className="text-ink mt-3 max-w-[58ch] text-[1.0625rem] leading-snug ">
                       {p.question}
                     </p>
                     <p className="text-ink-muted mt-4 max-w-[64ch] text-[0.975rem] leading-relaxed">
@@ -181,7 +181,7 @@ export default function ResearchPage() {
                     </dl>
 
                     {p.patentSensitive ? (
-                      <p className="font-kicker text-pending mt-5 inline-flex items-center gap-2 border border-pending/40 bg-pending/[0.06] px-3 py-1.5 normal-case tracking-normal [font-size:0.75rem]">
+                      <p className="font-kicker text-pending mt-5 inline-flex items-center gap-2 rounded-full border border-pending/40 bg-pending/[0.06] px-3.5 py-1.5 normal-case tracking-normal [font-size:0.75rem]">
                         Mechanism withheld pending provisional filing
                       </p>
                     ) : null}
@@ -217,7 +217,7 @@ export default function ResearchPage() {
             </div>
           ))}
         </div>
-        <p className="text-ink-faint mt-12 max-w-[60ch] text-[0.85rem] leading-relaxed italic">
+        <p className="text-ink-faint mt-12 max-w-[60ch] text-[0.85rem] leading-relaxed ">
           Working on any of this? {" "}
           <Link href="/contact" className="link-rule text-ink-muted">
             Get in touch

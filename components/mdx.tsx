@@ -19,7 +19,7 @@ export function Figure({
 }) {
   return (
     <figure className={`my-12 ${bleed ? "lg:-mx-24" : ""}`}>
-      <div className="border border-rule bg-paper-raised p-5 sm:p-8">{children}</div>
+      <div className="rounded-[18px] border border-rule bg-paper-raised p-5 sm:p-8">{children}</div>
       <figcaption>
         {n !== undefined ? (
           <span className="text-ink mr-2 font-medium">Fig. {String(n).padStart(2, "0")}</span>
@@ -48,7 +48,7 @@ export function Callout({
         : "border-l-rule-strong";
   return (
     <aside
-      className={`my-10 border border-rule border-l-2 ${accent} bg-paper-raised px-5 py-4 sm:px-6`}
+      className={`my-10 rounded-[12px] border border-rule border-l-[3px] ${accent} bg-paper-raised px-5 py-4 sm:px-6`}
     >
       <Kicker className="mb-2">{label}</Kicker>
       <div className="text-ink-muted [&>*+*]:mt-3 text-[0.975rem] leading-relaxed">
@@ -63,7 +63,7 @@ export function KeyLine({ children }: { children: ReactNode }) {
   // A div, not a p: MDX wraps the children in their own paragraph, and a
   // <p> inside a <p> is restructured by the browser and breaks hydration.
   return (
-    <div className="my-12 border-y border-rule-strong py-7 text-center text-[clamp(1.25rem,1rem+1.1vw,1.6rem)] leading-[1.32] tracking-[-0.014em] text-balance italic [&>p]:m-0">
+    <div className="my-12 border-y border-rule-strong py-7 text-center text-[clamp(1.25rem,1rem+1.1vw,1.6rem)] leading-[1.32] font-medium tracking-[-0.019em] text-balance [&>p]:m-0">
       {children}
     </div>
   );

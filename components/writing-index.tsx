@@ -48,11 +48,11 @@ export function WritingIndex({ posts }: { posts: IndexPost[] }) {
 
   return (
     <>
-      <div className="border-y border-rule">
+      <div className="border-y border-rule py-3">
         <div
           role="group"
           aria-label="Filter by pillar"
-          className="-mx-5 flex overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden"
+          className="-mx-5 flex gap-2 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden"
         >
           {filters.map((f) => {
             const on = activePillar === f.id;
@@ -64,8 +64,10 @@ export function WritingIndex({ posts }: { posts: IndexPost[] }) {
                 onClick={() => select(f.id)}
                 disabled={n === 0}
                 aria-pressed={on}
-                className={`font-kicker shrink-0 border-r border-rule px-4 py-3 transition-colors first:pl-0 disabled:opacity-35 ${
-                  on ? "text-accent" : "text-ink-faint enabled:hover:text-ink"
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-[0.8125rem] tracking-[-0.01em] transition-colors disabled:opacity-35 ${
+                  on
+                    ? "bg-[var(--btn-fill)] text-white"
+                    : "text-ink-muted bg-paper-sunk enabled:hover:text-ink"
                 }`}
               >
                 {f.label}
@@ -77,7 +79,7 @@ export function WritingIndex({ posts }: { posts: IndexPost[] }) {
       </div>
 
       {shown.length === 0 ? (
-        <p className="text-ink-muted py-16 text-center italic">
+        <p className="text-ink-muted py-16 text-center ">
           Nothing published under this pillar yet.
         </p>
       ) : (

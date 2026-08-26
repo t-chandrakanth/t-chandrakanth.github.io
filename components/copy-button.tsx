@@ -27,7 +27,7 @@ export function CopyButton({
     <button
       type="button"
       onClick={copy}
-      className={`font-kicker text-ink-faint hover:text-accent transition-colors ${className}`}
+      className={`link-action transition-colors ${className}`}
       aria-live="polite"
     >
       {state === "done" ? "Copied" : state === "failed" ? "Select manually" : label}

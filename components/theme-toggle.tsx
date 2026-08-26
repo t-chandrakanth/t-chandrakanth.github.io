@@ -38,7 +38,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => apply(next)}
-      className="font-kicker text-ink-faint hover:text-accent w-[3.25rem] text-right transition-colors"
+      className="text-ink-muted hover:text-ink hover:bg-paper-sunk hover:border-rule-strong min-w-[4rem] rounded-full border border-rule px-3 py-1 text-center text-[0.8125rem] tracking-[-0.01em] transition-colors"
       aria-label={`Appearance: ${mode}. Switch to ${next}.`}
       title={`Appearance: ${mode} — click for ${next}`}
     >

@@ -12,7 +12,7 @@ export function SiteHeader() {
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-rule bg-paper/85 backdrop-blur-md supports-[backdrop-filter]:bg-paper/75">
+    <header className="sticky top-0 z-50 border-b border-rule bg-paper/90 backdrop-blur-xl backdrop-saturate-[180%] supports-[backdrop-filter]:bg-[var(--glass-bg)]">
       <a
         href="#main"
         className="font-kicker sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:border focus:border-rule-strong focus:bg-paper focus:px-3 focus:py-2"
@@ -31,11 +31,11 @@ export function SiteHeader() {
               size={20}
               className="text-ink translate-y-[3px] transition-transform duration-500 group-hover:rotate-[-6deg]"
             />
-            <span className="text-ink text-[1.0625rem] tracking-[-0.015em] whitespace-nowrap">
+            <span className="text-ink text-[1.0625rem] font-semibold tracking-[-0.022em] whitespace-nowrap">
               {site.name}
             </span>
             <span
-              className="font-kicker text-ink-faint hidden border-l border-rule pl-2.5 xl:inline"
+              className="text-ink-faint hidden border-l border-rule pl-2.5 text-[0.8125rem] tracking-[-0.01em] xl:inline"
               aria-hidden="true"
             >
               {site.blogName}
@@ -48,22 +48,18 @@ export function SiteHeader() {
                 {primaryNav.map((item) => {
                   const active = isActive(item.href);
                   return (
-                    <li key={item.href} className="relative">
+                    <li key={item.href}>
                       <Link
                         href={item.href}
                         aria-current={active ? "page" : undefined}
-                        className={`font-kicker transition-colors ${
-                          active ? "text-ink" : "text-ink-faint hover:text-accent"
+                        className={`text-[0.875rem] tracking-[-0.012em] transition-colors ${
+                          active
+                            ? "text-ink font-semibold"
+                            : "text-ink-muted hover:text-ink"
                         }`}
                       >
                         {item.label}
                       </Link>
-                      <span
-                        aria-hidden="true"
-                        className={`absolute -top-[0.85rem] left-0 h-px w-full origin-left bg-accent transition-transform duration-300 ${
-                          active ? "scale-x-100" : "scale-x-0"
-                        }`}
-                      />
                     </li>
                   );
                 })}
@@ -87,8 +83,8 @@ export function SiteHeader() {
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`font-kicker block px-4 py-2.5 transition-colors ${
-                    active ? "text-accent bg-accent-wash" : "text-ink-faint"
+                  className={`block px-4 py-2.5 text-[0.8125rem] tracking-[-0.01em] transition-colors ${
+                    active ? "text-accent bg-accent-wash font-semibold" : "text-ink-muted"
                   }`}
                 >
                   {item.label}

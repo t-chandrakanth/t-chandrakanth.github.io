@@ -31,7 +31,7 @@ export default function WorkPage() {
           {throughLine}
         </p>
         <p
-          className="text-ink-faint reveal mt-5 max-w-[58ch] text-[0.875rem] leading-relaxed italic"
+          className="text-ink-faint reveal mt-5 max-w-[58ch] text-[0.875rem] leading-relaxed "
           style={{ animationDelay: "160ms" }}
         >
           Described by scope and scale only. No internal system names, vendors,
@@ -67,7 +67,7 @@ export default function WorkPage() {
                   <h2 className="text-[clamp(1.35rem,1.1rem+0.9vw,1.8rem)] leading-[1.18] tracking-[-0.016em]">
                     {d.name}
                   </h2>
-                  <p className="text-ink mt-3 max-w-[56ch] text-[1.0625rem] leading-snug italic">
+                  <p className="text-ink mt-3 max-w-[56ch] text-[1.0625rem] leading-snug ">
                     {d.problem}
                   </p>
                   <p className="text-ink-muted mt-4 max-w-[64ch] text-[0.975rem] leading-relaxed">
@@ -159,14 +159,14 @@ export default function WorkPage() {
               <p className="text-ink-muted mt-2.5 text-[0.925rem] leading-relaxed">{c.b}</p>
               <Link
                 href={c.href}
-                className="font-kicker text-ink-faint hover:text-accent mt-4 inline-block transition-colors"
+                className="link-action mt-4 inline-block transition-colors"
               >
                 {c.cta} →
               </Link>
             </div>
           ))}
         </div>
-        <p className="text-ink-faint mt-12 max-w-[60ch] text-[0.85rem] leading-relaxed italic">
+        <p className="text-ink-faint mt-12 max-w-[60ch] text-[0.85rem] leading-relaxed ">
           Building something in any of these areas?{" "}
           <Link href="/contact" className="link-rule text-ink-muted">
             Get in touch

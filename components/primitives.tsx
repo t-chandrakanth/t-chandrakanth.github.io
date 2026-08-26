@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** Small mono label. The site's connective tissue. */
+/** Small tracked label. The site's connective tissue. */
 export function Kicker({
   children,
   className = "",
@@ -92,7 +92,7 @@ export function Stamp({
 }) {
   return (
     <span
-      className={`font-kicker inline-flex items-center border px-[0.45rem] py-[0.2rem] leading-none ${
+      className={`font-kicker inline-flex items-center rounded-full border px-[0.6rem] py-[0.28rem] leading-none ${
         TONE[tone] ?? TONE.neutral
       } ${className}`}
     >

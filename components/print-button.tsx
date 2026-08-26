@@ -5,7 +5,7 @@ export function PrintButton({ label = "Print / save as PDF" }: { label?: string 
     <button
       type="button"
       onClick={() => window.print()}
-      className="font-kicker text-ink-faint hover:text-accent transition-colors print:hidden"
+      className="link-action transition-colors print:hidden"
     >
       {label}
     </button>

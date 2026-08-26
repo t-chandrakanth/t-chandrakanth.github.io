@@ -44,7 +44,7 @@ export default function CVPage() {
           employer internals appear here.
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 print:hidden">
-          <a href={`mailto:${site.email}`} className="font-kicker text-ink-faint hover:text-accent transition-colors">
+          <a href={`mailto:${site.email}`} className="link-action transition-colors">
             {site.email}
           </a>
           {liveProfiles().map((p) => (
@@ -53,7 +53,7 @@ export default function CVPage() {
               href={p.href}
               target="_blank"
               rel="me noopener"
-              className="font-kicker text-ink-faint hover:text-accent transition-colors"
+              className="link-action transition-colors"
             >
               {p.label}
             </a>
@@ -90,7 +90,7 @@ export default function CVPage() {
                         key={pos.title + pos.start}
                         className="flex flex-col gap-x-3 gap-y-0.5 sm:flex-row sm:items-baseline"
                       >
-                        <span className="text-accent text-[1.0625rem]">{pos.title}</span>
+                        <span className="text-ink text-[1.0625rem] font-semibold">{pos.title}</span>
                         <Kicker className="text-ink-faint tabular-nums">
                           {formatMonth(pos.start)} —{" "}
                           {pos.end === "Present" ? "Present" : formatMonth(pos.end)}
@@ -201,7 +201,7 @@ export default function CVPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-ink-faint mt-3 text-[0.875rem] leading-relaxed italic">
+                <p className="text-ink-faint mt-3 text-[0.875rem] leading-relaxed ">
                   {col.empty}
                 </p>
               )}
@@ -210,7 +210,7 @@ export default function CVPage() {
         </div>
       </section>
 
-      <p className="text-ink-faint mt-16 max-w-[64ch] text-[0.85rem] leading-relaxed italic print:hidden">
+      <p className="text-ink-faint mt-16 max-w-[64ch] text-[0.85rem] leading-relaxed print:hidden">
         A fuller account of the research behind these roles is on the{" "}
         <Link href="/research" className="link-rule text-ink-muted">
           research programme

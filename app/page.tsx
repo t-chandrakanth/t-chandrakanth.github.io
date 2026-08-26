@@ -44,7 +44,7 @@ export default function HomePage() {
               </h1>
 
               <p
-                className="reveal mt-6 max-w-[26ch] text-[clamp(1.2rem,1rem+0.9vw,1.7rem)] leading-[1.24] tracking-[-0.015em] italic"
+                className="text-ink-muted reveal mt-6 max-w-[26ch] text-[clamp(1.2rem,1rem+0.9vw,1.7rem)] leading-[1.24] tracking-[-0.019em]"
                 style={{ animationDelay: "120ms" }}
               >
                 {site.tagline}
@@ -95,7 +95,7 @@ export default function HomePage() {
               >
                 <Link
                   href="/writing"
-                  className="font-kicker group inline-flex items-center gap-2 border border-ink px-5 py-3 text-ink transition-colors hover:bg-ink hover:text-ink-invert"
+                  className="btn group"
                 >
                   Read the writing
                   <span
@@ -105,10 +105,10 @@ export default function HomePage() {
                     →
                   </span>
                 </Link>
-                <Link href="/research" className="font-kicker text-ink-faint hover:text-accent transition-colors">
+                <Link href="/research" className="text-accent hover:text-accent-hi text-[1rem] tracking-[-0.018em] transition-colors">
                   Research programme
                 </Link>
-                <Link href="/contact" className="font-kicker text-ink-faint hover:text-accent transition-colors">
+                <Link href="/contact" className="text-accent hover:text-accent-hi text-[1rem] tracking-[-0.018em] transition-colors">
                   Contact
                 </Link>
               </div>
@@ -161,7 +161,7 @@ export default function HomePage() {
             title={site.blogName}
             intro="One substantial piece every two weeks on agents, evaluation, and the systems that are not allowed to be approximately right. Each belongs to a single pillar, ships with an original diagram and a worked example on synthetic data, and states its own limits."
             action={
-              <Link href="/writing" className="font-kicker text-ink-faint hover:text-accent transition-colors">
+              <Link href="/writing" className="link-action transition-colors">
                 All {posts.length} →
               </Link>
             }
@@ -196,7 +196,7 @@ export default function HomePage() {
               ))}
             </ul>
           ) : (
-            <p className="text-ink-muted border-y border-rule py-8 italic">
+            <p className="text-ink-muted border-y border-rule py-8 ">
               The first essays are in preparation.
             </p>
           )}
@@ -210,13 +210,13 @@ export default function HomePage() {
             n={2}
             label="Research programme"
             action={
-              <Link href="/research" className="font-kicker text-ink-faint hover:text-accent transition-colors">
+              <Link href="/research" className="text-accent hover:text-accent-hi text-[1rem] tracking-[-0.018em] transition-colors">
                 Full programme →
               </Link>
             }
           />
 
-          <blockquote className="max-w-[30ch] text-[clamp(1.5rem,1.1rem+1.9vw,2.5rem)] leading-[1.16] tracking-[-0.02em] italic">
+          <blockquote className="max-w-[30ch] text-[clamp(1.5rem,1.1rem+1.9vw,2.5rem)] leading-[1.16] font-semibold tracking-[-0.02em]">
             {thesis.statement}
           </blockquote>
 
@@ -224,7 +224,7 @@ export default function HomePage() {
             {pillars.map((p, i) => (
               <div key={p.id} className="border-t border-rule py-6">
                 <div className="flex items-baseline gap-3">
-                  <span className="font-kicker text-accent tabular-nums">{p.id}</span>
+                  <span className="font-kicker text-ink-faint tabular-nums">{p.id}</span>
                   <h3 className="text-[1.1rem] leading-snug tracking-[-0.012em]">{p.name}</h3>
                 </div>
                 <p className="text-ink-muted mt-2.5 text-[0.925rem] leading-relaxed">{p.blurb}</p>
@@ -262,7 +262,7 @@ export default function HomePage() {
                 <Kicker className="text-ink-muted">Manuscripts</Kicker>
                 <Link
                   href="/publications"
-                  className="font-kicker text-ink-faint hover:text-accent transition-colors"
+                  className="link-action transition-colors"
                 >
                   All publications →
                 </Link>
@@ -272,7 +272,7 @@ export default function HomePage() {
                   <li key={paper.id} className="border-t border-rule py-6">
                     <Link href={`/publications/${paper.id}`} className="group block no-underline">
                       <div className="flex items-center gap-3">
-                        <span className="font-kicker text-accent">{paper.short}</span>
+                        <span className="font-kicker text-ink-muted">{paper.short}</span>
                         <Stamp tone="neutral">In preparation</Stamp>
                       </div>
                       <h3 className="mt-3 text-[1.05rem] leading-snug tracking-[-0.012em] transition-colors group-hover:text-accent">
@@ -310,7 +310,7 @@ export default function HomePage() {
               </p>
               <Link
                 href="/contact"
-                className="font-kicker group mt-7 inline-flex items-center gap-2 border border-ink px-5 py-3 text-ink transition-colors hover:bg-ink hover:text-ink-invert"
+                className="btn group mt-7"
               >
                 Get in touch
                 <span

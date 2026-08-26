@@ -101,7 +101,7 @@ export default async function PostPage({
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 reveal">
                 <Link
                   href={`/writing?pillar=${post.pillar}`}
-                  className="font-kicker text-accent hover:text-accent-hi transition-colors"
+                  className="link-action transition-colors"
                 >
                   {post.pillarName}
                 </Link>
@@ -120,7 +120,7 @@ export default async function PostPage({
               </h1>
 
               <p
-                className="text-ink-muted mt-6 max-w-[46ch] text-[clamp(1.1rem,1rem+0.4vw,1.3rem)] leading-[1.5] italic reveal"
+                className="text-ink-muted mt-6 max-w-[46ch] text-[clamp(1.1rem,1rem+0.4vw,1.3rem)] leading-[1.5] reveal"
                 style={{ animationDelay: "120ms" }}
               >
                 {post.description}
@@ -151,7 +151,7 @@ export default async function PostPage({
               <div className="lg:sticky lg:top-24">
                 <ReadingRail sections={post.sections} />
                 {post.quotable ? (
-                  <p className="text-ink-muted mt-10 hidden border-t border-rule pt-4 text-[0.9rem] leading-snug italic lg:block">
+                  <p className="text-ink-muted mt-10 hidden border-t border-rule pt-4 text-[0.9rem] leading-snug lg:block">
                     “{post.quotable}”
                   </p>
                 ) : null}
@@ -179,7 +179,7 @@ export default async function PostPage({
                   {site.url.replace(/^https?:\/\//, "")}/writing/{post.slug}
                 </a>
               </p>
-              <p className="text-ink-faint mt-3 text-[0.8125rem] leading-relaxed italic">
+              <p className="text-ink-faint mt-3 text-[0.8125rem] leading-relaxed ">
                 {disclaimer}
               </p>
             </div>

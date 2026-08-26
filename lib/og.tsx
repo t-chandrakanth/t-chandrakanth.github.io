@@ -9,17 +9,19 @@ export const OG_CONTENT_TYPE = "image/png";
 const FONT_DIR = path.join(process.cwd(), "assets", "fonts");
 const read = (f: string) => fs.readFileSync(path.join(FONT_DIR, f));
 
-const PAPER = "#fbf9f5";
-const INK = "#17150f";
-const INK_MUTED = "#56524a";
-const INK_FAINT = "#8b857b";
-const RULE = "#ded6c7";
-const ACCENT = "#a93b22";
+const PAPER = "#ffffff";
+const INK = "#1d1d1f";
+const INK_MUTED = "#515154";
+const INK_FAINT = "#6e6e73";
+const RULE = "#d2d2d7";
+const ACCENT = "#0071e3";
 
 /**
- * The social card is the same document the site is: paper, hairlines, a mono
- * kicker and a serif line. It has to be legible as a 400px-wide thumbnail, so
- * the title never drops below 48px and there are at most four elements on it.
+ * The social card is the same surface the site is: white, hairlines, a tracked
+ * kicker and one tight sans line. Satori has no system fonts, so the SF stack
+ * cannot resolve here — Inter stands in, the same face non-Apple visitors see.
+ * It has to be legible as a 400px-wide thumbnail, so the title never drops
+ * below 48px and there are at most four elements on it.
  */
 export async function renderOgImage({
   kicker,
@@ -73,12 +75,12 @@ export async function renderOgImage({
           <div
             style={{
               display: "flex",
-              fontFamily: "Plex",
+              fontFamily: "Inter",
               fontSize: 21,
-              letterSpacing: 3.4,
+              letterSpacing: 1.6,
               textTransform: "uppercase",
               color: ACCENT,
-              fontWeight: 500,
+              fontWeight: 600,
             }}
           >
             {kicker}
@@ -88,10 +90,11 @@ export async function renderOgImage({
         <div
           style={{
             display: "flex",
-            fontFamily: "Newsreader",
-            fontSize: long ? 62 : 76,
-            lineHeight: 1.08,
-            letterSpacing: -1.8,
+            fontFamily: "Inter",
+            fontWeight: 600,
+            fontSize: long ? 60 : 74,
+            lineHeight: 1.07,
+            letterSpacing: -2.2,
             color: INK,
             maxWidth: 1000,
           }}
@@ -110,14 +113,15 @@ export async function renderOgImage({
             }}
           >
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", fontFamily: "Newsreader", fontSize: 32, color: INK }}>
+              <div style={{ display: "flex", fontFamily: "Inter", fontWeight: 600, fontSize: 30, letterSpacing: -0.7, color: INK }}>
                 {site.name}
               </div>
               <div
                 style={{
                   display: "flex",
-                  fontFamily: "Plex",
+                  fontFamily: "Inter",
                   fontSize: 19,
+                  letterSpacing: -0.3,
                   color: INK_MUTED,
                   marginTop: 8,
                 }}
@@ -129,9 +133,10 @@ export async function renderOgImage({
               <div
                 style={{
                   display: "flex",
-                  fontFamily: "Plex",
-                  fontSize: 19,
-                  letterSpacing: 2.2,
+                  fontFamily: "Inter",
+                  fontWeight: 600,
+                  fontSize: 18,
+                  letterSpacing: 1.2,
                   textTransform: "uppercase",
                   color: INK_FAINT,
                 }}
@@ -146,9 +151,8 @@ export async function renderOgImage({
     {
       ...OG_SIZE,
       fonts: [
-        { name: "Newsreader", data: read("Newsreader-Regular.ttf"), weight: 400, style: "normal" },
-        { name: "Plex", data: read("IBMPlexMono-Regular.ttf"), weight: 400, style: "normal" },
-        { name: "Plex", data: read("IBMPlexMono-Medium.ttf"), weight: 500, style: "normal" },
+        { name: "Inter", data: read("Inter-Regular.ttf"), weight: 400, style: "normal" },
+        { name: "Inter", data: read("Inter-SemiBold.ttf"), weight: 600, style: "normal" },
       ],
     },
   );

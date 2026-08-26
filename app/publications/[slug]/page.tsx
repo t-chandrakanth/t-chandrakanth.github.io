@@ -91,7 +91,7 @@ export default async function PublicationPage({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Link
               href="/publications"
-              className="font-kicker text-ink-faint hover:text-accent transition-colors"
+              className="link-action transition-colors"
             >
               ← Publications
             </Link>
@@ -100,7 +100,7 @@ export default async function PublicationPage({
             {pillar ? (
               <Link
                 href={`/writing?pillar=${pillar.id}`}
-                className="font-kicker text-accent hover:text-accent-hi transition-colors"
+                className="link-action transition-colors"
               >
                 {pillar.name}
               </Link>
@@ -121,7 +121,7 @@ export default async function PublicationPage({
           </p>
 
           {p.note ? (
-            <p className="font-kicker text-pending mt-5 inline-flex border border-pending/40 bg-pending/[0.06] px-3 py-1.5 normal-case tracking-normal [font-size:0.8rem]">
+            <p className="font-kicker text-pending mt-5 inline-flex rounded-full border border-pending/40 bg-pending/[0.06] px-3.5 py-1.5 normal-case tracking-normal [font-size:0.8rem]">
               {p.note}
             </p>
           ) : null}
@@ -254,7 +254,7 @@ export default async function PublicationPage({
                   <CopyButton value={formatCitation(p)} label="Copy citation" />
                   <CopyButton value={formatBibtex(p)} label="Copy BibTeX" />
                 </div>
-                <p className="text-ink-faint mt-3 text-[0.8rem] leading-relaxed italic">
+                <p className="text-ink-faint mt-3 text-[0.8rem] leading-relaxed ">
                   BibTeX is emitted as <code className="font-mono">@unpublished</code> while the
                   manuscript is unsubmitted.
                 </p>

@@ -76,7 +76,7 @@ export default function WritingPage() {
             only synthetic data, and states what it does not know.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2">
-            <a href="/feed.xml" className="font-kicker text-ink-faint hover:text-accent transition-colors">
+            <a href="/feed.xml" className="link-action transition-colors">
               RSS
             </a>
             <span aria-hidden="true" className="text-rule-strong">·</span>

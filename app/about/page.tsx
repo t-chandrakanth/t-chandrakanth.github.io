@@ -35,7 +35,7 @@ export default function AboutPage() {
           {site.name}
         </h1>
         <p
-          className="reveal mt-6 max-w-[34ch] text-[clamp(1.15rem,1rem+0.8vw,1.6rem)] leading-[1.28] tracking-[-0.014em] italic"
+          className="text-ink-muted reveal mt-6 max-w-[34ch] text-[clamp(1.15rem,1rem+0.8vw,1.6rem)] leading-[1.28] tracking-[-0.019em]"
           style={{ animationDelay: "120ms" }}
         >
           {site.tagline}
@@ -189,7 +189,7 @@ export default function AboutPage() {
         <aside className="min-w-0 lg:pt-2">
           <div className="lg:sticky lg:top-24">
             {headshot ? (
-              <div className="border border-rule bg-paper-raised p-2">
+              <div className="rounded-[18px] border border-rule bg-paper-raised p-2">
                 <Image
                   src={HEADSHOT}
                   alt={`${site.name}`}
@@ -205,7 +205,7 @@ export default function AboutPage() {
               <Kicker className="border-t border-rule pt-3">Contact</Kicker>
               <ul className="mt-4 space-y-2.5">
                 <li>
-                  <a href={`mailto:${site.email}`} className="link-quiet text-ink-muted text-[0.95rem] break-all">
+                  <a href={`mailto:${site.email}`} className="link-quiet text-ink-muted text-[0.95rem] [overflow-wrap:anywhere]">
                     {site.email}
                   </a>
                 </li>
@@ -254,7 +254,7 @@ export default function AboutPage() {
           title="Copy-ready biography"
           intro="Three lengths, kept in sync with the record. Use whichever fits your programme; no attribution or approval needed."
         />
-        <div className="grid gap-px border border-rule bg-rule lg:grid-cols-2">
+        <div className="grid gap-px overflow-hidden rounded-[18px] border border-rule bg-rule lg:grid-cols-2">
           <div className="grid gap-px bg-rule">
             {bioLengths.slice(0, 2).map(({ key, label }) => (
               <div key={key} className="flex flex-col bg-paper p-6">
@@ -281,7 +281,7 @@ export default function AboutPage() {
           ))}
         </div>
         {!headshot ? (
-          <p className="text-ink-faint mt-6 text-[0.85rem] italic">
+          <p className="text-ink-faint mt-6 text-[0.85rem] ">
             A high-resolution headshot is available on request —{" "}
             <a href={`mailto:${site.email}`} className="link-rule text-ink-muted">
               email me
