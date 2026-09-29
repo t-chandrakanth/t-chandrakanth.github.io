@@ -108,3 +108,11 @@ h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:v
 .dchip.now.red:not(.on) b{color:#d32f2f}
 .redn{background:#fdecea;color:#b71c1c}
 .redt{color:#d32f2f}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;margin-top:8px}
+.calh{font-size:11px;color:var(--muted);font-weight:600}
+.calc{padding:8px 0;border-radius:10px;font-size:14px;color:var(--ink)}
+.calc.now{outline:2px solid var(--brand)}
+.calc.on{background:var(--brand);color:var(--brand-ink)}
+.calh.red,.calc.red{color:#d32f2f}
+.calc.red.on{background:#d32f2f;color:#fff}
+.calh-n{font-size:12px;color:#b71c1c;margin-top:4px}
