@@ -365,7 +365,6 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               )),
             ])}
           </div>
-          <Calendar selected={day} onPick={setDay} />
           {holidayName(day) && <div className="note redn">{long(day)} · {holidayName(day)}</div>}
           {!holidayName(day) && dd(day).getDay() === 0 && <div className="note redn">{long(day)} · Sunday</div>}
           {ticker.length > 0 && (
