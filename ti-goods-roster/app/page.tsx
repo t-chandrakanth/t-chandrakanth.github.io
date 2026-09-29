@@ -38,19 +38,6 @@ function kind(v: string) {
 }
 const label = (v: string) => NAMES[v] ?? (kind(v) === "rest" ? "Rest" : kind(v) === "night" ? "Night" : kind(v) === "aft" ? "Afternoon" : "Day");
 
-function segs(v: string) {
-  const out: [number, number][] = [];
-  v.split(/\s+/).forEach((t) => {
-    const m = t.match(/^(\d+)\/(\d+)$/);
-    if (!m) return;
-    const a = +m[1];
-    let b = +m[2];
-    if (b <= a) b += 24;
-    if (b > 24) { out.push([a, 24]); out.push([0, b - 24]); } else out.push([a, b]);
-  });
-  return out;
-}
-
 function Pill({ v, pend }: { v: string; pend?: boolean }) {
   const k = kind(v);
   return <span className={"pill" + (pend ? " pend" : "")} style={{ background: `var(--${k})`, color: `var(--${k}-ink)` }}>{v || "No duty"}</span>;
@@ -419,8 +406,6 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <small>{day === today ? "Your duty today" : `Your duty on ${long(day)}`}</small>
             <div className="big">{myV || "No duty"}</div>
             <div className="lbl">{myV ? label(myV) : "Nothing assigned yet"}</div>
-            <div className="bar">{segs(myV).map(([a, b], i) => <i key={i} style={{ left: `${(a / 24) * 100}%`, width: `${((b - a) / 24) * 100}%` }} />)}</div>
-            <div className="ticks"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
           </div>
           {data?.remarks[day] && <div className="note">Remark: {data.remarks[day]}</div>}
           {day !== tomorrow && (
