@@ -38,6 +38,7 @@
   "exclude": [
     "node_modules",
     "legacy",
+    "ti-goods-roster",
     "out",
     ".next"
   ]
