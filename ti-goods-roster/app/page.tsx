@@ -296,6 +296,11 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     say(action === "approve" ? `Approved. ${nm(c.person)} is updated.` : "Request rejected.");
     load();
   }
+  async function removeReq(c: Change) {
+    const r = await api("/api/requests", { id: c.id, date: c.date }, "DELETE");
+    say(r.ok ? "Request deleted." : String(r.j.error ?? "Could not delete"));
+    load();
+  }
   async function autoFill(d: string) {
     const prev = iso(new Date(dd(d).getTime() - 86400000));
     let y = data?.entries[prev];
@@ -474,7 +479,12 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               <div className="row first" style={{ padding: 0 }}><div className="nm"><small>Now</small></div><Pill v={data?.entries[c.date]?.[c.person] ?? ""} /><span>→</span><Pill v={c.value} /></div>
               {admin
                 ? <div className="btns"><button className="btn pri" onClick={() => decide(c, "approve")}>Approve</button><button className="btn" onClick={() => decide(c, "reject")}>Reject</button></div>
-                : <div className="note">Waiting for Raghav to approve.</div>}
+                : c.requestedBy === me
+                  ? <div className="btns">
+                      <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); setSheet({ d: c.date, p: c.person }); }}>Edit</button>
+                      <button className="btn" onClick={() => removeReq(c)}>Delete</button>
+                    </div>
+                  : <div className="note">Waiting for Raghav to approve.</div>}
             </div>
           )))}
 

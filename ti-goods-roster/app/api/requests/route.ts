@@ -21,3 +21,19 @@ export async function POST(req: Request) {
   await saveMonth(month, data);
   return Response.json({ ok: true });
 }
+
+// The person who made a request (or Raghav) can delete it while it is pending.
+export async function DELETE(req: Request) {
+  const u = await requireUser();
+  if ("error" in u) return u.error;
+  const { id, date } = (await req.json()) as { id?: string; date?: string };
+  if (!id || !date) return Response.json({ error: "Bad request" }, { status: 400 });
+  const month = date.slice(0, 7);
+  const data = await loadMonth(month);
+  const r = data.requests.find((x) => x.id === id);
+  if (!r) return Response.json({ error: "Request not found" }, { status: 404 });
+  if (r.requestedBy !== u.me && !isAdmin(u.me)) return Response.json({ error: "You can only delete your own request" }, { status: 403 });
+  data.requests = data.requests.filter((x) => x.id !== id);
+  await saveMonth(month, data);
+  return Response.json({ ok: true });
+}
