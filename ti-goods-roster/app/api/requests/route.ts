@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/config";
 import { loadMonth, saveMonth, type Month } from "@/lib/store";
 import { rangeDates } from "@/lib/range";
+import { followWithNightOff, saveMonths } from "@/lib/nightoff";
 
 // Raghav approves or rejects a duty change request.
 export async function POST(req: Request) {
@@ -26,7 +27,8 @@ export async function POST(req: Request) {
       if (!months.has(m)) months.set(m, await loadMonth(m));
       (months.get(m)!.entries[d] ??= {})[r.person] = r.value;
     }
-    for (const [m, md] of months) await saveMonth(m, md);
+    if (!r.to) await followWithNightOff(r.date, r.person, r.value, months);
+    await saveMonths(months);
   } else {
     await saveMonth(month, data);
   }
