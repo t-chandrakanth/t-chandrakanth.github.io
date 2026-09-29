@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_ID, PEOPLE, SHIFTS } from "@/lib/config";
 import { suggest } from "@/lib/suggest";
 import { countDuties } from "@/lib/summary";
+import { rangeDates } from "@/lib/range";
 import { holidayName } from "@/lib/holidays";
 import { buildMessage, whatsappLink } from "@/lib/share";
 
-type Change = { id: string; date: string; person: string; value: string; requestedBy: string; note?: string };
+type Change = { id: string; date: string; person: string; value: string; requestedBy: string; note?: string; to?: string };
 type Data = { me: string; entries: Record<string, Record<string, string>>; remarks: Record<string, string>; requests: Change[] };
 type Tab = "today" | "roster" | "sum" | "req" | "me";
 
@@ -18,6 +19,7 @@ const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const isRed = (d: string) => dd(d).getDay() === 0 || !!holidayName(d);
+const days_ = (a: string, b: string) => rangeDates(a, b).length;
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dd = (d: string) => new Date(d + "T00:00:00");
@@ -237,6 +239,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
   const [reqNote, setReqNote] = useState("");
+  const [range, setRange] = useState<{ id?: string; from: string; to: string; type: string } | null>(null);
   const [sumSel, setSumSel] = useState<{ p: string; k: string } | null>(null);
   const [restOnly, setRestOnly] = useState(false);
   const [ticker, setTicker] = useState<Change[]>([]);
@@ -296,6 +299,18 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     say(action === "approve" ? `Approved. ${nm(c.person)} is updated.` : "Request rejected.");
     load();
   }
+  const when = (c: Change) => (c.to ? `${long(c.date)} to ${long(c.to)} (${days_(c.date, c.to)} days)` : long(c.date));
+  async function sendRange() {
+    if (!range) return;
+    if (range.to < range.from) return say("The last day is before the first day.");
+    setBusy(true);
+    if (range.id) await api("/api/requests", { id: range.id, date: range.from }, "DELETE");
+    const r = await api("/api/roster", { date: range.from, to: range.to > range.from ? range.to : undefined, person: me, value: range.type, note: reqNote }, "PUT");
+    setBusy(false);
+    if (!r.ok) return say(String(r.j.error ?? "Could not send"));
+    setRange(null); setReqNote("");
+    say("Request sent to Raghav."); load();
+  }
   async function removeReq(c: Change) {
     const r = await api("/api/requests", { id: c.id, date: c.date }, "DELETE");
     if (r.ok) setTicker((t) => t.filter((x) => x.id !== c.id));
@@ -319,7 +334,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
 
   const PersonRow = ({ d, id, first }: { d: string; id: string; first?: boolean }) => {
     const v = entry(d, id);
-    const q = reqs.find((r) => r.date === d && r.person === id && !admin);
+    const q = reqs.find((r) => r.person === id && d >= r.date && d <= (r.to ?? r.date) && !admin);
     const inner = (
       <>
         <Av id={id} />
@@ -393,7 +408,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               <span className="tk-h">Requests</span>
               <div className="tk-w"><div className="tk-t" style={{ animationDuration: `${Math.max(15, ticker.length * 9)}s` }}>
                 {[0, 1].map((n) => ticker.map((c) => (
-                  <span key={n + c.id}>{nm(c.person)} asks {NAMES[c.value] ?? c.value} on {long(c.date)}{c.note ? ` — "${c.note}"` : ""} (waiting for Raghav)</span>
+                  <span key={n + c.id}>{nm(c.person)} asks {NAMES[c.value] ?? c.value} on {when(c)}{c.note ? ` — "${c.note}"` : ""} (waiting for Raghav)</span>
                 )))}
               </div></div>
             </div>
@@ -440,7 +455,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             );
           })()}
           {!admin && group(me) === "team" && (
-            <button className="btn" onClick={() => { setRestOnly(true); setSheet({ d: day, p: me }); }}>Request Rest / Leave for {long(day)}</button>
+            <button className="btn" onClick={() => { setReqNote(""); setRange({ from: day, to: day, type: "LEAVE" }); }}>Request Rest / Leave (one or many days)</button>
           )}
           {!admin && <div className="note">{group(me) === "lr" ? "You can see all duties. Raghav decides LR shifts." : "Tap your own row to ask for a change. Raghav approves it."}</div>}
         </>)}
@@ -472,19 +487,19 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           ? <div className="empty">No requests waiting. Rest and leave requests appear here for everyone.</div>
           : reqs.map((c) => (
             <div key={c.id} className="card">
-              <div className="row first" style={{ padding: 0 }}><Av id={c.person} /><div className="nm">{nm(c.person)}<small>{long(c.date)}</small></div></div>
+              <div className="row first" style={{ padding: 0 }}><Av id={c.person} /><div className="nm">{nm(c.person)}<small>{when(c)}</small></div></div>
               {c.note && <div className="note">Note: {c.note}</div>}
-              <div className="row first" style={{ padding: 0 }}><div className="nm"><small>Now</small></div><Pill v={data?.entries[c.date]?.[c.person] ?? ""} /><span>→</span><Pill v={c.value} /></div>
+              <div className="row first" style={{ padding: 0 }}>{!c.to && <><div className="nm"><small>Now</small></div><Pill v={data?.entries[c.date]?.[c.person] ?? ""} /><span>→</span></>}<Pill v={c.value} /></div>
               {admin
                 ? <div className="btns">
                     <button className="btn pri" onClick={() => decide(c, "approve")}>Approve</button>
                     <button className="btn" onClick={() => decide(c, "reject")}>Reject</button>
-                    <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); setSheet({ d: c.date, p: c.person }); }}>Edit</button>
+                    <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); if (c.requestedBy === me && (c.value === "REST" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
                     <button className="btn" onClick={() => removeReq(c)}>Delete</button>
                   </div>
                 : c.requestedBy === me
                   ? <div className="btns">
-                      <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); setSheet({ d: c.date, p: c.person }); }}>Edit</button>
+                      <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); if (c.requestedBy === me && (c.value === "REST" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
                       <button className="btn" onClick={() => removeReq(c)}>Delete</button>
                     </div>
                   : <div className="note">Waiting for Raghav to approve.</div>}
@@ -526,6 +541,22 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           </button>
         ))}
       </nav>
+      {range && (
+        <div className="scrim" onClick={(e) => e.target === e.currentTarget && setRange(null)}>
+          <div className="sheet">
+            <div className="grab" />
+            <h2>{range.id ? "Edit request" : "Ask Raghav for Rest / Leave"}</h2>
+            <div className="seg">
+              {["LEAVE", "REST"].map((t) => <button type="button" key={t} className={range.type === t ? "on" : ""} onClick={() => setRange({ ...range, type: t })}>{NAMES[t]}</button>)}
+            </div>
+            <div className="field"><label htmlFor="rf">First day</label><input id="rf" type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value, to: range.to < e.target.value ? e.target.value : range.to })} /></div>
+            <div className="field"><label htmlFor="rt">Last day</label><input id="rt" type="date" min={range.from} value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} /></div>
+            <div className="field"><label htmlFor="rn2">Note for Raghav (optional)</label><input id="rn2" maxLength={120} placeholder="Reason, e.g. family function" value={reqNote} onChange={(e) => setReqNote(e.target.value)} /></div>
+            {range.to >= range.from && <div className="note">{days_(range.from, range.to)} day{days_(range.from, range.to) > 1 ? "s" : ""}: {long(range.from)}{range.to > range.from ? ` to ${long(range.to)}` : ""}</div>}
+            <button className="btn pri" disabled={busy || !range.from || !range.to} onClick={sendRange}>{busy ? "Sending…" : range.id ? "Save changes" : "Send to Raghav"}</button>
+          </div>
+        </div>
+      )}
       {sheet && (
         <div className="scrim" onClick={(e) => e.target === e.currentTarget && (setSheet(null), setRestOnly(false))}>
           <div className="sheet">

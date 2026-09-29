@@ -9,6 +9,7 @@ export type Change = {
   value: string;
   requestedBy: string;
   note?: string;
+  to?: string; // last day of a multi-day request; `date` is the first day
   at: number;
 };
 export type Month = { entries: Entries; remarks: Record<string, string>; requests: Change[] };

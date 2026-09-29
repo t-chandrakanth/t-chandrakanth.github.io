@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { isAdmin, personById } from "@/lib/config";
 import { loadMonth, saveMonth } from "@/lib/store";
+import { rangeDates } from "@/lib/range";
 
 const MONTH = /^\d{4}-\d{2}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -21,7 +22,7 @@ export async function PUT(req: Request) {
   const u = await requireUser();
   if ("error" in u) return u.error;
   const me = u.me;
-  const b = (await req.json()) as { date?: string; person?: string; value?: string; remark?: string; note?: string };
+  const b = (await req.json()) as { date?: string; person?: string; value?: string; remark?: string; note?: string; to?: string };
   if (!b.date || !DATE.test(b.date)) return Response.json({ error: "Bad date" }, { status: 400 });
   const month = b.date.slice(0, 7);
   const data = await loadMonth(month);
@@ -47,8 +48,10 @@ export async function PUT(req: Request) {
   if (person.id !== me || person.group !== "team") {
     return Response.json({ error: "You can only request changes to your own duty" }, { status: 403 });
   }
+  const to = b.to && DATE.test(b.to) && b.to > b.date ? b.to : undefined;
+  if (to && rangeDates(b.date, to).length > 31) return Response.json({ error: "Ask for at most 31 days at a time" }, { status: 400 });
   data.requests = data.requests.filter((r) => !(r.date === b.date && r.person === me));
-  data.requests.push({ id: crypto.randomUUID(), date: b.date, person: me, value, requestedBy: me, note: (b.note ?? "").trim().slice(0, 120), at: Date.now() });
+  data.requests.push({ id: crypto.randomUUID(), date: b.date, person: me, value, requestedBy: me, note: (b.note ?? "").trim().slice(0, 120), ...(to ? { to } : {}), at: Date.now() });
   await saveMonth(month, data);
   return Response.json({ ok: true, pending: true });
 }
