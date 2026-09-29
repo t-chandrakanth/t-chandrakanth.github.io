@@ -82,7 +82,7 @@ h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:v
 .brand p{margin:0;color:var(--muted);font-size:13px}
 .brand .rule{width:64px;height:4px;border-radius:2px;background:var(--rail)}
 .sumgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.sumgrid div{border-radius:14px;padding:8px 6px;display:grid;justify-items:center;gap:0}
+.sumgrid div,.sumgrid button{border-radius:14px;padding:8px 6px;display:grid;justify-items:center;gap:0}
 .sumgrid b{font-size:22px;font-family:var(--mono),monospace;font-weight:500}
 .sumgrid span{font-size:12px}
 .install{display:grid;grid-template-columns:44px 1fr auto;gap:8px 12px;align-items:center;background:var(--surface);border-radius:18px;padding:12px;box-shadow:var(--shadow);position:relative}
@@ -118,3 +118,8 @@ h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:v
 .calh-n{font-size:12px;color:#b71c1c;margin-top:4px}
 .strip{flex:none;min-height:64px}
 .dchip{flex:none;min-height:56px}
+.sumgrid button{border-radius:14px;padding:8px 6px;display:grid;justify-items:center;gap:0}
+.sumgrid button.sel{outline:2px solid var(--brand)}
+.sumlist{display:grid;gap:6px;font-size:13px}
+.sumlist .sl{display:flex;align-items:center;justify-content:space-between}
+.sumlist .none{color:var(--muted)}

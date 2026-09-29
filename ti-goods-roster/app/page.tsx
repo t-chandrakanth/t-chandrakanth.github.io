@@ -237,6 +237,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
   const [reqNote, setReqNote] = useState("");
+  const [sumSel, setSumSel] = useState<{ p: string; k: string } | null>(null);
   const [restOnly, setRestOnly] = useState(false);
   const [ticker, setTicker] = useState<Change[]>([]);
   const admin = me === ADMIN_ID;
@@ -333,14 +334,31 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           ["Day", c.day, "day"], ["Afternoon", c.afternoon, "aft"], ["Night", c.night, "night"],
           ["Night off", c.nightOff, "off"], ["Rest", c.rest, "rest"], ["Leave", c.leave, "leave"],
         ];
+        const sel = sumSel?.p === p.id ? sumSel.k : null;
+        const test = (v: string, k: string) => {
+          const x = countDuties([v]);
+          return k === "day" ? x.day > 0 : k === "aft" ? x.afternoon > 0 : k === "night" ? x.night > 0 : k === "off" ? x.nightOff > 0 : k === "rest" ? x.rest > 0 : x.leave > 0;
+        };
+        const listFor = (fn: (v: string) => boolean) => days(month).map((d) => [d, entry(d, p.id)] as const).filter(([, v]) => v && fn(v));
+        const rows = sel ? listFor((v) => test(v, sel)) : [];
+        const dutyRows = sel === "rest" ? listFor((v) => countDuties([v]).worked > 0) : [];
         return (
           <div key={p.id} className="card">
             <div className="row first" style={{ padding: 0 }}><Av id={p.id} /><div className="nm">{p.name}{p.id === me && <span className="tag">You</span>}<small>{c.worked} duty days · {c.marked} days marked{c.other ? ` · ${c.other} other` : ""}</small></div></div>
             <div className="sumgrid">
               {cells.map(([t, n, k]) => (
-                <div key={t} style={{ background: `var(--${k})`, color: `var(--${k}-ink)` }}><b>{n}</b><span>{t}</span></div>
+                <button type="button" key={t} className={sel === k ? "sel" : ""} onClick={() => setSumSel(sel === k ? null : { p: p.id, k })} style={{ background: `var(--${k})`, color: `var(--${k}-ink)` }}><b>{n}</b><span>{t}</span></button>
               ))}
             </div>
+            {sel && (
+              <div className="sumlist">
+                <b>{cells.find((c2) => c2[2] === sel)?.[0]} days ({rows.length})</b>
+                {rows.length === 0 && <span className="none">None this month</span>}
+                {rows.map(([d, v]) => <div key={d} className="sl"><span className={isRed(d) ? "redt" : ""}>{long(d)}</span><Pill v={v} /></div>)}
+                {sel === "rest" && <b style={{ marginTop: 6 }}>Duty days ({dutyRows.length})</b>}
+                {dutyRows.map(([d, v]) => <div key={d} className="sl"><span className={isRed(d) ? "redt" : ""}>{long(d)}</span><Pill v={v} /></div>)}
+              </div>
+            )}
           </div>
         );
       })}
@@ -402,7 +420,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             {PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
           </div>
           {(() => {
-            const msg = data ? buildMessage(day, data.entries) : "";
+            const msg = data && admin ? buildMessage(day, data.entries) : "";
             if (!msg) return null;
             return (
               <div className="card">
