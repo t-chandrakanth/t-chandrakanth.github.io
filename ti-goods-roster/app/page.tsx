@@ -214,6 +214,14 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     if (r.ok) setData((await r.json()) as Data);
   }, [month]);
   useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, [load]);
+  const tomorrow = iso(new Date(dd(today).getTime() + 86400000));
+  const [tmData, setTmData] = useState<Data | null>(null);
+  const loadTomorrow = useCallback(async () => {
+    const r = await fetch(`/api/roster?month=${tomorrow.slice(0, 7)}`, { cache: "no-store" });
+    if (r.ok) setTmData((await r.json()) as Data);
+  }, [tomorrow]);
+  useEffect(() => { loadTomorrow(); const t = setInterval(loadTomorrow, 30000); return () => clearInterval(t); }, [loadTomorrow]);
+  useEffect(() => { if (data) loadTomorrow(); }, [data, loadTomorrow]);
   useEffect(() => { if (day.slice(0, 7) !== month) setMonth(day.slice(0, 7)); }, [day, month]);
   useEffect(() => {
     const on = stripRef.current?.querySelector<HTMLElement>(".on");
@@ -316,6 +324,16 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="ticks"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
           </div>
           {data?.remarks[day] && <div className="note">Remark: {data.remarks[day]}</div>}
+          {day !== tomorrow && (
+            <button className="card" style={{ textAlign: "left" }} onClick={() => setDay(tomorrow)}>
+              <div className="dayhead"><h2>Tomorrow · {long(tomorrow)}</h2><span>Tap to open</span></div>
+              <div className="row first" style={{ padding: 0 }}>
+                <div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>Your duty{tmData?.entries[tomorrow]?.[me] ? ` · ${label(tmData.entries[tomorrow][me])}` : ""}</div>
+                <Pill v={tmData?.entries[tomorrow]?.[me] ?? ""} />
+              </div>
+              <div className="mini">{PEOPLE.filter((p) => p.id !== me).map((p) => <div key={p.id}><Av id={p.id} sm /><Pill v={tmData?.entries[tomorrow]?.[p.id] ?? ""} /></div>)}</div>
+            </button>
+          )}
           <div className="card">
             <div className="dayhead"><h2>Everyone on {long(day)}</h2>
               {admin && <button className="tag" disabled={busy} onClick={() => autoFill(day)}>✨ Auto-fill</button>}
