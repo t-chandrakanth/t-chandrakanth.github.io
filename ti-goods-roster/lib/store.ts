@@ -1,4 +1,5 @@
 import "server-only";
+import { seedSep2026 } from "./seed-2026-09";
 
 export type Entries = Record<string, Record<string, string>>; // date -> person -> duty
 export type Change = {
@@ -41,7 +42,9 @@ async function set(key: string, value: string) {
 
 export async function loadMonth(month: string): Promise<Month> {
   const raw = await get(`roster:${month}`);
-  return raw ? (JSON.parse(raw) as Month) : { entries: {}, remarks: {}, requests: [] };
+  if (raw) return JSON.parse(raw) as Month;
+  // First open of September 2026 loads the duties from the muster sheet.
+  return month === "2026-09" ? seedSep2026() : { entries: {}, remarks: {}, requests: [] };
 }
 
 export const saveMonth = (month: string, data: Month) => set(`roster:${month}`, JSON.stringify(data));
