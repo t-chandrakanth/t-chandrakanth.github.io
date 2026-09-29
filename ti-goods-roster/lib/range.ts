@@ -7,3 +7,6 @@ export function rangeDates(from: string, to: string): string[] {
   }
   return out;
 }
+
+// Today's date in India (YYYY-MM-DD), so "completed day" means the same thing on the server and on phones.
+export const todayIST = () => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);

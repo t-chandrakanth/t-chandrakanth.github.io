@@ -279,7 +279,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   }, [day, tab, data]);
 
   const say = (t: string) => { setToast(t); setTimeout(() => setToast((x) => (x === t ? "" : x)), 2600); };
-  const canEdit = (id: string) => admin || (id === me && group(id) === "team");
+  const canEdit = (id: string, d?: string) => admin || (id === me && group(id) === "team" && (!d || d >= today));
   const entry = (d: string, id: string) => data?.entries[d]?.[id] ?? "";
   const days = (m: string) => {
     const [y, mo] = m.split("-").map(Number);
@@ -303,6 +303,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   async function sendRange() {
     if (!range) return;
     if (range.to < range.from) return say("The last day is before the first day.");
+    if (range.from < today) return say("That day is over. Only Raghav can change a completed day.");
     setBusy(true);
     if (range.id) await api("/api/requests", { id: range.id, date: range.from }, "DELETE");
     const r = await api("/api/roster", { date: range.from, to: range.to > range.from ? range.to : undefined, person: me, value: range.type, note: reqNote }, "PUT");
@@ -342,7 +343,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
         <Pill v={q ? q.value : v} pend={!!q} />
       </>
     );
-    return canEdit(id)
+    return canEdit(id, d)
       ? <button className={"row" + (first ? " first" : "")} onClick={() => { setRestOnly(false); setSheet({ d, p: id }); }}>{inner}</button>
       : <div className={"row" + (first ? " first" : "")}>{inner}</div>;
   };
@@ -454,9 +455,10 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               </div>
             );
           })()}
-          {!admin && group(me) === "team" && (
+          {!admin && group(me) === "team" && day >= today && (
             <button className="btn" onClick={() => { setReqNote(""); setRange({ from: day, to: day, type: "LEAVE" }); }}>Request Rest / Leave (one or many days)</button>
           )}
+          {!admin && group(me) === "team" && day < today && <div className="note">This day is over. Only Raghav can change a completed day.</div>}
           {!admin && <div className="note">{group(me) === "lr" ? "You can see all duties. Raghav decides LR shifts." : "Tap your own row to ask for a change. Raghav approves it."}</div>}
         </>)}
 
@@ -549,8 +551,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="seg">
               {["LEAVE", "REST"].map((t) => <button type="button" key={t} className={range.type === t ? "on" : ""} onClick={() => setRange({ ...range, type: t })}>{NAMES[t]}</button>)}
             </div>
-            <div className="field"><label htmlFor="rf">First day</label><input id="rf" type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value, to: range.to < e.target.value ? e.target.value : range.to })} /></div>
-            <div className="field"><label htmlFor="rt">Last day</label><input id="rt" type="date" min={range.from} value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} /></div>
+            <div className="field"><label htmlFor="rf">First day</label><input id="rf" type="date" min={today} value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value, to: range.to < e.target.value ? e.target.value : range.to })} /></div>
+            <div className="field"><label htmlFor="rt">Last day</label><input id="rt" type="date" min={range.from < today ? today : range.from} value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} /></div>
             <div className="field"><label htmlFor="rn2">Note for Raghav (optional)</label><input id="rn2" maxLength={120} placeholder="Reason, e.g. family function" value={reqNote} onChange={(e) => setReqNote(e.target.value)} /></div>
             {range.to >= range.from && <div className="note">{days_(range.from, range.to)} day{days_(range.from, range.to) > 1 ? "s" : ""}: {long(range.from)}{range.to > range.from ? ` to ${long(range.to)}` : ""}</div>}
             <button className="btn pri" disabled={busy || !range.from || !range.to} onClick={sendRange}>{busy ? "Sending…" : range.id ? "Save changes" : "Send to Raghav"}</button>

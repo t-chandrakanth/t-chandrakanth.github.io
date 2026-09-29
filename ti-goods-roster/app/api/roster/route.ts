@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { isAdmin, personById } from "@/lib/config";
 import { loadMonth, saveMonth } from "@/lib/store";
-import { rangeDates } from "@/lib/range";
+import { rangeDates, todayIST } from "@/lib/range";
 
 const MONTH = /^\d{4}-\d{2}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -48,6 +48,8 @@ export async function PUT(req: Request) {
   if (person.id !== me || person.group !== "team") {
     return Response.json({ error: "You can only request changes to your own duty" }, { status: 403 });
   }
+  // Completed days are the record of what happened; only Raghav corrects them.
+  if (b.date < todayIST()) return Response.json({ error: "That day is over. Only Raghav can change a completed day." }, { status: 403 });
   const to = b.to && DATE.test(b.to) && b.to > b.date ? b.to : undefined;
   if (to && rangeDates(b.date, to).length > 31) return Response.json({ error: "Ask for at most 31 days at a time" }, { status: 400 });
   data.requests = data.requests.filter((r) => !(r.date === b.date && r.person === me));
