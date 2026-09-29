@@ -1,0 +1,35 @@
+:root {
+  --bg: #f6f7f9; --card: #fff; --ink: #14181f; --muted: #667085; --line: #e3e6ec;
+  --accent: #2456d6; --day: #fff4d6; --aft: #dff0ff; --night: #e6e0ff; --off: #e7f7ea; --rest: #eef0f3; --leave: #ffe3e3;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1218; --card: #171b23; --ink: #eef1f6; --muted: #98a2b3; --line: #2a303c; --accent: #6b93ff;
+    --day: #4a3e12; --aft: #123852; --night: #302a55; --off: #16401f; --rest: #262b35; --leave: #55202a;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 20px; margin: 0; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button, select, input { font: inherit; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+button { cursor: pointer; } button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:disabled { opacity: .5; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+.login { max-width: 340px; margin: 12vh auto; display: grid; gap: 10px; }
+.wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; min-width: 760px; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: center; white-space: nowrap; }
+th { position: sticky; top: 0; background: var(--card); font-size: 13px; }
+th.lr, td.lr { border-left: 1px solid var(--line); }
+td.date { text-align: left; color: var(--muted); } tr.today td.date { color: var(--accent); font-weight: 700; }
+tr.today { outline: 2px solid var(--accent); outline-offset: -2px; }
+td.mine { box-shadow: inset 0 0 0 2px var(--accent); }
+.chip { display: inline-block; min-width: 64px; padding: 3px 8px; border-radius: 999px; font-size: 13px; }
+.editable { cursor: pointer; }
+.pending { border: 1px dashed var(--accent); }
+.err { color: #d92d20; } .muted { color: var(--muted); } .small { font-size: 13px; }
+.pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--rest); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
