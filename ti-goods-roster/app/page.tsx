@@ -122,6 +122,34 @@ export default function Page() {
   return <App me={auth.me} onLogout={async () => { await api("/api/logout"); check(); }} />;
 }
 
+function Calendar({ selected, onPick }: { selected?: string; onPick?: (d: string) => void }) {
+  const now = new Date();
+  const [ym, setYm] = useState<[number, number]>(() => (selected ? [+selected.slice(0, 4), +selected.slice(5, 7) - 1] : [now.getFullYear(), now.getMonth()]));
+  const [y, m] = ym;
+  const go = (n: number) => { const d = new Date(y, m + n, 1); setYm([d.getFullYear(), d.getMonth()]); };
+  const first = new Date(y, m, 1).getDay();
+  const count = new Date(y, m + 1, 0).getDate();
+  const cells = [...Array(first).fill(null), ...Array.from({ length: count }, (_, i) => `${y}-${pad(m + 1)}-${pad(i + 1)}`)];
+  const todayIso = iso(now);
+  const hols = Array.from({ length: count }, (_, i) => `${y}-${pad(m + 1)}-${pad(i + 1)}`).filter((d) => holidayName(d));
+  return (
+    <div className="card cal">
+      <div className="monthbar">
+        <button type="button" aria-label="Previous month" onClick={() => go(-1)}>‹</button>
+        <strong>{MON[m]} {y}</strong>
+        <button type="button" aria-label="Next month" onClick={() => go(1)}>›</button>
+      </div>
+      <div className="calgrid">
+        {DOW.map((w, i) => <span key={w} className={"calh" + (i === 0 ? " red" : "")}>{w}</span>)}
+        {cells.map((d, i) => d
+          ? <button type="button" key={d} className={"calc" + (isRed(d) ? " red" : "") + (d === todayIso ? " now" : "") + (d === selected ? " on" : "")} onClick={() => onPick?.(d)}>{+d.slice(8)}</button>
+          : <span key={"e" + i} />)}
+      </div>
+      {hols.map((d) => <div key={d} className="calh-n"><b>{+d.slice(8)} {MON[m]}</b> · {holidayName(d)}</div>)}
+    </div>
+  );
+}
+
 function Brand({ sub }: { sub: string }) {
   return (
     <div className="brand">
@@ -149,6 +177,7 @@ function Login({ onDone }: { onDone: () => void }) {
       }}>
         <InstallBanner />
         <Brand sub="Login to see your duties" />
+        <Calendar />
         <div className="field">
           <label htmlFor="name">Name</label>
           <select id="name" value={user} onChange={(e) => setUser(e.target.value)}>
@@ -336,6 +365,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               )),
             ])}
           </div>
+          <Calendar selected={day} onPick={setDay} />
           {holidayName(day) && <div className="note redn">{long(day)} · {holidayName(day)}</div>}
           {!holidayName(day) && dd(day).getDay() === 0 && <div className="note redn">{long(day)} · Sunday</div>}
           {ticker.length > 0 && (
