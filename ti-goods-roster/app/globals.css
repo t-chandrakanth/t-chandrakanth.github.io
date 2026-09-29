@@ -103,3 +103,8 @@ h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:v
 .tk-w:hover .tk-t{animation-play-state:paused}
 @keyframes tk{to{transform:translateX(-100%)}}
 @media (prefers-reduced-motion:reduce){.tk-t{animation:none;padding-left:0;overflow-x:auto}}
+.dchip.red{color:#d32f2f}.dchip.red b{color:#d32f2f}
+.dchip.red.on{background:#d32f2f;color:#fff}.dchip.red.on b{color:#fff}
+.dchip.now.red:not(.on) b{color:#d32f2f}
+.redn{background:#fdecea;color:#b71c1c}
+.redt{color:#d32f2f}

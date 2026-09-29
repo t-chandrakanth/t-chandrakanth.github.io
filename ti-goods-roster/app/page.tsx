@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_ID, PEOPLE, SHIFTS } from "@/lib/config";
 import { suggest } from "@/lib/suggest";
 import { countDuties } from "@/lib/summary";
+import { holidayName } from "@/lib/holidays";
 import { buildMessage, whatsappLink } from "@/lib/share";
 
 type Change = { id: string; date: string; person: string; value: string; requestedBy: string; note?: string };
@@ -16,6 +17,7 @@ const NAMES: Record<string, string> = { "07/13": "Day", "13/21": "Afternoon", "2
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const isRed = (d: string) => dd(d).getDay() === 0 || !!holidayName(d);
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dd = (d: string) => new Date(d + "T00:00:00");
@@ -330,10 +332,12 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             {Array.from({ length: 12 }, (_, i) => `${day.slice(0, 4)}-${pad(i + 1)}`).flatMap((m) => [
               <span key={m} className="mchip">{MON[+m.slice(5) - 1]}</span>,
               ...days(m).map((k) => (
-                <button key={k} className={"dchip" + (k === day ? " on" : "") + (k === today ? " now" : "")} onClick={() => setDay(k)}>{DOW[dd(k).getDay()]}<b>{+k.slice(8)}</b></button>
+                <button key={k} className={"dchip" + (isRed(k) ? " red" : "") + (k === day ? " on" : "") + (k === today ? " now" : "")} onClick={() => setDay(k)}>{DOW[dd(k).getDay()]}<b>{+k.slice(8)}</b></button>
               )),
             ])}
           </div>
+          {holidayName(day) && <div className="note redn">{long(day)} · {holidayName(day)}</div>}
+          {!holidayName(day) && dd(day).getDay() === 0 && <div className="note redn">{long(day)} · Sunday</div>}
           {ticker.length > 0 && (
             <div className="ticker" role="marquee" aria-label="Pending rest and leave requests">
               <span className="tk-h">Requests</span>
@@ -404,7 +408,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {tab === "sum" && <SummaryCards />}
           {tab === "roster" && days(month).map((d) => (
             <button key={d} className="card" style={{ textAlign: "left" }} onClick={() => { setDay(d); setTab("today"); }}>
-              <div className="dayhead"><b>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{data?.remarks[d] ?? ""}</span></div>
+              <div className="dayhead"><b className={isRed(d) ? "redt" : ""}>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{holidayName(d) ?? data?.remarks[d] ?? ""}</span></div>
               {view === "mine" ? (
                 <div className="row first" style={{ padding: 0 }}><div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>{entry(d, me) ? label(entry(d, me)) : "No duty"}</div><Pill v={entry(d, me)} /></div>
               ) : (
