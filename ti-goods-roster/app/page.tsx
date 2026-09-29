@@ -423,7 +423,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           )}
           <div className="card">
             <div className="dayhead">
-              <button type="button" className="fold" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}><h2>Everyone on {long(day)}</h2><span className="chev">{showAll ? "▲ Hide" : "▼ Show"}</span></button>
+              <button type="button" className="fold" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}><span className="chev">{showAll ? "▲" : "▼"}</span><h2>👥 Everyone on {long(day)}</h2><span className="chev">{showAll ? "Hide" : "Show"}</span></button>
               {admin && showAll && <button className="tag" disabled={busy} onClick={() => autoFill(day)}>✨ Auto-fill</button>}
             </div>
             {showAll && PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
