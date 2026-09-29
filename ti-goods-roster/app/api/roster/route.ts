@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { isAdmin, personById } from "@/lib/config";
-import { loadMonth, saveMonth } from "@/lib/store";
+import { loadMonth, saveMonth, type Month } from "@/lib/store";
+import { followWithNightOff, saveMonths } from "@/lib/nightoff";
 import { rangeDates, todayIST } from "@/lib/range";
 
 const MONTH = /^\d{4}-\d{2}$/;
@@ -41,8 +42,10 @@ export async function PUT(req: Request) {
   if (isAdmin(me)) {
     (data.entries[b.date] ??= {})[person.id] = value;
     data.requests = data.requests.filter((r) => !(r.date === b.date && r.person === person.id));
-    await saveMonth(month, data);
-    return Response.json({ ok: true });
+    const months = new Map<string, Month>([[month, data]]);
+    const nightOff = await followWithNightOff(b.date, person.id, value, months);
+    await saveMonths(months);
+    return Response.json({ ok: true, nightOff });
   }
 
   if (person.id !== me || person.group !== "team") {

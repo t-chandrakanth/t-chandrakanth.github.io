@@ -278,7 +278,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     const r = await api("/api/roster", { date: d, person: p, value: v, note: reqNote }, "PUT");
     setBusy(false); setSheet(null); setReqNote("");
     if (!r.ok) return say(String(r.j.error ?? "Could not save"));
-    say(r.j.pending ? "Request sent to Raghav." : "Saved.");
+    say(r.j.pending ? "Request sent to Raghav." : r.j.nightOff ? "Saved. Next day set to Night off 00/07." : "Saved.");
     load();
   }
   async function decide(c: Change, action: "approve" | "reject") {
