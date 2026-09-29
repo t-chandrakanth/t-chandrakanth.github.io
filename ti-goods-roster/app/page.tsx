@@ -227,6 +227,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const [busy, setBusy] = useState(false);
   const [reqNote, setReqNote] = useState("");
   const [range, setRange] = useState<{ id?: string; from: string; to: string; type: string } | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [sumSel, setSumSel] = useState<{ p: string; k: string } | null>(null);
   const [restOnly, setRestOnly] = useState(false);
   const [ticker, setTicker] = useState<Change[]>([]);
@@ -419,10 +420,11 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             </button>
           )}
           <div className="card">
-            <div className="dayhead"><h2>Everyone on {long(day)}</h2>
-              {admin && <button className="tag" disabled={busy} onClick={() => autoFill(day)}>✨ Auto-fill</button>}
+            <div className="dayhead">
+              <button type="button" className="fold" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}><h2>Everyone on {long(day)}</h2><span className="chev">{showAll ? "▲ Hide" : "▼ Show"}</span></button>
+              {admin && showAll && <button className="tag" disabled={busy} onClick={() => autoFill(day)}>✨ Auto-fill</button>}
             </div>
-            {PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
+            {showAll && PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
           </div>
           {(() => {
             const msg = data && admin ? buildMessage(day, data.entries) : "";

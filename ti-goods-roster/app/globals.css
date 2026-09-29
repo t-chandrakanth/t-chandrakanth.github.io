@@ -129,3 +129,5 @@ h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:v
 .dchip.now b{font-size:24px;font-weight:800}
 .dchip.now.red{border-color:#d32f2f}
 .reqbtn{background:#c2571a;color:#fff;font-weight:800;font-size:15px;box-shadow:0 4px 12px rgba(194,87,26,.35)}
+.fold{display:flex;align-items:center;gap:10px;flex:1;text-align:left;padding:0}
+.fold .chev{font-size:12px;font-weight:700;color:var(--brand);white-space:nowrap}
