@@ -260,7 +260,9 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   }, [today]);
   useEffect(() => { loadTicker(); const t = setInterval(loadTicker, 30000); return () => clearInterval(t); }, [loadTicker]);
   useEffect(() => { if (data) loadTicker(); }, [data, loadTicker]);
-  useEffect(() => { if (day.slice(0, 7) !== month) setMonth(day.slice(0, 7)); }, [day, month]);
+  // Follow the selected day's month, but let the ‹ › buttons on Roster/Summary browse other months freely.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setMonth(day.slice(0, 7)); }, [day]);
   useEffect(() => {
     const on = stripRef.current?.querySelector<HTMLElement>(".on");
     if (on && stripRef.current) stripRef.current.scrollLeft = on.offsetLeft - stripRef.current.clientWidth / 2 + 25;
