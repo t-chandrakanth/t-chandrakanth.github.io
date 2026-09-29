@@ -17,17 +17,18 @@ export const PEOPLE: Person[] = [
 
 // Duty codes follow the existing muster sheet.
 export const SHIFTS = [
+  { code: "08/20", label: "General 08-20" },
   { code: "07/13", label: "Day 07-13" },
   { code: "13/21", label: "Afternoon 13-21" },
-  { code: "21/24", label: "Night 21-24" },
+  { code: "21/24", label: "Night 21-00" },
   { code: "00/07", label: "Night off 00-07" },
   { code: "07/13 21/24", label: "Day + Night" },
   { code: "REST", label: "Rest" },
   { code: "LEAVE", label: "Leave" },
 ];
 
-// Usual rotation on the sheet: Afternoon -> Day+Night -> Night off -> Rest -> Afternoon
-export const CYCLE = ["13/21", "07/13 21/24", "00/07", "REST"];
+// Usual rotation for the four team members: General 08-20 -> direct Night 21-00 -> Night off 00-07 -> Rest -> General
+export const CYCLE = ["08/20", "21/24", "00/07", "REST"];
 
 export const isAdmin = (id?: string | null) => id === ADMIN_ID;
 export const personById = (id: string) => PEOPLE.find((p) => p.id === id);
