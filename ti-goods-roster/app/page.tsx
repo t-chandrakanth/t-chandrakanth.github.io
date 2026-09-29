@@ -65,6 +65,46 @@ async function api(url: string, body?: unknown, method = "POST") {
   return { ok: r.ok, status: r.status, j: (await r.json().catch(() => ({}))) as Record<string, unknown> };
 }
 
+type InstallEvt = { prompt: () => Promise<void> };
+function useInstall() {
+  const [evt, setEvt] = useState<InstallEvt | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const [ios, setIos] = useState(false);
+  useEffect(() => {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+    setInstalled(window.matchMedia("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true);
+    setIos(/iphone|ipad|ipod/i.test(navigator.userAgent));
+    const onPrompt = (e: Event) => { e.preventDefault(); setEvt(e as unknown as InstallEvt); };
+    const onInstalled = () => { setInstalled(true); setEvt(null); };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => { window.removeEventListener("beforeinstallprompt", onPrompt); window.removeEventListener("appinstalled", onInstalled); };
+  }, []);
+  const install = async () => { if (evt) { await evt.prompt(); setEvt(null); } };
+  return { evt, installed, ios, install };
+}
+
+function InstallBanner() {
+  const { evt, installed, ios, install } = useInstall();
+  const [hidden, setHidden] = useState(false);
+  const [help, setHelp] = useState(false);
+  useEffect(() => { try { setHidden(sessionStorage.getItem("hideInstall") === "1"); } catch {} }, []);
+  if (installed || hidden) return null;
+  const close = () => { setHidden(true); try { sessionStorage.setItem("hideInstall", "1"); } catch {} };
+  return (
+    <div className="install">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icon-192.png" alt="" />
+      <div className="txt">
+        <b>Install TI Goods Muster</b>
+        <span>{help ? (ios ? "Tap the Share button, then Add to Home Screen." : "Open the browser menu, then tap Install app or Add to Home screen.") : "Open it like an app from your home screen."}</span>
+      </div>
+      <button className="btn pri" onClick={evt ? install : () => setHelp((h) => !h)}>{evt ? "Tap here to install" : help ? "Got it" : "How to install"}</button>
+      <button className="x" aria-label="Hide" onClick={close}>✕</button>
+    </div>
+  );
+}
+
 export default function Page() {
   const [auth, setAuth] = useState<{ me: string | null; mustChange?: boolean } | undefined>();
   const check = useCallback(async () => {
@@ -104,6 +144,7 @@ function Login({ onDone }: { onDone: () => void }) {
         setBusy(false);
         if (r.ok) onDone(); else setErr(String(r.j.error ?? "Login failed"));
       }}>
+        <InstallBanner />
         <Brand sub="Login to see your duties" />
         <div className="field">
           <label htmlFor="name">Name</label>
@@ -139,6 +180,7 @@ function SetPassword({ first, onDone }: { first?: boolean; onDone: () => void })
   };
   return (
     <form className={first ? "login" : "card"} onSubmit={submit}>
+      {first && <InstallBanner />}
       {first ? <Brand sub="Set your own password to continue" /> : <h2>Change password</h2>}
       {!first && (
         <div className="field"><label htmlFor="cur">Current password</label><input id="cur" type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} /></div>
@@ -164,15 +206,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const [busy, setBusy] = useState(false);
   const admin = me === ADMIN_ID;
   const stripRef = useRef<HTMLDivElement>(null);
-  const [installEvt, setInstallEvt] = useState<{ prompt: () => Promise<void> } | null>(null);
-  const [installed, setInstalled] = useState(false);
-  useEffect(() => {
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
-    setInstalled(window.matchMedia("(display-mode: standalone)").matches);
-    const onPrompt = (e: Event) => { e.preventDefault(); setInstallEvt(e as unknown as { prompt: () => Promise<void> }); };
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
-  }, []);
+  const inst = useInstall();
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/roster?month=${month}`, { cache: "no-store" });
@@ -330,11 +364,11 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="row first" style={{ padding: 0 }}><Av id={me} /><div className="nm">{nm(me)}<small>{admin ? "Admin" : group(me) === "lr" ? "LR candidate, view only" : "Team member"}</small></div></div>
             <button className="btn" onClick={onLogout}>Logout</button>
           </div>
-          {!installed && (
+          {!inst.installed && (
             <div className="card">
               <h2>Install on your phone</h2>
-              {installEvt
-                ? <button className="btn pri" onClick={async () => { await installEvt.prompt(); setInstallEvt(null); }}>Install app</button>
+              {inst.evt
+                ? <button className="btn pri" onClick={inst.install}>Tap here to install</button>
                 : <div className="note">Android or Chrome: open the browser menu and tap <b>Install app</b> or <b>Add to Home screen</b>. iPhone: tap Share, then <b>Add to Home Screen</b>.</div>}
             </div>
           )}
