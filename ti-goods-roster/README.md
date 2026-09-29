@@ -10,12 +10,12 @@ The home page is the login: choose your **name**, enter your **password**.
 
 ## Rules built in
 - Everyone can **see all duties**.
-- **Raghav** (admin) sets any duty directly, approves or rejects requests, and can press ✨ Auto-fill to fill a day from yesterday's rotation (Afternoon → Day+Night → Night off → Rest).
+- **Raghav** (admin) sets any duty directly, approves or rejects requests, and can press ✨ Auto-fill to fill a day from yesterday's rotation (General 08-20 → Night 21-00 → Night off 00-07 → Rest).
 - Team members can only **request** a change to **their own** duty; it stays pending until Raghav approves.
 - LR candidates (Subbareddy, Teja) are view-only; Raghav decides their shifts.
 - September 2026 is pre-loaded from the muster sheet. Ravi is removed; Narendra is a team member.
 
-Duty codes follow the muster sheet (`07/13`, `13/21`, `21/24`, `00/07`, `07/13 21/24`, `REST`, `LEAVE`). Edit `lib/config.ts` to change people or codes.
+Duty codes follow the muster sheet (`08/20` General, `07/13`, `13/21`, `21/24`, `00/07`, `07/13 21/24`, `REST`, `LEAVE`). Edit `lib/config.ts` to change people or codes.
 
 ## Deploy on Vercel
 1. Import the GitHub repo in Vercel and set **Root Directory** to `ti-goods-roster`.

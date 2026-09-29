@@ -8,6 +8,7 @@ export function suggest(yesterday: Record<string, string> = {}): Record<string, 
   const slotOf = (v: string) => {
     if (v.includes("21/") && v.includes("07/13")) return 1; // day + night
     if (v.startsWith("21/") || v.startsWith("20/") || v.startsWith("18/")) return 1; // night start -> night off next
+    if (/^(07|08|13)\//.test(v)) return 0; // general, day or afternoon -> night next
     return CYCLE.indexOf(v);
   };
   const taken = new Set<number>();

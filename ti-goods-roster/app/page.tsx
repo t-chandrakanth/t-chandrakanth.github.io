@@ -13,8 +13,8 @@ type Data = { me: string; entries: Record<string, Record<string, string>>; remar
 type Tab = "today" | "roster" | "sum" | "req" | "me";
 
 const COLORS: Record<string, string> = { raghav: "#2447d8", mahesh: "#0e8f6e", vishnu: "#c2571a", narendra: "#8a3fd0", teja: "#0a7fa8", subbareddy: "#b0356b" };
-const TIMES: Record<string, string> = { "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 24:00", "00/07": "00:00 to 07:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 24:00", REST: "Weekly rest", LEAVE: "On leave" };
-const NAMES: Record<string, string> = { "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", LEAVE: "Leave" };
+const TIMES: Record<string, string> = { "08/20": "08:00 to 20:00", "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 00:00", "00/07": "00:00 to 07:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 00:00", REST: "Weekly rest", LEAVE: "On leave" };
+const NAMES: Record<string, string> = { "08/20": "General", "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", LEAVE: "Leave" };
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -352,7 +352,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
       {PEOPLE.map((p) => {
         const c = countDuties(days(month).map((d) => entry(d, p.id)));
         const cells: [string, number, string][] = [
-          ["Day", c.day, "day"], ["Afternoon", c.afternoon, "aft"], ["Night", c.night, "night"],
+          ["Day / General", c.day, "day"], ["Afternoon", c.afternoon, "aft"], ["Night", c.night, "night"],
           ["Night off", c.nightOff, "off"], ["Rest", c.rest, "rest"], ["Leave", c.leave, "leave"],
         ];
         const sel = sumSel?.p === p.id ? sumSel.k : null;

@@ -5,6 +5,7 @@ function wording(code: string) {
   const v = code.trim().toUpperCase();
   if (v === "REST") return "Rest";
   if (v === "LEAVE") return "Leave";
+  if (v === "08/20") return "General";
   const starts = v.split(/\s+/).map((t) => +(t.match(/^(\d+)\//)?.[1] ?? -1)).filter((n) => n >= 0);
   if (starts.some((s) => s >= 5 && s < 13) && starts.some((s) => s >= 18)) return "Day/Night";
   return v;
@@ -13,6 +14,7 @@ function wording(code: string) {
 // Order in the message: Day/Night, day, afternoon, night, night off, rest, leave.
 function rank(label: string) {
   if (label === "Day/Night") return 0;
+  if (label === "General") return 1;
   if (label === "Rest") return 5;
   if (label === "Leave") return 6;
   const s = +(label.match(/^(\d+)\//)?.[1] ?? 99);
