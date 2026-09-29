@@ -1,236 +1,338 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_ID, PEOPLE, SHIFTS } from "@/lib/config";
 import { suggest } from "@/lib/suggest";
 
 type Change = { id: string; date: string; person: string; value: string; requestedBy: string };
-type Data = {
-  me: string;
-  entries: Record<string, Record<string, string>>;
-  remarks: Record<string, string>;
-  requests: Change[];
-};
+type Data = { me: string; entries: Record<string, Record<string, string>>; remarks: Record<string, string>; requests: Change[] };
+type Tab = "today" | "roster" | "req" | "me";
+
+const COLORS: Record<string, string> = { raghav: "#2447d8", mahesh: "#0e8f6e", vishnu: "#c2571a", narendra: "#8a3fd0", teja: "#0a7fa8", subbareddy: "#b0356b" };
+const TIMES: Record<string, string> = { "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 24:00", "00/07": "00:00 to 07:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 24:00", REST: "Weekly rest", LEAVE: "On leave" };
+const NAMES: Record<string, string> = { "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", LEAVE: "Leave" };
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const DOW = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-const nameOf = (id: string) => PEOPLE.find((p) => p.id === id)?.name ?? id;
+const dd = (d: string) => new Date(d + "T00:00:00");
+const long = (d: string) => `${DOW[dd(d).getDay()]} ${+d.slice(8)} ${MON[+d.slice(5, 7) - 1]}`;
+const nm = (id: string) => PEOPLE.find((p) => p.id === id)?.name ?? id;
+const group = (id: string) => PEOPLE.find((p) => p.id === id)?.group;
 
-function tone(v: string) {
-  if (!v) return "transparent";
-  if (v === "REST") return "var(--rest)";
-  if (v === "LEAVE") return "var(--leave)";
-  if (v === "00/07") return "var(--off)";
-  if (v.includes("21/") ) return "var(--night)";
-  if (v.startsWith("13/")) return "var(--aft)";
-  return "var(--day)";
+function kind(v: string) {
+  if (!v) return "rest";
+  if (v === "REST") return "rest";
+  if (v === "LEAVE") return "leave";
+  if (v === "00/07") return "off";
+  if (v.includes("21/") || v.startsWith("20/") || v.startsWith("18/")) return "night";
+  if (v.startsWith("13/")) return "aft";
+  return "day";
+}
+const label = (v: string) => NAMES[v] ?? (kind(v) === "rest" ? "Rest" : "Custom duty");
+
+function segs(v: string) {
+  const out: [number, number][] = [];
+  v.split(/\s+/).forEach((t) => {
+    const m = t.match(/^(\d+)\/(\d+)$/);
+    if (!m) return;
+    const a = +m[1];
+    let b = +m[2];
+    if (b <= a) b += 24;
+    if (b > 24) { out.push([a, 24]); out.push([0, b - 24]); } else out.push([a, b]);
+  });
+  return out;
+}
+
+function Pill({ v, pend }: { v: string; pend?: boolean }) {
+  const k = kind(v);
+  return <span className={"pill" + (pend ? " pend" : "")} style={{ background: `var(--${k})`, color: `var(--${k}-ink)` }}>{v || "No duty"}</span>;
+}
+const Av = ({ id, sm }: { id: string; sm?: boolean }) => <div className={"av" + (sm ? " sm" : "")} style={{ background: COLORS[id] }}>{nm(id)[0]}</div>;
+
+const ICONS: Record<Tab, string> = {
+  today: "M4 7h16M7 3v4M17 3v4M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM12 11v4l2 1",
+  roster: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
+  req: "M4 12l5 5L20 6",
+  me: "M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21c1-4 4-6 8-6s7 2 8 6",
+};
+
+async function api(url: string, body?: unknown, method = "POST") {
+  const r = await fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  return { ok: r.ok, status: r.status, j: (await r.json().catch(() => ({}))) as Record<string, unknown> };
 }
 
 export default function Page() {
-  const [me, setMe] = useState<string | null | undefined>(undefined);
-  const [month, setMonth] = useState(() => iso(new Date()).slice(0, 7));
-  const [data, setData] = useState<Data | null>(null);
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [edit, setEdit] = useState<{ date: string; person: string } | null>(null);
-  const [note, setNote] = useState("");
+  const [auth, setAuth] = useState<{ me: string | null; mustChange?: boolean } | undefined>();
+  const check = useCallback(async () => {
+    const r = await fetch("/api/me", { cache: "no-store" });
+    setAuth((await r.json()) as { me: string | null; mustChange?: boolean });
+  }, []);
+  useEffect(() => { check(); }, [check]);
 
-  const load = useCallback(async () => {
-    const r = await fetch(`/api/roster?month=${month}`, { cache: "no-store" });
-    if (r.status === 401) return setMe(null);
-    if (!r.ok) return setErr("Could not load roster");
-    const d = (await r.json()) as Data;
-    setData(d);
-    setMe(d.me);
-  }, [month]);
-
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    if (!me) return;
-    const t = setInterval(load, 30000);
-    return () => clearInterval(t);
-  }, [me, load]);
-
-  const isAdmin = me === ADMIN_ID;
-  const days = useMemo(() => {
-    const [y, m] = month.split("-").map(Number);
-    return Array.from({ length: new Date(y, m, 0).getDate() }, (_, i) => iso(new Date(y, m - 1, i + 1)));
-  }, [month]);
-  const today = iso(new Date());
-
-  async function save(date: string, person: string, value: string) {
-    setBusy(true); setErr(""); setNote("");
-    const r = await fetch("/api/roster", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ date, person, value }) });
-    const j = await r.json();
-    setBusy(false);
-    if (!r.ok) return setErr(j.error ?? "Failed");
-    if (j.pending) setNote("Request sent to Raghav for approval.");
-    setEdit(null); load();
-  }
-
-  async function saveRemark(date: string, remark: string) {
-    await fetch("/api/roster", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ date, remark }) });
-    load();
-  }
-
-  async function decide(c: Change, action: "approve" | "reject") {
-    await fetch("/api/requests", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: c.id, date: c.date, action }) });
-    load();
-  }
-
-  async function suggestDay(date: string) {
-    const prev = iso(new Date(new Date(date).getTime() - 86400000));
-    let yesterday = data?.entries[prev];
-    if (!yesterday && prev.slice(0, 7) !== month) {
-      const r = await fetch(`/api/roster?month=${prev.slice(0, 7)}`);
-      if (r.ok) yesterday = ((await r.json()) as Data).entries[prev];
-    }
-    const s = suggest(yesterday);
-    for (const [p, v] of Object.entries(s)) await save(date, p, v);
-  }
-
-  function shiftMonth(delta: number) {
-    const [y, m] = month.split("-").map(Number);
-    const d = new Date(y, m - 1 + delta, 1);
-    setMonth(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`);
-  }
-
-  if (me === undefined) return <main className="muted">Loading…</main>;
-  if (me === null) return <Login onDone={load} />;
-
-  const mine = days.filter((d) => data?.entries[d]?.[me]).map((d) => ({ d, v: data!.entries[d][me] }));
-  const upcoming = mine.filter((x) => x.d >= today).slice(0, 5);
-  const team = PEOPLE.filter((p) => p.group === "team");
-  const lr = PEOPLE.filter((p) => p.group === "lr");
-
-  return (
-    <main>
-      <div className="bar">
-        <h1>TI Goods Roster</h1>
-        <div className="row">
-          <span className="pill">{nameOf(me)}{isAdmin ? " · admin" : ""}</span>
-          <button onClick={async () => { await fetch("/api/logout", { method: "POST" }); setMe(null); setData(null); }}>Logout</button>
-        </div>
-      </div>
-
-      <div className="card">
-        <strong>My next duties</strong>
-        <div className="row small" style={{ marginTop: 8 }}>
-          {upcoming.length ? upcoming.map((x) => (
-            <span key={x.d}>{x.d.slice(8)}/{x.d.slice(5, 7)} <span className="chip" style={{ background: tone(x.v) }}>{x.v}</span></span>
-          )) : <span className="muted">Nothing scheduled yet this month.</span>}
-        </div>
-        {!isAdmin && <p className="small muted" style={{ marginBottom: 0 }}>Everyone&apos;s duties are visible. You can only ask for a change to your own; Raghav approves.</p>}
-      </div>
-
-      {isAdmin && data && data.requests.length > 0 && (
-        <div className="card">
-          <strong>Change requests</strong>
-          {data.requests.map((c) => (
-            <div key={c.id} className="row" style={{ marginTop: 8 }}>
-              <span>{nameOf(c.person)} · {c.date.slice(8)}/{c.date.slice(5, 7)} → <b>{c.value || "clear"}</b> (now: {data.entries[c.date]?.[c.person] || "—"})</span>
-              <button className="primary" onClick={() => decide(c, "approve")}>Approve</button>
-              <button onClick={() => decide(c, "reject")}>Reject</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="bar">
-        <div className="row">
-          <button onClick={() => shiftMonth(-1)}>‹</button>
-          <strong>{month}</strong>
-          <button onClick={() => shiftMonth(1)}>›</button>
-        </div>
-        <span className="err">{err}</span><span className="small">{note}</span>
-      </div>
-
-      <div className="wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>DATE</th>
-              {team.map((p) => <th key={p.id}>{p.name.toUpperCase()}</th>)}
-              {lr.map((p, i) => <th key={p.id} className={i === 0 ? "lr" : ""}>LR {p.name.toUpperCase()}</th>)}
-              <th className="lr">REMARKS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {days.map((d) => (
-              <tr key={d} className={d === today ? "today" : ""}>
-                <td className="date">
-                  {DOW[new Date(d).getDay()]} {d.slice(8)}/{d.slice(5, 7)}
-                  {isAdmin && <button className="small" style={{ marginLeft: 6, padding: "1px 6px" }} disabled={busy} onClick={() => suggestDay(d)} title="Fill from yesterday's rotation">✨</button>}
-                </td>
-                {[...team, ...lr].map((p, i) => {
-                  const v = data?.entries[d]?.[p.id] ?? "";
-                  const req = data?.requests.find((r) => r.date === d && r.person === p.id && !isAdmin);
-                  const canEdit = isAdmin || (p.id === me && p.group === "team");
-                  const editing = edit?.date === d && edit.person === p.id;
-                  return (
-                    <td key={p.id} className={(p.id === me ? "mine " : "") + (i === team.length ? "lr" : "")}>
-                      {editing ? (
-                        <Editor value={v} busy={busy} onSave={(x) => save(d, p.id, x)} onCancel={() => setEdit(null)} />
-                      ) : (
-                        <span
-                          className={"chip" + (canEdit ? " editable" : "") + (req ? " pending" : "")}
-                          style={{ background: tone(req ? req.value : v) }}
-                          onClick={() => canEdit && setEdit({ date: d, person: p.id })}
-                          title={req ? `Pending request: ${req.value}` : undefined}
-                        >
-                          {(req ? req.value : v) || (canEdit ? "+" : "")}
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-                <td className="lr small">
-                  {isAdmin ? <input defaultValue={data?.remarks[d] ?? ""} onBlur={(e) => e.target.value !== (data?.remarks[d] ?? "") && saveRemark(d, e.target.value)} style={{ width: 160, padding: "2px 6px" }} /> : data?.remarks[d]}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="legend small">
-        {SHIFTS.map((s) => <span key={s.code} className="chip" style={{ background: tone(s.code) }}>{s.code} · {s.label}</span>)}
-      </div>
-    </main>
-  );
+  if (!auth) return <div className="phone"><p className="empty">Loading…</p></div>;
+  if (!auth.me) return <Login onDone={check} />;
+  if (auth.mustChange) return <SetPassword first onDone={check} />;
+  return <App me={auth.me} onLogout={async () => { await api("/api/logout"); check(); }} />;
 }
 
-function Editor({ value, busy, onSave, onCancel }: { value: string; busy: boolean; onSave: (v: string) => void; onCancel: () => void }) {
-  const [v, setV] = useState(value);
+function Brand({ sub }: { sub: string }) {
   return (
-    <span className="row" style={{ flexWrap: "nowrap", gap: 4 }}>
-      <input list="shifts" value={v} onChange={(e) => setV(e.target.value)} style={{ width: 120, padding: "4px 6px" }} autoFocus />
-      <datalist id="shifts">{SHIFTS.map((s) => <option key={s.code} value={s.code}>{s.label}</option>)}</datalist>
-      <button className="primary" disabled={busy} onClick={() => onSave(v)} style={{ padding: "4px 8px" }}>✓</button>
-      <button onClick={onCancel} style={{ padding: "4px 8px" }}>✕</button>
-    </span>
+    <div className="brand">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.jpg" alt="Indian Railways" />
+      <h1>TI GOODS MUSTER</h1>
+      <div className="rule" />
+      <p>{sub}</p>
+    </div>
   );
 }
 
 function Login({ onDone }: { onDone: () => void }) {
   const [user, setUser] = useState(PEOPLE[0].id);
-  const [pin, setPin] = useState("");
+  const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
   return (
-    <main>
-      <form className="card login" onSubmit={async (e) => {
-        e.preventDefault(); setErr("");
-        const r = await fetch("/api/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user, pin }) });
-        if (r.ok) onDone(); else setErr((await r.json()).error ?? "Login failed");
+    <div className="phone">
+      <form className="login" onSubmit={async (e) => {
+        e.preventDefault(); setBusy(true); setErr("");
+        const r = await api("/api/login", { user, password: pw });
+        setBusy(false);
+        if (r.ok) onDone(); else setErr(String(r.j.error ?? "Login failed"));
       }}>
-        <h1>TI Goods Roster</h1>
-        <select value={user} onChange={(e) => setUser(e.target.value)}>
-          {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name}{p.group === "lr" ? " (LR)" : ""}</option>)}
-        </select>
-        <input type="password" inputMode="numeric" placeholder="PIN" value={pin} onChange={(e) => setPin(e.target.value)} />
-        <button className="primary">Login</button>
-        <span className="err small">{err}</span>
+        <Brand sub="Login to see your duties" />
+        <div className="field">
+          <label htmlFor="name">Name</label>
+          <select id="name" value={user} onChange={(e) => setUser(e.target.value)}>
+            {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name}{p.group === "lr" ? " (LR)" : ""}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="pw">Password</label>
+          <input id="pw" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} />
+        </div>
+        {err && <div className="err" role="alert">{err}</div>}
+        <button className="btn pri" disabled={busy || !pw}>{busy ? "Signing in…" : "Login"}</button>
+        <p className="note">First time? Your password is 1234. You will be asked to set your own.</p>
       </form>
-    </main>
+    </div>
+  );
+}
+
+function SetPassword({ first, onDone }: { first?: boolean; onDone: () => void }) {
+  const [cur, setCur] = useState("");
+  const [a, setA] = useState("");
+  const [b, setB] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); setErr("");
+    if (a !== b) return setErr("The two passwords do not match");
+    setBusy(true);
+    const r = await api("/api/password", { current: cur, next: a });
+    setBusy(false);
+    if (r.ok) onDone(); else setErr(String(r.j.error ?? "Could not save"));
+  };
+  return (
+    <form className={first ? "login" : "card"} onSubmit={submit}>
+      {first ? <Brand sub="Set your own password to continue" /> : <h2>Change password</h2>}
+      {!first && (
+        <div className="field"><label htmlFor="cur">Current password</label><input id="cur" type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} /></div>
+      )}
+      <div className="field"><label htmlFor="n1">New password</label><input id="n1" type="password" autoComplete="new-password" value={a} onChange={(e) => setA(e.target.value)} /></div>
+      <div className="field"><label htmlFor="n2">Repeat new password</label><input id="n2" type="password" autoComplete="new-password" value={b} onChange={(e) => setB(e.target.value)} /></div>
+      {err && <div className="err" role="alert">{err}</div>}
+      <button className="btn pri" disabled={busy || a.length < 4}>{busy ? "Saving…" : "Save password"}</button>
+      <p className="note">At least 4 characters, and not 1234.</p>
+    </form>
+  );
+}
+
+function App({ me, onLogout }: { me: string; onLogout: () => void }) {
+  const today = iso(new Date());
+  const [tab, setTab] = useState<Tab>("today");
+  const [day, setDay] = useState(today);
+  const [month, setMonth] = useState(today.slice(0, 7));
+  const [view, setView] = useState<"mine" | "all">("mine");
+  const [data, setData] = useState<Data | null>(null);
+  const [sheet, setSheet] = useState<{ d: string; p: string } | null>(null);
+  const [toast, setToast] = useState("");
+  const [busy, setBusy] = useState(false);
+  const admin = me === ADMIN_ID;
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  const load = useCallback(async () => {
+    const r = await fetch(`/api/roster?month=${month}`, { cache: "no-store" });
+    if (r.ok) setData((await r.json()) as Data);
+  }, [month]);
+  useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { if (day.slice(0, 7) !== month) setMonth(day.slice(0, 7)); }, [day, month]);
+  useEffect(() => {
+    const on = stripRef.current?.querySelector<HTMLElement>(".on");
+    if (on && stripRef.current) stripRef.current.scrollLeft = on.offsetLeft - stripRef.current.clientWidth / 2 + 25;
+  }, [day, tab, data]);
+
+  const say = (t: string) => { setToast(t); setTimeout(() => setToast((x) => (x === t ? "" : x)), 2600); };
+  const canEdit = (id: string) => admin || (id === me && group(id) === "team");
+  const entry = (d: string, id: string) => data?.entries[d]?.[id] ?? "";
+  const days = (m: string) => {
+    const [y, mo] = m.split("-").map(Number);
+    return Array.from({ length: new Date(y, mo, 0).getDate() }, (_, i) => `${m}-${pad(i + 1)}`);
+  };
+
+  async function save(d: string, p: string, v: string) {
+    setBusy(true);
+    const r = await api("/api/roster", { date: d, person: p, value: v }, "PUT");
+    setBusy(false); setSheet(null);
+    if (!r.ok) return say(String(r.j.error ?? "Could not save"));
+    say(r.j.pending ? "Request sent to Raghav." : "Saved.");
+    load();
+  }
+  async function decide(c: Change, action: "approve" | "reject") {
+    await api("/api/requests", { id: c.id, date: c.date, action });
+    say(action === "approve" ? `Approved. ${nm(c.person)} is updated.` : "Request rejected.");
+    load();
+  }
+  async function autoFill(d: string) {
+    const prev = iso(new Date(dd(d).getTime() - 86400000));
+    let y = data?.entries[prev];
+    if (!y && prev.slice(0, 7) !== month) {
+      const r = await fetch(`/api/roster?month=${prev.slice(0, 7)}`);
+      if (r.ok) y = ((await r.json()) as Data).entries[prev];
+    }
+    for (const [p, v] of Object.entries(suggest(y))) await api("/api/roster", { date: d, person: p, value: v }, "PUT");
+    say("Filled from yesterday's rotation. Check and adjust."); load();
+  }
+
+  const reqs = data?.requests ?? [];
+  const pending = reqs.length;
+  const title = tab === "today" ? `Hi ${nm(me)}` : tab === "roster" ? "Roster" : tab === "req" ? "Requests" : "Me";
+
+  const PersonRow = ({ d, id, first }: { d: string; id: string; first?: boolean }) => {
+    const v = entry(d, id);
+    const q = reqs.find((r) => r.date === d && r.person === id && !admin);
+    const inner = (
+      <>
+        <Av id={id} />
+        <div className="nm">{nm(id)}{id === me && <span className="tag">You</span>}<small>{group(id) === "lr" ? "LR candidate" : "Team"}{q ? " · change pending" : ""}</small></div>
+        <Pill v={q ? q.value : v} pend={!!q} />
+      </>
+    );
+    return canEdit(id)
+      ? <button className={"row" + (first ? " first" : "")} onClick={() => setSheet({ d, p: id })}>{inner}</button>
+      : <div className={"row" + (first ? " first" : "")}>{inner}</div>;
+  };
+
+  const myV = entry(day, me);
+  return (
+    <div className="phone">
+      <header>
+        <div><h1>{title}</h1><p>TI Goods Muster · {long(today)}</p></div>
+        <button className="me-btn" onClick={() => setTab("me")}><Av id={me} />{admin ? "Admin" : "Team"}</button>
+      </header>
+      <main>
+        {tab === "today" && (<>
+          <div className="strip" ref={stripRef}>
+            {days(day.slice(0, 7)).map((k) => (
+              <button key={k} className={"dchip" + (k === day ? " on" : "") + (k === today ? " now" : "")} onClick={() => setDay(k)}>{DOW[dd(k).getDay()]}<b>{+k.slice(8)}</b></button>
+            ))}
+          </div>
+          <div className="hero">
+            <small>{day === today ? "Your duty today" : `Your duty on ${long(day)}`}</small>
+            <div className="big">{myV || "No duty"}</div>
+            <div className="lbl">{myV ? label(myV) : "Nothing assigned yet"}</div>
+            <div className="bar">{segs(myV).map(([a, b], i) => <i key={i} style={{ left: `${(a / 24) * 100}%`, width: `${((b - a) / 24) * 100}%` }} />)}</div>
+            <div className="ticks"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+          </div>
+          {data?.remarks[day] && <div className="note">Remark: {data.remarks[day]}</div>}
+          <div className="card">
+            <div className="dayhead"><h2>Everyone on {long(day)}</h2>
+              {admin && <button className="tag" disabled={busy} onClick={() => autoFill(day)}>✨ Auto-fill</button>}
+            </div>
+            {PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
+          </div>
+          {!admin && <div className="note">{group(me) === "lr" ? "You can see all duties. Raghav decides LR shifts." : "Tap your own row to ask for a change. Raghav approves it."}</div>}
+        </>)}
+
+        {tab === "roster" && (<>
+          <div className="monthbar">
+            <button aria-label="Previous month" onClick={() => { const d = dd(month + "-01"); d.setMonth(d.getMonth() - 1); setMonth(iso(d).slice(0, 7)); }}>‹</button>
+            <strong>{MON[+month.slice(5) - 1]} {month.slice(0, 4)}</strong>
+            <button aria-label="Next month" onClick={() => { const d = dd(month + "-01"); d.setMonth(d.getMonth() + 1); setMonth(iso(d).slice(0, 7)); }}>›</button>
+          </div>
+          <div className="seg">
+            <button className={view === "mine" ? "on" : ""} onClick={() => setView("mine")}>My month</button>
+            <button className={view === "all" ? "on" : ""} onClick={() => setView("all")}>Everyone</button>
+          </div>
+          {days(month).map((d) => (
+            <button key={d} className="card" style={{ textAlign: "left" }} onClick={() => { setDay(d); setTab("today"); }}>
+              <div className="dayhead"><b>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{data?.remarks[d] ?? ""}</span></div>
+              {view === "mine" ? (
+                <div className="row first" style={{ padding: 0 }}><div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>{entry(d, me) ? label(entry(d, me)) : "No duty"}</div><Pill v={entry(d, me)} /></div>
+              ) : (
+                <div className="mini">{PEOPLE.map((p) => <div key={p.id}><Av id={p.id} sm /><Pill v={entry(d, p.id)} /></div>)}</div>
+              )}
+            </button>
+          ))}
+        </>)}
+
+        {tab === "req" && (reqs.length === 0
+          ? <div className="empty">{admin ? "No requests waiting. Team change requests appear here." : "You have no pending requests."}</div>
+          : reqs.map((c) => (
+            <div key={c.id} className="card">
+              <div className="row first" style={{ padding: 0 }}><Av id={c.person} /><div className="nm">{nm(c.person)}<small>{long(c.date)}</small></div></div>
+              <div className="row first" style={{ padding: 0 }}><div className="nm"><small>Now</small></div><Pill v={data?.entries[c.date]?.[c.person] ?? ""} /><span>→</span><Pill v={c.value} /></div>
+              {admin
+                ? <div className="btns"><button className="btn pri" onClick={() => decide(c, "approve")}>Approve</button><button className="btn" onClick={() => decide(c, "reject")}>Reject</button></div>
+                : <div className="note">Waiting for Raghav to approve.</div>}
+            </div>
+          )))}
+
+        {tab === "me" && (<>
+          <div className="card">
+            <div className="row first" style={{ padding: 0 }}><Av id={me} /><div className="nm">{nm(me)}<small>{admin ? "Admin" : group(me) === "lr" ? "LR candidate, view only" : "Team member"}</small></div></div>
+            <button className="btn" onClick={onLogout}>Logout</button>
+          </div>
+          <SetPassword onDone={() => say("Password changed.")} />
+          {admin && (
+            <div className="card">
+              <h2>Reset a password to 1234</h2>
+              {PEOPLE.filter((p) => p.id !== me).map((p) => (
+                <div key={p.id} className="row"><Av id={p.id} /><div className="nm">{p.name}</div>
+                  <button className="btn" onClick={async () => { await api("/api/password", { reset: p.id }); say(`${p.name} can log in with 1234 and set a new password.`); }}>Reset</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>)}
+      </main>
+      <nav>
+        {(["today", "roster", "req", "me"] as Tab[]).map((k) => (
+          <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+            <svg viewBox="0 0 24 24"><path d={ICONS[k]} /></svg>
+            {k === "today" ? "Today" : k === "roster" ? "Roster" : k === "req" ? "Requests" : "Me"}
+            {k === "req" && pending > 0 && <span className="badge">{pending}</span>}
+          </button>
+        ))}
+      </nav>
+      {sheet && (
+        <div className="scrim" onClick={(e) => e.target === e.currentTarget && setSheet(null)}>
+          <div className="sheet">
+            <div className="grab" />
+            <div className="row first" style={{ padding: 0 }}><Av id={sheet.p} /><div className="nm">{nm(sheet.p)}<small>{long(sheet.d)}</small></div></div>
+            <div className="note">{admin ? "Pick a duty. It saves straight away." : "Pick the duty you want. Raghav will approve it."}</div>
+            {[...SHIFTS.map((s) => s.code), ""].map((code) => (
+              <button key={code || "clear"} className="opt" disabled={busy} onClick={() => save(sheet.d, sheet.p, code)}>
+                <span>{code ? NAMES[code] ?? code : "Clear duty"}<br /><small>{code ? TIMES[code] : "Leave the day empty"}</small></span>
+                {code && <Pill v={code} />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {toast && <div className="toast" role="status">{toast}</div>}
+    </div>
   );
 }

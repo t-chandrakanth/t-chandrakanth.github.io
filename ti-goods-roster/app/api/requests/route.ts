@@ -1,10 +1,12 @@
-import { currentUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/config";
 import { loadMonth, saveMonth } from "@/lib/store";
 
 // Raghav approves or rejects a duty change request.
 export async function POST(req: Request) {
-  const me = await currentUser();
+  const u = await requireUser();
+  if ("error" in u) return u.error;
+  const me = u.me;
   if (!isAdmin(me)) return Response.json({ error: "Only Raghav can decide requests" }, { status: 403 });
   const { id, date, action } = (await req.json()) as { id?: string; date?: string; action?: string };
   if (!id || !date || (action !== "approve" && action !== "reject")) {

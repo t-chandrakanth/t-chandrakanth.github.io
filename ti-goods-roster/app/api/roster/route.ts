@@ -1,4 +1,4 @@
-import { currentUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { isAdmin, personById } from "@/lib/config";
 import { loadMonth, saveMonth } from "@/lib/store";
 
@@ -6,8 +6,9 @@ const MONTH = /^\d{4}-\d{2}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(req: Request) {
-  const me = await currentUser();
-  if (!me) return Response.json({ error: "Login required" }, { status: 401 });
+  const u = await requireUser();
+  if ("error" in u) return u.error;
+  const me = u.me;
   const month = new URL(req.url).searchParams.get("month") ?? "";
   if (!MONTH.test(month)) return Response.json({ error: "Bad month" }, { status: 400 });
   const data = await loadMonth(month);
@@ -18,8 +19,9 @@ export async function GET(req: Request) {
 
 // Raghav: sets any duty directly. Team member: files a request for their own duty only.
 export async function PUT(req: Request) {
-  const me = await currentUser();
-  if (!me) return Response.json({ error: "Login required" }, { status: 401 });
+  const u = await requireUser();
+  if ("error" in u) return u.error;
+  const me = u.me;
   const b = (await req.json()) as { date?: string; person?: string; value?: string; remark?: string };
   if (!b.date || !DATE.test(b.date)) return Response.json({ error: "Bad date" }, { status: 400 });
   const month = b.date.slice(0, 7);
