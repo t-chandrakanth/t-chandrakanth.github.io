@@ -442,7 +442,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             );
           })()}
           {!admin && group(me) === "team" && day >= today && (
-            <button className="btn" onClick={() => { setReqNote(""); setRange({ from: day, to: day, type: "LEAVE" }); }}>Request Rest / Leave (one or many days)</button>
+            <button className="btn reqbtn" onClick={() => { setReqNote(""); setRange({ from: day, to: day, type: "LEAVE" }); }}>✋ Request Rest / Leave (one or many days)</button>
           )}
           {!admin && group(me) === "team" && day < today && <div className="note">This day is over. Only Raghav can change a completed day.</div>}
           {!admin && <div className="note">{group(me) === "lr" ? "You can see all duties. Raghav decides LR shifts." : "Tap your own row to ask for a change. Raghav approves it."}</div>}
