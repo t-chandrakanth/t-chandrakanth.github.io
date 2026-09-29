@@ -298,6 +298,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   }
   async function removeReq(c: Change) {
     const r = await api("/api/requests", { id: c.id, date: c.date }, "DELETE");
+    if (r.ok) setTicker((t) => t.filter((x) => x.id !== c.id));
     say(r.ok ? "Request deleted." : String(r.j.error ?? "Could not delete"));
     load();
   }
@@ -346,7 +347,6 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
         };
         const listFor = (fn: (v: string) => boolean) => days(month).map((d) => [d, entry(d, p.id)] as const).filter(([, v]) => v && fn(v));
         const rows = sel ? listFor((v) => test(v, sel)) : [];
-        const dutyRows = sel === "rest" ? listFor((v) => countDuties([v]).worked > 0) : [];
         return (
           <div key={p.id} className="card">
             <div className="row first" style={{ padding: 0 }}><Av id={p.id} /><div className="nm">{p.name}{p.id === me && <span className="tag">You</span>}<small>{c.worked} duty days · {c.marked} days marked{c.other ? ` · ${c.other} other` : ""}</small></div></div>
@@ -357,11 +357,9 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             </div>
             {sel && (
               <div className="sumlist">
-                <b>{cells.find((c2) => c2[2] === sel)?.[0]} days ({rows.length})</b>
+                <div className="slh"><b>{cells.find((c2) => c2[2] === sel)?.[0]} days ({rows.length})</b><button type="button" className="hide" aria-label="Hide list" onClick={() => setSumSel(null)}>✕ Hide</button></div>
                 {rows.length === 0 && <span className="none">None this month</span>}
                 {rows.map(([d, v]) => <div key={d} className="sl"><span className={isRed(d) ? "redt" : ""}>{long(d)}</span><Pill v={v} /></div>)}
-                {sel === "rest" && <b style={{ marginTop: 6 }}>Duty days ({dutyRows.length})</b>}
-                {dutyRows.map(([d, v]) => <div key={d} className="sl"><span className={isRed(d) ? "redt" : ""}>{long(d)}</span><Pill v={v} /></div>)}
               </div>
             )}
           </div>
@@ -478,7 +476,12 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               {c.note && <div className="note">Note: {c.note}</div>}
               <div className="row first" style={{ padding: 0 }}><div className="nm"><small>Now</small></div><Pill v={data?.entries[c.date]?.[c.person] ?? ""} /><span>→</span><Pill v={c.value} /></div>
               {admin
-                ? <div className="btns"><button className="btn pri" onClick={() => decide(c, "approve")}>Approve</button><button className="btn" onClick={() => decide(c, "reject")}>Reject</button></div>
+                ? <div className="btns">
+                    <button className="btn pri" onClick={() => decide(c, "approve")}>Approve</button>
+                    <button className="btn" onClick={() => decide(c, "reject")}>Reject</button>
+                    <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); setSheet({ d: c.date, p: c.person }); }}>Edit</button>
+                    <button className="btn" onClick={() => removeReq(c)}>Delete</button>
+                  </div>
                 : c.requestedBy === me
                   ? <div className="btns">
                       <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); setSheet({ d: c.date, p: c.person }); }}>Edit</button>
