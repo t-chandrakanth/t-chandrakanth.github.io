@@ -122,4 +122,6 @@ h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:v
 .sumgrid button.sel{outline:2px solid var(--brand)}
 .sumlist{display:grid;gap:6px;font-size:13px}
 .sumlist .sl{display:flex;align-items:center;justify-content:space-between}
+.sumlist .slh{display:flex;align-items:center;justify-content:space-between}
+.sumlist .hide{font-size:12px;color:var(--brand);font-weight:600;padding:4px 8px}
 .sumlist .none{color:var(--muted)}
