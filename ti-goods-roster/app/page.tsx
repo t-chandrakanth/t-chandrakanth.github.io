@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_ID, PEOPLE, SHIFTS } from "@/lib/config";
 import { suggest } from "@/lib/suggest";
 import { countDuties } from "@/lib/summary";
+import { buildMessage, whatsappLink } from "@/lib/share";
 
 type Change = { id: string; date: string; person: string; value: string; requestedBy: string };
 type Data = { me: string; entries: Record<string, Record<string, string>>; remarks: Record<string, string>; requests: Change[] };
@@ -321,6 +322,23 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             </div>
             {PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
           </div>
+          {(() => {
+            const msg = data ? buildMessage(day, data.entries) : "";
+            if (!msg) return null;
+            return (
+              <div className="card">
+                <h2>Message for WhatsApp</h2>
+                <pre className="wamsg">{msg}</pre>
+                <div className="btns">
+                  <a className="btn wa" href={whatsappLink(msg)} target="_blank" rel="noopener noreferrer">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l1.6-4.6A8.5 8.5 0 1 1 8 19.6L3 21z" /><path d="M9.2 8.6c.3 2.3 2.4 4.6 4.8 5.2l1.4-1.3-1.9-1-1 .8c-.8-.4-1.5-1.1-1.9-1.9l.8-1-1-1.9-1.2 1.1z" /></svg>
+                    Share on WhatsApp
+                  </a>
+                  <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(msg); say("Message copied."); } catch { say("Could not copy. Select the text and copy it."); } }}>Copy</button>
+                </div>
+              </div>
+            );
+          })()}
           {!admin && <div className="note">{group(me) === "lr" ? "You can see all duties. Raghav decides LR shifts." : "Tap your own row to ask for a change. Raghav approves it."}</div>}
         </>)}
 
