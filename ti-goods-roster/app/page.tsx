@@ -397,7 +397,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             {Array.from({ length: 12 }, (_, i) => `${day.slice(0, 4)}-${pad(i + 1)}`).flatMap((m) => [
               <span key={m} className="mchip">{MON[+m.slice(5) - 1]}</span>,
               ...days(m).map((k) => (
-                <button key={k} className={"dchip" + (isRed(k) ? " red" : "") + (k === day ? " on" : "") + (k === today ? " now" : "")} onClick={() => setDay(k)}>{DOW[dd(k).getDay()]}<b>{+k.slice(8)}</b></button>
+                <button key={k} className={"dchip" + (isRed(k) ? " red" : "") + (k === day ? " on" : "") + (k === today ? " now" : "")} onClick={() => setDay(k)}>{k === today ? "Today" : DOW[dd(k).getDay()]}<b>{+k.slice(8)}</b></button>
               )),
             ])}
           </div>
