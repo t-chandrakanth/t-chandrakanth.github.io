@@ -262,7 +262,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   useEffect(() => { if (data) loadTomorrow(); }, [data, loadTomorrow]);
   const loadTicker = useCallback(async () => {
     const t = dd(today);
-    const ms = [0, 1, 2].map((i) => iso(new Date(t.getFullYear(), t.getMonth() + i, 1)).slice(0, 7));
+    const ms = [-1, 0, 1, 2].map((i) => iso(new Date(t.getFullYear(), t.getMonth() + i, 1)).slice(0, 7));
     const all: Change[] = [];
     for (const m of ms) {
       const r = await fetch(`/api/roster?month=${m}`, { cache: "no-store" });
@@ -329,7 +329,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     say("Filled from yesterday's rotation. Check and adjust."); load();
   }
 
-  const reqs = data?.requests ?? [];
+  // Requests from last month to two months ahead, so a leave asked for next month still shows.
+  const reqs = ticker;
   const pending = reqs.length;
   const title = tab === "today" ? `Hi ${nm(me)}` : tab === "roster" ? "Roster" : tab === "sum" ? "Summary" : tab === "req" ? "Requests" : "Me";
 
@@ -489,6 +490,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           ? <div className="empty">No requests waiting. Rest and leave requests appear here for everyone.</div>
           : reqs.map((c) => (
             <div key={c.id} className="card">
+              {c.date.slice(0, 7) !== month && <small className="tag">{MON[+c.date.slice(5, 7) - 1]}</small>}
               <div className="row first" style={{ padding: 0 }}><Av id={c.person} /><div className="nm">{nm(c.person)}<small>{when(c)}</small></div></div>
               {c.note && <div className="note">Note: {c.note}</div>}
               <div className="row first" style={{ padding: 0 }}>{!c.to && <><div className="nm"><small>Now</small></div><Pill v={data?.entries[c.date]?.[c.person] ?? ""} /><span>→</span></>}<Pill v={c.value} /></div>
