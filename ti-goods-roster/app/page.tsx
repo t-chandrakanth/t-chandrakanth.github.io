@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_ID, PEOPLE, SHIFTS } from "@/lib/config";
 import { suggest } from "@/lib/suggest";
+import { countDuties } from "@/lib/summary";
 
 type Change = { id: string; date: string; person: string; value: string; requestedBy: string };
 type Data = { me: string; entries: Record<string, Record<string, string>>; remarks: Record<string, string>; requests: Change[] };
-type Tab = "today" | "roster" | "req" | "me";
+type Tab = "today" | "roster" | "sum" | "req" | "me";
 
 const COLORS: Record<string, string> = { raghav: "#2447d8", mahesh: "#0e8f6e", vishnu: "#c2571a", narendra: "#8a3fd0", teja: "#0a7fa8", subbareddy: "#b0356b" };
 const TIMES: Record<string, string> = { "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 24:00", "00/07": "00:00 to 07:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 24:00", REST: "Weekly rest", LEAVE: "On leave" };
@@ -54,6 +55,7 @@ const Av = ({ id, sm }: { id: string; sm?: boolean }) => <div className={"av" + 
 const ICONS: Record<Tab, string> = {
   today: "M4 7h16M7 3v4M17 3v4M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM12 11v4l2 1",
   roster: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
+  sum: "M5 20V10M12 20V4M19 20v-7",
   req: "M4 12l5 5L20 6",
   me: "M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21c1-4 4-6 8-6s7 2 8 6",
 };
@@ -208,7 +210,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
 
   const reqs = data?.requests ?? [];
   const pending = reqs.length;
-  const title = tab === "today" ? `Hi ${nm(me)}` : tab === "roster" ? "Roster" : tab === "req" ? "Requests" : "Me";
+  const title = tab === "today" ? `Hi ${nm(me)}` : tab === "roster" ? "Roster" : tab === "sum" ? "Summary" : tab === "req" ? "Requests" : "Me";
 
   const PersonRow = ({ d, id, first }: { d: string; id: string; first?: boolean }) => {
     const v = entry(d, id);
@@ -224,6 +226,29 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
       ? <button className={"row" + (first ? " first" : "")} onClick={() => setSheet({ d, p: id })}>{inner}</button>
       : <div className={"row" + (first ? " first" : "")}>{inner}</div>;
   };
+
+  const SummaryCards = () => (
+    <>
+      {PEOPLE.map((p) => {
+        const c = countDuties(days(month).map((d) => entry(d, p.id)));
+        const cells: [string, number, string][] = [
+          ["Day", c.day, "day"], ["Afternoon", c.afternoon, "aft"], ["Night", c.night, "night"],
+          ["Night off", c.nightOff, "off"], ["Rest", c.rest, "rest"], ["Leave", c.leave, "leave"],
+        ];
+        return (
+          <div key={p.id} className="card">
+            <div className="row first" style={{ padding: 0 }}><Av id={p.id} /><div className="nm">{p.name}{p.id === me && <span className="tag">You</span>}<small>{c.worked} duty days · {c.marked} days marked{c.other ? ` · ${c.other} other` : ""}</small></div></div>
+            <div className="sumgrid">
+              {cells.map(([t, n, k]) => (
+                <div key={t} style={{ background: `var(--${k})`, color: `var(--${k}-ink)` }}><b>{n}</b><span>{t}</span></div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      <div className="note">Day+Night counts once as Day and once as Night. Night off is the 00/07 part after a night duty.</div>
+    </>
+  );
 
   const myV = entry(day, me);
   return (
@@ -256,17 +281,18 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {!admin && <div className="note">{group(me) === "lr" ? "You can see all duties. Raghav decides LR shifts." : "Tap your own row to ask for a change. Raghav approves it."}</div>}
         </>)}
 
-        {tab === "roster" && (<>
+        {(tab === "roster" || tab === "sum") && (<>
           <div className="monthbar">
             <button aria-label="Previous month" onClick={() => { const d = dd(month + "-01"); d.setMonth(d.getMonth() - 1); setMonth(iso(d).slice(0, 7)); }}>‹</button>
             <strong>{MON[+month.slice(5) - 1]} {month.slice(0, 4)}</strong>
             <button aria-label="Next month" onClick={() => { const d = dd(month + "-01"); d.setMonth(d.getMonth() + 1); setMonth(iso(d).slice(0, 7)); }}>›</button>
           </div>
-          <div className="seg">
+          {tab === "roster" && <div className="seg">
             <button className={view === "mine" ? "on" : ""} onClick={() => setView("mine")}>My month</button>
             <button className={view === "all" ? "on" : ""} onClick={() => setView("all")}>Everyone</button>
-          </div>
-          {days(month).map((d) => (
+          </div>}
+          {tab === "sum" && <SummaryCards />}
+          {tab === "roster" && days(month).map((d) => (
             <button key={d} className="card" style={{ textAlign: "left" }} onClick={() => { setDay(d); setTab("today"); }}>
               <div className="dayhead"><b>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{data?.remarks[d] ?? ""}</span></div>
               {view === "mine" ? (
@@ -309,10 +335,10 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
         </>)}
       </main>
       <nav>
-        {(["today", "roster", "req", "me"] as Tab[]).map((k) => (
+        {(["today", "roster", "sum", "req", "me"] as Tab[]).map((k) => (
           <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
             <svg viewBox="0 0 24 24"><path d={ICONS[k]} /></svg>
-            {k === "today" ? "Today" : k === "roster" ? "Roster" : k === "req" ? "Requests" : "Me"}
+            {k === "today" ? "Today" : k === "roster" ? "Roster" : k === "sum" ? "Summary" : k === "req" ? "Requests" : "Me"}
             {k === "req" && pending > 0 && <span className="badge">{pending}</span>}
           </button>
         ))}
