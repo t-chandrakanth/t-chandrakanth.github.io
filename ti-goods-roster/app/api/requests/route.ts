@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/config";
-import { loadMonth, saveMonth } from "@/lib/store";
+import { loadMonth, saveMonth, type Month } from "@/lib/store";
+import { rangeDates } from "@/lib/range";
 
 // Raghav approves or rejects a duty change request.
 export async function POST(req: Request) {
@@ -16,9 +17,19 @@ export async function POST(req: Request) {
   const data = await loadMonth(month);
   const r = data.requests.find((x) => x.id === id);
   if (!r) return Response.json({ error: "Request not found" }, { status: 404 });
-  if (action === "approve") (data.entries[r.date] ??= {})[r.person] = r.value;
   data.requests = data.requests.filter((x) => x.id !== id);
-  await saveMonth(month, data);
+  if (action === "approve") {
+    // A multi-day request can cross into the next month, so load each month it touches.
+    const months = new Map<string, Month>([[month, data]]);
+    for (const d of r.to ? rangeDates(r.date, r.to) : [r.date]) {
+      const m = d.slice(0, 7);
+      if (!months.has(m)) months.set(m, await loadMonth(m));
+      (months.get(m)!.entries[d] ??= {})[r.person] = r.value;
+    }
+    for (const [m, md] of months) await saveMonth(m, md);
+  } else {
+    await saveMonth(month, data);
+  }
   return Response.json({ ok: true });
 }
 
