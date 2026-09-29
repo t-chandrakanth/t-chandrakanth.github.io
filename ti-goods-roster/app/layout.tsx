@@ -5,8 +5,13 @@ import "./globals.css";
 const sans = DM_Sans({ subsets: ["latin"], variable: "--sans" });
 const mono = DM_Mono({ subsets: ["latin"], weight: "500", variable: "--mono" });
 
-export const metadata: Metadata = { title: "TI Goods Muster", description: "Duty muster for the TI Goods team" };
-export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
+export const metadata: Metadata = {
+  title: "TI Goods Muster",
+  description: "Duty muster for the TI Goods team",
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "TI Muster", statusBarStyle: "default" },
+};
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#2447d8" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -164,6 +164,15 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const [busy, setBusy] = useState(false);
   const admin = me === ADMIN_ID;
   const stripRef = useRef<HTMLDivElement>(null);
+  const [installEvt, setInstallEvt] = useState<{ prompt: () => Promise<void> } | null>(null);
+  const [installed, setInstalled] = useState(false);
+  useEffect(() => {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+    setInstalled(window.matchMedia("(display-mode: standalone)").matches);
+    const onPrompt = (e: Event) => { e.preventDefault(); setInstallEvt(e as unknown as { prompt: () => Promise<void> }); };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+  }, []);
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/roster?month=${month}`, { cache: "no-store" });
@@ -321,6 +330,14 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="row first" style={{ padding: 0 }}><Av id={me} /><div className="nm">{nm(me)}<small>{admin ? "Admin" : group(me) === "lr" ? "LR candidate, view only" : "Team member"}</small></div></div>
             <button className="btn" onClick={onLogout}>Logout</button>
           </div>
+          {!installed && (
+            <div className="card">
+              <h2>Install on your phone</h2>
+              {installEvt
+                ? <button className="btn pri" onClick={async () => { await installEvt.prompt(); setInstallEvt(null); }}>Install app</button>
+                : <div className="note">Android or Chrome: open the browser menu and tap <b>Install app</b> or <b>Add to Home screen</b>. iPhone: tap Share, then <b>Add to Home Screen</b>.</div>}
+            </div>
+          )}
           <SetPassword onDone={() => say("Password changed.")} />
           {admin && (
             <div className="card">
