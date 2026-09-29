@@ -4,9 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_ID, PEOPLE, SHIFTS } from "@/lib/config";
 import { suggest } from "@/lib/suggest";
 import { countDuties } from "@/lib/summary";
+import { holidayName } from "@/lib/holidays";
 import { buildMessage, whatsappLink } from "@/lib/share";
 
-type Change = { id: string; date: string; person: string; value: string; requestedBy: string };
+type Change = { id: string; date: string; person: string; value: string; requestedBy: string; note?: string };
 type Data = { me: string; entries: Record<string, Record<string, string>>; remarks: Record<string, string>; requests: Change[] };
 type Tab = "today" | "roster" | "sum" | "req" | "me";
 
@@ -16,6 +17,7 @@ const NAMES: Record<string, string> = { "07/13": "Day", "13/21": "Afternoon", "2
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const isRed = (d: string) => dd(d).getDay() === 0 || !!holidayName(d);
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dd = (d: string) => new Date(d + "T00:00:00");
@@ -32,7 +34,7 @@ function kind(v: string) {
   if (v.startsWith("13/")) return "aft";
   return "day";
 }
-const label = (v: string) => NAMES[v] ?? (kind(v) === "rest" ? "Rest" : "Custom duty");
+const label = (v: string) => NAMES[v] ?? (kind(v) === "rest" ? "Rest" : kind(v) === "night" ? "Night" : kind(v) === "aft" ? "Afternoon" : "Day");
 
 function segs(v: string) {
   const out: [number, number][] = [];
@@ -205,6 +207,9 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const [sheet, setSheet] = useState<{ d: string; p: string } | null>(null);
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reqNote, setReqNote] = useState("");
+  const [restOnly, setRestOnly] = useState(false);
+  const [ticker, setTicker] = useState<Change[]>([]);
   const admin = me === ADMIN_ID;
   const stripRef = useRef<HTMLDivElement>(null);
   const inst = useInstall();
@@ -222,6 +227,18 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   }, [tomorrow]);
   useEffect(() => { loadTomorrow(); const t = setInterval(loadTomorrow, 30000); return () => clearInterval(t); }, [loadTomorrow]);
   useEffect(() => { if (data) loadTomorrow(); }, [data, loadTomorrow]);
+  const loadTicker = useCallback(async () => {
+    const t = dd(today);
+    const ms = [0, 1, 2].map((i) => iso(new Date(t.getFullYear(), t.getMonth() + i, 1)).slice(0, 7));
+    const all: Change[] = [];
+    for (const m of ms) {
+      const r = await fetch(`/api/roster?month=${m}`, { cache: "no-store" });
+      if (r.ok) all.push(...(((await r.json()) as Data).requests));
+    }
+    setTicker(all.sort((a, b) => a.date.localeCompare(b.date)));
+  }, [today]);
+  useEffect(() => { loadTicker(); const t = setInterval(loadTicker, 30000); return () => clearInterval(t); }, [loadTicker]);
+  useEffect(() => { if (data) loadTicker(); }, [data, loadTicker]);
   useEffect(() => { if (day.slice(0, 7) !== month) setMonth(day.slice(0, 7)); }, [day, month]);
   useEffect(() => {
     const on = stripRef.current?.querySelector<HTMLElement>(".on");
@@ -238,8 +255,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
 
   async function save(d: string, p: string, v: string) {
     setBusy(true);
-    const r = await api("/api/roster", { date: d, person: p, value: v }, "PUT");
-    setBusy(false); setSheet(null);
+    const r = await api("/api/roster", { date: d, person: p, value: v, note: reqNote }, "PUT");
+    setBusy(false); setSheet(null); setReqNote("");
     if (!r.ok) return say(String(r.j.error ?? "Could not save"));
     say(r.j.pending ? "Request sent to Raghav." : "Saved.");
     load();
@@ -275,7 +292,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
       </>
     );
     return canEdit(id)
-      ? <button className={"row" + (first ? " first" : "")} onClick={() => setSheet({ d, p: id })}>{inner}</button>
+      ? <button className={"row" + (first ? " first" : "")} onClick={() => { setRestOnly(false); setSheet({ d, p: id }); }}>{inner}</button>
       : <div className={"row" + (first ? " first" : "")}>{inner}</div>;
   };
 
@@ -312,10 +329,25 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
       <main>
         {tab === "today" && (<>
           <div className="strip" ref={stripRef}>
-            {days(day.slice(0, 7)).map((k) => (
-              <button key={k} className={"dchip" + (k === day ? " on" : "") + (k === today ? " now" : "")} onClick={() => setDay(k)}>{DOW[dd(k).getDay()]}<b>{+k.slice(8)}</b></button>
-            ))}
+            {Array.from({ length: 12 }, (_, i) => `${day.slice(0, 4)}-${pad(i + 1)}`).flatMap((m) => [
+              <span key={m} className="mchip">{MON[+m.slice(5) - 1]}</span>,
+              ...days(m).map((k) => (
+                <button key={k} className={"dchip" + (isRed(k) ? " red" : "") + (k === day ? " on" : "") + (k === today ? " now" : "")} onClick={() => setDay(k)}>{DOW[dd(k).getDay()]}<b>{+k.slice(8)}</b></button>
+              )),
+            ])}
           </div>
+          {holidayName(day) && <div className="note redn">{long(day)} · {holidayName(day)}</div>}
+          {!holidayName(day) && dd(day).getDay() === 0 && <div className="note redn">{long(day)} · Sunday</div>}
+          {ticker.length > 0 && (
+            <div className="ticker" role="marquee" aria-label="Pending rest and leave requests">
+              <span className="tk-h">Requests</span>
+              <div className="tk-w"><div className="tk-t" style={{ animationDuration: `${Math.max(15, ticker.length * 9)}s` }}>
+                {[0, 1].map((n) => ticker.map((c) => (
+                  <span key={n + c.id}>{nm(c.person)} asks {NAMES[c.value] ?? c.value} on {long(c.date)}{c.note ? ` — "${c.note}"` : ""} (waiting for Raghav)</span>
+                )))}
+              </div></div>
+            </div>
+          )}
           <div className="hero">
             <small>{day === today ? "Your duty today" : `Your duty on ${long(day)}`}</small>
             <div className="big">{myV || "No duty"}</div>
@@ -357,6 +389,9 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               </div>
             );
           })()}
+          {!admin && group(me) === "team" && (
+            <button className="btn" onClick={() => { setRestOnly(true); setSheet({ d: day, p: me }); }}>Request Rest / Leave for {long(day)}</button>
+          )}
           {!admin && <div className="note">{group(me) === "lr" ? "You can see all duties. Raghav decides LR shifts." : "Tap your own row to ask for a change. Raghav approves it."}</div>}
         </>)}
 
@@ -373,7 +408,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {tab === "sum" && <SummaryCards />}
           {tab === "roster" && days(month).map((d) => (
             <button key={d} className="card" style={{ textAlign: "left" }} onClick={() => { setDay(d); setTab("today"); }}>
-              <div className="dayhead"><b>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{data?.remarks[d] ?? ""}</span></div>
+              <div className="dayhead"><b className={isRed(d) ? "redt" : ""}>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{holidayName(d) ?? data?.remarks[d] ?? ""}</span></div>
               {view === "mine" ? (
                 <div className="row first" style={{ padding: 0 }}><div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>{entry(d, me) ? label(entry(d, me)) : "No duty"}</div><Pill v={entry(d, me)} /></div>
               ) : (
@@ -384,10 +419,11 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
         </>)}
 
         {tab === "req" && (reqs.length === 0
-          ? <div className="empty">{admin ? "No requests waiting. Team change requests appear here." : "You have no pending requests."}</div>
+          ? <div className="empty">No requests waiting. Rest and leave requests appear here for everyone.</div>
           : reqs.map((c) => (
             <div key={c.id} className="card">
               <div className="row first" style={{ padding: 0 }}><Av id={c.person} /><div className="nm">{nm(c.person)}<small>{long(c.date)}</small></div></div>
+              {c.note && <div className="note">Note: {c.note}</div>}
               <div className="row first" style={{ padding: 0 }}><div className="nm"><small>Now</small></div><Pill v={data?.entries[c.date]?.[c.person] ?? ""} /><span>→</span><Pill v={c.value} /></div>
               {admin
                 ? <div className="btns"><button className="btn pri" onClick={() => decide(c, "approve")}>Approve</button><button className="btn" onClick={() => decide(c, "reject")}>Reject</button></div>
@@ -431,13 +467,17 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
         ))}
       </nav>
       {sheet && (
-        <div className="scrim" onClick={(e) => e.target === e.currentTarget && setSheet(null)}>
+        <div className="scrim" onClick={(e) => e.target === e.currentTarget && (setSheet(null), setRestOnly(false))}>
           <div className="sheet">
             <div className="grab" />
             <div className="row first" style={{ padding: 0 }}><Av id={sheet.p} /><div className="nm">{nm(sheet.p)}<small>{long(sheet.d)}</small></div></div>
             <div className="note">{admin ? "Pick a duty. It saves straight away." : "Pick the duty you want. Raghav will approve it."}</div>
-            {[...SHIFTS.map((s) => s.code), ""].map((code) => (
-              <button key={code || "clear"} className="opt" disabled={busy} onClick={() => save(sheet.d, sheet.p, code)}>
+            {!admin && (
+              <div className="field"><label htmlFor="rn">Note for Raghav (optional)</label>
+                <input id="rn" maxLength={120} placeholder="Reason, e.g. family function" value={reqNote} onChange={(e) => setReqNote(e.target.value)} /></div>
+            )}
+            {[...SHIFTS.map((s) => s.code), ""].filter((c) => !restOnly || c === "REST" || c === "LEAVE").map((code) => (
+              <button key={code || "clear"} className="opt" disabled={busy} onClick={async () => { await save(sheet.d, sheet.p, code); setRestOnly(false); }}>
                 <span>{code ? NAMES[code] ?? code : "Clear duty"}<br /><small>{code ? TIMES[code] : "Leave the day empty"}</small></span>
                 {code && <Pill v={code} />}
               </button>

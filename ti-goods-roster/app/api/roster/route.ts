@@ -12,9 +12,8 @@ export async function GET(req: Request) {
   const month = new URL(req.url).searchParams.get("month") ?? "";
   if (!MONTH.test(month)) return Response.json({ error: "Bad month" }, { status: 400 });
   const data = await loadMonth(month);
-  // Only Raghav sees the whole request queue; others see their own pending requests.
-  const requests = isAdmin(me) ? data.requests : data.requests.filter((r) => r.requestedBy === me);
-  return Response.json({ me, ...data, requests });
+  // Pending requests are visible to everyone.
+  return Response.json({ me, ...data });
 }
 
 // Raghav: sets any duty directly. Team member: files a request for their own duty only.
@@ -22,7 +21,7 @@ export async function PUT(req: Request) {
   const u = await requireUser();
   if ("error" in u) return u.error;
   const me = u.me;
-  const b = (await req.json()) as { date?: string; person?: string; value?: string; remark?: string };
+  const b = (await req.json()) as { date?: string; person?: string; value?: string; remark?: string; note?: string };
   if (!b.date || !DATE.test(b.date)) return Response.json({ error: "Bad date" }, { status: 400 });
   const month = b.date.slice(0, 7);
   const data = await loadMonth(month);
@@ -49,7 +48,7 @@ export async function PUT(req: Request) {
     return Response.json({ error: "You can only request changes to your own duty" }, { status: 403 });
   }
   data.requests = data.requests.filter((r) => !(r.date === b.date && r.person === me));
-  data.requests.push({ id: crypto.randomUUID(), date: b.date, person: me, value, requestedBy: me, at: Date.now() });
+  data.requests.push({ id: crypto.randomUUID(), date: b.date, person: me, value, requestedBy: me, note: (b.note ?? "").trim().slice(0, 120), at: Date.now() });
   await saveMonth(month, data);
   return Response.json({ ok: true, pending: true });
 }

@@ -8,6 +8,7 @@ export type Change = {
   person: string;
   value: string;
   requestedBy: string;
+  note?: string;
   at: number;
 };
 export type Month = { entries: Entries; remarks: Record<string, string>; requests: Change[] };
