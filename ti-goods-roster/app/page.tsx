@@ -304,7 +304,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   }, []);
   useEffect(() => { if (tab !== "today" || sheet || range) history.pushState({ tab }, ""); }, [tab, sheet, range]);
   const say = (t: string) => { setToast(t); setTimeout(() => setToast((x) => (x === t ? "" : x)), 2600); };
-  const canEdit = (id: string, d?: string) => admin || (id === me && group(id) === "team" && (!d || d >= today));
+  const canEdit = (id: string, d?: string) => admin || (id === me && (!d || d >= today));
   const entry = (d: string, id: string) => data?.entries[d]?.[id] ?? "";
   const days = (m: string) => {
     const [y, mo] = m.split("-").map(Number);
@@ -370,7 +370,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
       </>
     );
     return canEdit(id, d)
-      ? <button className={"row" + (first ? " first" : "")} onClick={() => { setRestOnly(false); setSheet({ d, p: id }); }}>{inner}</button>
+      ? <button className={"row" + (first ? " first" : "")} onClick={() => { setRestOnly(!admin && group(id) === "lr"); setSheet({ d, p: id }); }}>{inner}</button>
       : <div className={"row" + (first ? " first" : "")}>{inner}</div>;
   };
 
@@ -480,11 +480,11 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               </div>
             );
           })()}
-          {!admin && group(me) === "team" && day >= today && (
+          {!admin && day >= today && (
             <button className="btn reqbtn" onClick={() => { setReqNote(""); setRange({ from: day, to: day, type: "LEAVE" }); }}>✋ Request Rest / Leave (one or many days)</button>
           )}
-          {!admin && group(me) === "team" && day < today && <div className="note">This day is over. Only {ADMIN_NAME} can change a completed day.</div>}
-          {!admin && <div className="note">{group(me) === "lr" ? `You can see all duties. ${ADMIN_NAME} decides LR shifts.` : `Tap your own row to ask for a change. ${ADMIN_NAME} approves it.`}</div>}
+          {!admin && day < today && <div className="note">This day is over. Only {ADMIN_NAME} can change a completed day.</div>}
+          {!admin && <div className="note">{group(me) === "lr" ? `You can see all duties and ask for Rest / Leave. ${ADMIN_NAME} decides LR shifts.` : `Tap your own row to ask for a change. ${ADMIN_NAME} approves it.`}</div>}
         </>)}
 
         {(tab === "roster" || tab === "sum") && (<>
@@ -522,12 +522,12 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
                 ? <div className="btns">
                     <button className="btn pri" onClick={() => decide(c, "approve")}>Approve</button>
                     <button className="btn" onClick={() => decide(c, "reject")}>Reject</button>
-                    <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); if (c.requestedBy === me && (c.value === "REST" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
+                    <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(group(c.person) === "lr"); if (c.requestedBy === me && (c.value === "REST" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
                     <button className="btn" onClick={() => removeReq(c)}>Delete</button>
                   </div>
                 : c.requestedBy === me
                   ? <div className="btns">
-                      <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); if (c.requestedBy === me && (c.value === "REST" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
+                      <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(group(c.person) === "lr"); if (c.requestedBy === me && (c.value === "REST" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
                       <button className="btn" onClick={() => removeReq(c)}>Delete</button>
                     </div>
                   : <div className="note">Waiting for {ADMIN_NAME} to approve.</div>}
@@ -536,7 +536,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
 
         {tab === "me" && (<>
           <div className="card">
-            <div className="row first" style={{ padding: 0 }}><Av id={me} /><div className="nm">{nm(me)}<small>{admin ? "Admin" : group(me) === "lr" ? "LR candidate, view only" : "Team member"}</small></div></div>
+            <div className="row first" style={{ padding: 0 }}><Av id={me} /><div className="nm">{nm(me)}<small>{admin ? "Admin" : group(me) === "lr" ? "LR candidate" : "Team member"}</small></div></div>
             <button className="btn" onClick={onLogout}>Logout</button>
           </div>
           {!inst.installed && (

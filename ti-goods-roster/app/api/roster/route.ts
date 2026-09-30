@@ -48,8 +48,11 @@ export async function PUT(req: Request) {
     return Response.json({ ok: true, nightOff });
   }
 
-  if (person.id !== me || person.group !== "team") {
+  if (person.id !== me) {
     return Response.json({ error: "You can only request changes to your own duty" }, { status: 403 });
+  }
+  if (person.group === "lr" && value !== "REST" && value !== "LEAVE") {
+    return Response.json({ error: `LR candidates can only ask for Rest or Leave. ${ADMIN_NAME} decides LR shifts.` }, { status: 403 });
   }
   // Completed days are the record of what happened; only Raghav corrects them.
   if (b.date < todayIST()) return Response.json({ error: `That day is over. Only ${ADMIN_NAME} can change a completed day.` }, { status: 403 });
