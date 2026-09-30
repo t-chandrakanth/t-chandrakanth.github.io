@@ -120,7 +120,7 @@ export default function Page() {
 
   if (!auth) return <div className="phone"><p className="empty">Loading…</p></div>;
   if (!auth.me) return <Login onDone={check} />;
-  if (auth.mustChange) return <SetPassword first onDone={check} />;
+  if (auth.mustChange) return <SetPassword first onDone={check} onBack={async () => { await api("/api/logout"); check(); }} />;
   return <App me={auth.me} onLogout={async () => { await api("/api/logout"); check(); }} />;
 }
 
@@ -201,7 +201,7 @@ function Login({ onDone }: { onDone: () => void }) {
   );
 }
 
-function SetPassword({ first, onDone }: { first?: boolean; onDone: () => void }) {
+function SetPassword({ first, onDone, onBack }: { first?: boolean; onDone: () => void; onBack?: () => void }) {
   const [cur, setCur] = useState("");
   const [a, setA] = useState("");
   const [b, setB] = useState("");
@@ -218,6 +218,7 @@ function SetPassword({ first, onDone }: { first?: boolean; onDone: () => void })
   return (
     <form className={first ? "login" : "card"} onSubmit={submit}>
       {first && <InstallBanner />}
+      {first && onBack && <button type="button" className="back" onClick={onBack}>‹ Back</button>}
       {first ? <Brand sub="Set your own password to continue" /> : <h2>Change password</h2>}
       {!first && (
         <div className="field"><label htmlFor="cur">Current password</label><input id="cur" type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} /></div>
@@ -284,6 +285,13 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     if (on && stripRef.current) stripRef.current.scrollLeft = on.offsetLeft - stripRef.current.clientWidth / 2 + 25;
   }, [day, tab, data]);
 
+  // Phone back button: close an open sheet, else return to Today, before it leaves the app.
+  useEffect(() => {
+    const onPop = () => { setSheet(null); setRange(null); setTab("today"); };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  useEffect(() => { if (tab !== "today" || sheet || range) history.pushState({ tab }, ""); }, [tab, sheet, range]);
   const say = (t: string) => { setToast(t); setTimeout(() => setToast((x) => (x === t ? "" : x)), 2600); };
   const canEdit = (id: string, d?: string) => admin || (id === me && group(id) === "team" && (!d || d >= today));
   const entry = (d: string, id: string) => data?.entries[d]?.[id] ?? "";
