@@ -57,7 +57,7 @@ async function api(url: string, body?: unknown, method = "POST") {
   return { ok: r.ok, status: r.status, j: (await r.json().catch(() => ({}))) as Record<string, unknown> };
 }
 
-type InstallEvt = { prompt: () => Promise<void> };
+type InstallEvt = { prompt: () => Promise<void>; userChoice?: Promise<{ outcome: string }> };
 function useInstall() {
   const [evt, setEvt] = useState<InstallEvt | null>(null);
   const [installed, setInstalled] = useState(false);
@@ -67,12 +67,21 @@ function useInstall() {
     setInstalled(window.matchMedia("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true);
     setIos(/iphone|ipad|ipod/i.test(navigator.userAgent));
     const onPrompt = (e: Event) => { e.preventDefault(); setEvt(e as unknown as InstallEvt); };
+    const early = (window as unknown as { __bip?: InstallEvt }).__bip;
+    if (early) setEvt(early);
     const onInstalled = () => { setInstalled(true); setEvt(null); };
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
     return () => { window.removeEventListener("beforeinstallprompt", onPrompt); window.removeEventListener("appinstalled", onInstalled); };
   }, []);
-  const install = async () => { if (evt) { await evt.prompt(); setEvt(null); } };
+  const install = async () => {
+    if (!evt) return;
+    await evt.prompt();
+    const choice = await evt.userChoice?.catch(() => undefined);
+    (window as unknown as { __bip?: InstallEvt }).__bip = undefined;
+    setEvt(null);
+    if (choice?.outcome === "accepted") setInstalled(true);
+  };
   return { evt, installed, ios, install };
 }
 
@@ -89,9 +98,13 @@ function InstallBanner() {
       <img src="/icon-192.png" alt="" />
       <div className="txt">
         <b>Install TI Goods Muster</b>
-        <span>{help ? (ios ? "Tap the Share button, then Add to Home Screen." : "Open the browser menu, then tap Install app or Add to Home screen.") : "Open it like an app from your home screen."}</span>
+        <span>{evt ? "One tap adds it to your home screen." : ios ? "iPhone: tap Share, then Add to Home Screen." : help ? "Open this page in Chrome, then tap the button again. If it still does not work, open the browser menu and tap Install app." : "Open it like an app from your home screen."}</span>
       </div>
-      <button className="btn pri flash" onClick={evt ? install : () => setHelp((h) => !h)}>{evt ? "TAP TO INSTALL ON YOUR PHONE" : help ? "Got it" : "TAP TO INSTALL ON YOUR PHONE"}</button>
+      {evt
+        ? <button className="btn pri flash" onClick={install}>TAP TO INSTALL ON YOUR PHONE</button>
+        : ios
+          ? null
+          : <button className="btn pri flash" onClick={() => setHelp(true)}>TAP TO INSTALL ON YOUR PHONE</button>}
       <button className="x" aria-label="Hide" onClick={close}>✕</button>
     </div>
   );
