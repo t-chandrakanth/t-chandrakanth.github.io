@@ -139,3 +139,6 @@ h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:v
 @media (prefers-reduced-motion:reduce){.install .btn.flash{animation:none}}
 .forgot{justify-self:end;font-size:12px;color:var(--brand);text-decoration:underline;padding:2px 0;margin-top:-6px}
 .back{justify-self:start;color:var(--brand);font-weight:700;font-size:15px;padding:4px 0}
+.calmini{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;font-weight:700;font-size:14px}
+.calmini .d.red{color:#d32f2f}
+.calmini .chev{font-size:12px;color:var(--brand);white-space:nowrap}
