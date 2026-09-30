@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/auth";
-import { isAdmin } from "@/lib/config";
+import { ADMIN_NAME, isAdmin } from "@/lib/config";
 import { loadMonth, saveMonth, type Month } from "@/lib/store";
 import { rangeDates } from "@/lib/range";
 import { followWithNightOff, saveMonths } from "@/lib/nightoff";
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const u = await requireUser();
   if ("error" in u) return u.error;
   const me = u.me;
-  if (!isAdmin(me)) return Response.json({ error: "Only Raghav can decide requests" }, { status: 403 });
+  if (!isAdmin(me)) return Response.json({ error: `Only ${ADMIN_NAME} can decide requests` }, { status: 403 });
   const { id, date, action } = (await req.json()) as { id?: string; date?: string; action?: string };
   if (!id || !date || (action !== "approve" && action !== "reject")) {
     return Response.json({ error: "Bad request" }, { status: 400 });

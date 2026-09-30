@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ADMIN_ID, PEOPLE, SHIFTS } from "@/lib/config";
+import { ADMIN_ID, ADMIN_NAME, APP_TITLE, PEOPLE, SHIFTS } from "@/lib/config";
 import { suggest } from "@/lib/suggest";
 import { countDuties } from "@/lib/summary";
 import { rangeDates } from "@/lib/range";
@@ -12,7 +12,6 @@ type Change = { id: string; date: string; person: string; value: string; request
 type Data = { me: string; entries: Record<string, Record<string, string>>; remarks: Record<string, string>; requests: Change[] };
 type Tab = "today" | "roster" | "sum" | "req" | "me";
 
-const COLORS: Record<string, string> = { raghav: "#2447d8", mahesh: "#0e8f6e", vishnu: "#c2571a", narendra: "#8a3fd0", teja: "#0a7fa8", subbareddy: "#b0356b" };
 const TIMES: Record<string, string> = { "08/20": "08:00 to 20:00", "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 00:00", "00/07": "00:00 to 07:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 00:00", REST: "Weekly rest", LEAVE: "On leave" };
 const NAMES: Record<string, string> = { "08/20": "General", "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", LEAVE: "Leave" };
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -42,7 +41,7 @@ function Pill({ v, pend }: { v: string; pend?: boolean }) {
   const k = kind(v);
   return <span className={"pill" + (pend ? " pend" : "")} style={{ background: `var(--${k})`, color: `var(--${k}-ink)` }}>{v || "No duty"}</span>;
 }
-const Av = ({ id, sm }: { id: string; sm?: boolean }) => <div className={"av" + (sm ? " sm" : "")} style={{ background: COLORS[id] }}>{nm(id)[0]}</div>;
+const Av = ({ id, sm }: { id: string; sm?: boolean }) => <div className={"av" + (sm ? " sm" : "")} style={{ background: PEOPLE.find((p) => p.id === id)?.color }}>{nm(id)[0]}</div>;
 
 const ICONS: Record<Tab, string> = {
   today: "M4 7h16M7 3v4M17 3v4M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM12 11v4l2 1",
@@ -97,7 +96,7 @@ function InstallBanner() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icon-192.png" alt="" />
       <div className="txt">
-        <b>Install TI Goods Muster</b>
+        <b>Install {APP_TITLE}</b>
         <span>{evt ? "One tap adds it to your home screen." : ios ? "iPhone: tap Share, then Add to Home Screen." : help ? "Open this page in Chrome, then tap the button again. If it still does not work, open the browser menu and tap Install app." : "Open it like an app from your home screen."}</span>
       </div>
       {evt
@@ -169,7 +168,7 @@ function Brand({ sub }: { sub: string }) {
     <div className="brand">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo.jpg" alt="Indian Railways" />
-      <h1>TI GOODS MUSTER</h1>
+      <h1>{APP_TITLE.toUpperCase()}</h1>
       <div className="rule" />
       <p>{sub}</p>
     </div>
@@ -206,7 +205,7 @@ function Login({ onDone }: { onDone: () => void }) {
         {err && <div className="err" role="alert">{err}</div>}
         <button className="btn pri" disabled={busy || !pw}>{busy ? "Signing in…" : "Login"}</button>
         <button type="button" className="forgot" onClick={() => setForgot((f) => !f)}>Forgot password?</button>
-        {forgot && <p className="note">Ask Raghav to reset your password. He opens <b>Me → Reset a password to 1234</b>, then you log in with 1234 and set a new one.</p>}
+        {forgot && <p className="note">Ask {ADMIN_NAME} to reset your password. They open <b>Me → Reset a password to 1234</b>, then you log in with 1234 and set a new one.</p>}
         <p className="note">First time? Your password is 1234. You will be asked to set your own.</p>
       </form>
     </div>
@@ -317,7 +316,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     const r = await api("/api/roster", { date: d, person: p, value: v, note: reqNote }, "PUT");
     setBusy(false); setSheet(null); setReqNote("");
     if (!r.ok) return say(String(r.j.error ?? "Could not save"));
-    say(r.j.pending ? "Request sent to Raghav." : r.j.nightOff ? "Saved. Next day set to Night off 00/07." : "Saved.");
+    say(r.j.pending ? `Request sent to ${ADMIN_NAME}.` : r.j.nightOff ? "Saved. Next day set to Night off 00/07." : "Saved.");
     load();
   }
   async function decide(c: Change, action: "approve" | "reject") {
@@ -329,14 +328,14 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   async function sendRange() {
     if (!range) return;
     if (range.to < range.from) return say("The last day is before the first day.");
-    if (range.from < today) return say("That day is over. Only Raghav can change a completed day.");
+    if (range.from < today) return say(`That day is over. Only ${ADMIN_NAME} can change a completed day.`);
     setBusy(true);
     if (range.id) await api("/api/requests", { id: range.id, date: range.from }, "DELETE");
     const r = await api("/api/roster", { date: range.from, to: range.to > range.from ? range.to : undefined, person: me, value: range.type, note: reqNote }, "PUT");
     setBusy(false);
     if (!r.ok) return say(String(r.j.error ?? "Could not send"));
     setRange(null); setReqNote("");
-    say("Request sent to Raghav."); load();
+    say(`Request sent to ${ADMIN_NAME}.`); load();
   }
   async function removeReq(c: Change) {
     const r = await api("/api/requests", { id: c.id, date: c.date }, "DELETE");
@@ -416,7 +415,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   return (
     <div className="phone">
       <header>
-        <div><h1>{title}</h1><p>TI Goods Muster · {long(today)}</p></div>
+        <div><h1>{title}</h1><p>{APP_TITLE} · {long(today)}</p></div>
         <button className="me-btn" onClick={() => setTab("me")}><Av id={me} />{admin ? "Admin" : "Team"}</button>
       </header>
       <main>
@@ -436,7 +435,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               <span className="tk-h">Requests</span>
               <div className="tk-w"><div className="tk-t" style={{ animationDuration: `${Math.max(15, ticker.length * 9)}s` }}>
                 {[0, 1].map((n) => ticker.map((c) => (
-                  <span key={n + c.id}>{nm(c.person)} asks {NAMES[c.value] ?? c.value} on {when(c)}{c.note ? ` — "${c.note}"` : ""} (waiting for Raghav)</span>
+                  <span key={n + c.id}>{nm(c.person)} asks {NAMES[c.value] ?? c.value} on {when(c)}{c.note ? ` — "${c.note}"` : ""} (waiting for {ADMIN_NAME})</span>
                 )))}
               </div></div>
             </div>
@@ -484,8 +483,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {!admin && group(me) === "team" && day >= today && (
             <button className="btn reqbtn" onClick={() => { setReqNote(""); setRange({ from: day, to: day, type: "LEAVE" }); }}>✋ Request Rest / Leave (one or many days)</button>
           )}
-          {!admin && group(me) === "team" && day < today && <div className="note">This day is over. Only Raghav can change a completed day.</div>}
-          {!admin && <div className="note">{group(me) === "lr" ? "You can see all duties. Raghav decides LR shifts." : "Tap your own row to ask for a change. Raghav approves it."}</div>}
+          {!admin && group(me) === "team" && day < today && <div className="note">This day is over. Only {ADMIN_NAME} can change a completed day.</div>}
+          {!admin && <div className="note">{group(me) === "lr" ? `You can see all duties. ${ADMIN_NAME} decides LR shifts.` : `Tap your own row to ask for a change. ${ADMIN_NAME} approves it.`}</div>}
         </>)}
 
         {(tab === "roster" || tab === "sum") && (<>
@@ -531,7 +530,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
                       <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(false); if (c.requestedBy === me && (c.value === "REST" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
                       <button className="btn" onClick={() => removeReq(c)}>Delete</button>
                     </div>
-                  : <div className="note">Waiting for Raghav to approve.</div>}
+                  : <div className="note">Waiting for {ADMIN_NAME} to approve.</div>}
             </div>
           )))}
 
@@ -574,15 +573,15 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
         <div className="scrim" onClick={(e) => e.target === e.currentTarget && setRange(null)}>
           <div className="sheet">
             <div className="grab" />
-            <h2>{range.id ? "Edit request" : "Ask Raghav for Rest / Leave"}</h2>
+            <h2>{range.id ? "Edit request" : `Ask ${ADMIN_NAME} for Rest / Leave`}</h2>
             <div className="seg">
               {["LEAVE", "REST"].map((t) => <button type="button" key={t} className={range.type === t ? "on" : ""} onClick={() => setRange({ ...range, type: t })}>{NAMES[t]}</button>)}
             </div>
             <div className="field"><label htmlFor="rf">First day</label><input id="rf" type="date" min={today} value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value, to: range.to < e.target.value ? e.target.value : range.to })} /></div>
             <div className="field"><label htmlFor="rt">Last day</label><input id="rt" type="date" min={range.from < today ? today : range.from} value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} /></div>
-            <div className="field"><label htmlFor="rn2">Note for Raghav (optional)</label><input id="rn2" maxLength={120} placeholder="Reason, e.g. family function" value={reqNote} onChange={(e) => setReqNote(e.target.value)} /></div>
+            <div className="field"><label htmlFor="rn2">Note for {ADMIN_NAME} (optional)</label><input id="rn2" maxLength={120} placeholder="Reason, e.g. family function" value={reqNote} onChange={(e) => setReqNote(e.target.value)} /></div>
             {range.to >= range.from && <div className="note">{days_(range.from, range.to)} day{days_(range.from, range.to) > 1 ? "s" : ""}: {long(range.from)}{range.to > range.from ? ` to ${long(range.to)}` : ""}</div>}
-            <button className="btn pri" disabled={busy || !range.from || !range.to} onClick={sendRange}>{busy ? "Sending…" : range.id ? "Save changes" : "Send to Raghav"}</button>
+            <button className="btn pri" disabled={busy || !range.from || !range.to} onClick={sendRange}>{busy ? "Sending…" : range.id ? "Save changes" : `Send to ${ADMIN_NAME}`}</button>
           </div>
         </div>
       )}
@@ -591,9 +590,9 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           <div className="sheet">
             <div className="grab" />
             <div className="row first" style={{ padding: 0 }}><Av id={sheet.p} /><div className="nm">{nm(sheet.p)}<small>{long(sheet.d)}</small></div></div>
-            <div className="note">{admin ? "Pick a duty. It saves straight away." : "Pick the duty you want. Raghav will approve it."}</div>
+            <div className="note">{admin ? "Pick a duty. It saves straight away." : `Pick the duty you want. ${ADMIN_NAME} will approve it.`}</div>
             {!admin && (
-              <div className="field"><label htmlFor="rn">Note for Raghav (optional)</label>
+              <div className="field"><label htmlFor="rn">Note for {ADMIN_NAME} (optional)</label>
                 <input id="rn" maxLength={120} placeholder="Reason, e.g. family function" value={reqNote} onChange={(e) => setReqNote(e.target.value)} /></div>
             )}
             {[...SHIFTS.map((s) => s.code), ""].filter((c) => !restOnly || c === "REST" || c === "LEAVE").map((code) => (
