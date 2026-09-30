@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/auth";
-import { isAdmin, personById } from "@/lib/config";
+import { ADMIN_NAME, isAdmin, personById } from "@/lib/config";
 import { loadMonth, saveMonth, type Month } from "@/lib/store";
 import { followWithNightOff, saveMonths } from "@/lib/nightoff";
 import { rangeDates, todayIST } from "@/lib/range";
@@ -29,7 +29,7 @@ export async function PUT(req: Request) {
   const data = await loadMonth(month);
 
   if (typeof b.remark === "string") {
-    if (!isAdmin(me)) return Response.json({ error: "Only Raghav can edit remarks" }, { status: 403 });
+    if (!isAdmin(me)) return Response.json({ error: `Only ${ADMIN_NAME} can edit remarks` }, { status: 403 });
     data.remarks[b.date] = b.remark.slice(0, 200);
     await saveMonth(month, data);
     return Response.json({ ok: true });
@@ -52,7 +52,7 @@ export async function PUT(req: Request) {
     return Response.json({ error: "You can only request changes to your own duty" }, { status: 403 });
   }
   // Completed days are the record of what happened; only Raghav corrects them.
-  if (b.date < todayIST()) return Response.json({ error: "That day is over. Only Raghav can change a completed day." }, { status: 403 });
+  if (b.date < todayIST()) return Response.json({ error: `That day is over. Only ${ADMIN_NAME} can change a completed day.` }, { status: 403 });
   const to = b.to && DATE.test(b.to) && b.to > b.date ? b.to : undefined;
   if (to && rangeDates(b.date, to).length > 31) return Response.json({ error: "Ask for at most 31 days at a time" }, { status: 400 });
   data.requests = data.requests.filter((r) => !(r.date === b.date && r.person === me));

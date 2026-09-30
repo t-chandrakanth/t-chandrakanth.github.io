@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { APP_TITLE, TEAM } from "@/lib/config";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TI Goods Muster",
-    short_name: "TI Muster",
-    description: "Duty muster for the TI Goods team",
+    name: APP_TITLE,
+    short_name: TEAM.short,
+    description: `Duty muster for ${APP_TITLE}`,
     start_url: "/",
     scope: "/",
     display: "standalone",
