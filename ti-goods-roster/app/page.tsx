@@ -91,7 +91,7 @@ function InstallBanner() {
         <b>Install TI Goods Muster</b>
         <span>{help ? (ios ? "Tap the Share button, then Add to Home Screen." : "Open the browser menu, then tap Install app or Add to Home screen.") : "Open it like an app from your home screen."}</span>
       </div>
-      <button className="btn pri" onClick={evt ? install : () => setHelp((h) => !h)}>{evt ? "Tap here to install" : help ? "Got it" : "How to install"}</button>
+      <button className="btn pri flash" onClick={evt ? install : () => setHelp((h) => !h)}>{evt ? "TAP TO INSTALL ON YOUR PHONE" : help ? "Got it" : "TAP TO INSTALL ON YOUR PHONE"}</button>
       <button className="x" aria-label="Hide" onClick={close}>✕</button>
     </div>
   );
@@ -156,6 +156,7 @@ function Login({ onDone }: { onDone: () => void }) {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgot, setForgot] = useState(false);
   return (
     <div className="phone">
       <form className="login" onSubmit={async (e) => {
@@ -168,7 +169,7 @@ function Login({ onDone }: { onDone: () => void }) {
         <Brand sub="Login to see your duties" />
         <Calendar />
         <div className="field">
-          <label htmlFor="name">Name</label>
+          <label htmlFor="name">User</label>
           <select id="name" value={user} onChange={(e) => setUser(e.target.value)}>
             {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name}{p.group === "lr" ? " (LR)" : ""}</option>)}
           </select>
@@ -179,6 +180,8 @@ function Login({ onDone }: { onDone: () => void }) {
         </div>
         {err && <div className="err" role="alert">{err}</div>}
         <button className="btn pri" disabled={busy || !pw}>{busy ? "Signing in…" : "Login"}</button>
+        <button type="button" className="forgot" onClick={() => setForgot((f) => !f)}>Forgot password?</button>
+        {forgot && <p className="note">Ask Raghav to reset your password. He opens <b>Me → Reset a password to 1234</b>, then you log in with 1234 and set a new one.</p>}
         <p className="note">First time? Your password is 1234. You will be asked to set your own.</p>
       </form>
     </div>
