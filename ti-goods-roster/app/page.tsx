@@ -124,8 +124,9 @@ export default function Page() {
   return <App me={auth.me} onLogout={async () => { await api("/api/logout"); check(); }} />;
 }
 
-function Calendar({ selected, onPick }: { selected?: string; onPick?: (d: string) => void }) {
+function Calendar({ selected, onPick, compact }: { selected?: string; onPick?: (d: string) => void; compact?: boolean }) {
   const now = new Date();
+  const [open, setOpen] = useState(!compact);
   const [ym, setYm] = useState<[number, number]>(() => (selected ? [+selected.slice(0, 4), +selected.slice(5, 7) - 1] : [now.getFullYear(), now.getMonth()]));
   const [y, m] = ym;
   const go = (n: number) => { const d = new Date(y, m + n, 1); setYm([d.getFullYear(), d.getMonth()]); };
@@ -134,8 +135,19 @@ function Calendar({ selected, onPick }: { selected?: string; onPick?: (d: string
   const cells = [...Array(first).fill(null), ...Array.from({ length: count }, (_, i) => `${y}-${pad(m + 1)}-${pad(i + 1)}`)];
   const todayIso = iso(now);
   const hols = Array.from({ length: count }, (_, i) => `${y}-${pad(m + 1)}-${pad(i + 1)}`).filter((d) => holidayName(d));
+  if (!open) {
+    const t = iso(now);
+    const why = holidayName(t) ?? (now.getDay() === 0 ? "Sunday" : "");
+    return (
+      <button type="button" className="card calmini" onClick={() => setOpen(true)}>
+        <span className={"d" + (why ? " red" : "")}>📅 {long(t)} {now.getFullYear()}{why ? ` · ${why}` : ""}</span>
+        <span className="chev">▼ Calendar</span>
+      </button>
+    );
+  }
   return (
     <div className="card cal">
+      {compact && <button type="button" className="fold" onClick={() => setOpen(false)}><h2>Calendar</h2><span className="chev">▲ Hide</span></button>}
       <div className="monthbar">
         <button type="button" aria-label="Previous month" onClick={() => go(-1)}>‹</button>
         <strong>{MON[m]} {y}</strong>
@@ -180,7 +192,7 @@ function Login({ onDone }: { onDone: () => void }) {
       }}>
         <InstallBanner />
         <Brand sub="Login to see your duties" />
-        <Calendar />
+        <Calendar compact />
         <div className="field">
           <label htmlFor="name">User</label>
           <select id="name" value={user} onChange={(e) => setUser(e.target.value)}>
