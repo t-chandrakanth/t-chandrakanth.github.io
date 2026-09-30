@@ -32,8 +32,8 @@ export const TEAMS: Team[] = [
   },
   {
     id: "victor",
-    title: "Goods Muster · Victor Samuel",
-    short: "VS Muster",
+    title: "MLA Muster",
+    short: "MLA Muster",
     adminId: "victor",
     people: [
       { id: "victor", name: "Victor Samuel", group: "team", color: "#2447d8" },
