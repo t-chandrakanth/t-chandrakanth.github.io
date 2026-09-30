@@ -16,6 +16,10 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+      <head>
+        {/* Catch the browser's install prompt before React loads, so "Tap to install" can open it straight away. */}
+        <script dangerouslySetInnerHTML={{ __html: "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;});" }} />
+      </head>
       <body>{children}</body>
     </html>
   );
