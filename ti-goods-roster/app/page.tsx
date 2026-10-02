@@ -256,6 +256,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const [reqNote, setReqNote] = useState("");
   const [range, setRange] = useState<{ id?: string; from: string; to: string; type: string } | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [remark, setRemark] = useState("");          // admin: remark typed in the duty picker
+  const [reqRemark, setReqRemark] = useState<Record<string, string>>({}); // admin: remark per request card
   const [sumSel, setSumSel] = useState<{ p: string; k: string } | null>(null);
   const [restOnly, setRestOnly] = useState(false);
   const [ticker, setTicker] = useState<Change[]>([]);
@@ -311,16 +313,22 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     return Array.from({ length: new Date(y, mo, 0).getDate() }, (_, i) => `${m}-${pad(i + 1)}`);
   };
 
+  async function saveRemark(d: string, text: string) {
+    const r = await api("/api/roster", { date: d, remark: text.trim() }, "PUT");
+    if (!r.ok) say(String(r.j.error ?? "Could not save remark"));
+  }
   async function save(d: string, p: string, v: string) {
     setBusy(true);
     const r = await api("/api/roster", { date: d, person: p, value: v, note: reqNote }, "PUT");
+    if (r.ok && admin && remark.trim() !== (data?.remarks[d] ?? "")) await saveRemark(d, remark);
     setBusy(false); setSheet(null); setReqNote("");
     if (!r.ok) return say(String(r.j.error ?? "Could not save"));
     say(r.j.pending ? `Request sent to ${ADMIN_NAME}.` : r.j.nightOff ? "Saved. Next day set to Night off 00/07." : "Saved.");
     load();
   }
   async function decide(c: Change, action: "approve" | "reject") {
-    await api("/api/requests", { id: c.id, date: c.date, action });
+    await api("/api/requests", { id: c.id, date: c.date, action, remark: reqRemark[c.id] ?? "" });
+    setReqRemark((m) => { const n = { ...m }; delete n[c.id]; return n; });
     say(action === "approve" ? `Approved. ${nm(c.person)} is updated.` : "Request rejected.");
     load();
   }
@@ -370,7 +378,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
       </>
     );
     return canEdit(id, d)
-      ? <button className={"row" + (first ? " first" : "")} onClick={() => { setRestOnly(false); setSheet({ d, p: id }); }}>{inner}</button>
+      ? <button className={"row" + (first ? " first" : "")} onClick={() => { setRestOnly(false); setRemark(data?.remarks[d] ?? ""); setSheet({ d, p: id }); }}>{inner}</button>
       : <div className={"row" + (first ? " first" : "")}>{inner}</div>;
   };
 
@@ -445,7 +453,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="big">{myV || "No duty"}</div>
             <div className="lbl">{myV ? label(myV) : "Nothing assigned yet"}</div>
           </div>
-          {data?.remarks[day] && <div className="note">Remark: {data.remarks[day]}</div>}
+          {data?.remarks[day] && <div className="note remark">📝 Remark: {data.remarks[day]}</div>}
           {day !== tomorrow && (
             <button className="card" style={{ textAlign: "left" }} onClick={() => setDay(tomorrow)}>
               <div className="dayhead"><h2>Tomorrow · {long(tomorrow)}</h2><span>Tap to open</span></div>
@@ -464,7 +472,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             {showAll && PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
           </div>
           {(() => {
-            const msg = data && admin ? buildMessage(day, data.entries) : "";
+            const msg = data && admin ? buildMessage(day, data.entries, data.remarks[day] ?? "") : "";
             if (!msg) return null;
             return (
               <div className="card">
@@ -500,7 +508,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {tab === "sum" && <SummaryCards />}
           {tab === "roster" && days(month).map((d) => (
             <button key={d} className="card" style={{ textAlign: "left" }} onClick={() => { setDay(d); setTab("today"); }}>
-              <div className="dayhead"><b className={isRed(d) ? "redt" : ""}>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{holidayName(d) ?? data?.remarks[d] ?? ""}</span></div>
+              <div className="dayhead"><b className={isRed(d) ? "redt" : ""}>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{holidayName(d) ?? ""}</span></div>
+              {data?.remarks[d] && <div className="note remark">📝 {data.remarks[d]}</div>}
               {view === "mine" ? (
                 <div className="row first" style={{ padding: 0 }}><div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>{entry(d, me) ? label(entry(d, me)) : "No duty"}</div><Pill v={entry(d, me)} /></div>
               ) : (
@@ -518,6 +527,10 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               <div className="row first" style={{ padding: 0 }}><Av id={c.person} /><div className="nm">{nm(c.person)}<small>{when(c)}</small></div></div>
               {c.note && <div className="note">Note: {c.note}</div>}
               <div className="row first" style={{ padding: 0 }}>{!c.to && <><div className="nm"><small>Now</small></div><Pill v={data?.entries[c.date]?.[c.person] ?? ""} /><span>→</span></>}<Pill v={c.value} /></div>
+              {admin && (
+                <div className="field"><label htmlFor={"rr" + c.id}>Remark (optional, visible to all)</label>
+                  <input id={"rr" + c.id} maxLength={200} placeholder="e.g. Adjustment for Vishnu" value={reqRemark[c.id] ?? ""} onChange={(e) => setReqRemark((m) => ({ ...m, [c.id]: e.target.value }))} /></div>
+              )}
               {admin
                 ? <div className="btns">
                     <button className="btn pri" onClick={() => decide(c, "approve")}>Approve</button>
@@ -591,6 +604,12 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="grab" />
             <div className="row first" style={{ padding: 0 }}><Av id={sheet.p} /><div className="nm">{nm(sheet.p)}<small>{long(sheet.d)}</small></div></div>
             <div className="note">{admin ? "Pick a duty. It saves straight away." : `Pick the duty you want. ${ADMIN_NAME} will approve it.`}</div>
+            {admin && (
+              <div className="field"><label htmlFor="rk">Remark for {long(sheet.d)} (visible to all)</label>
+                <input id="rk" maxLength={200} placeholder="e.g. Adjustment for Vishnu" value={remark} onChange={(e) => setRemark(e.target.value)} />
+                <button type="button" className="btn" disabled={busy} onClick={async () => { await saveRemark(sheet.d, remark); setSheet(null); say("Remark saved."); load(); }}>Save remark only</button>
+              </div>
+            )}
             {!admin && (
               <div className="field"><label htmlFor="rn">Note for {ADMIN_NAME} (optional)</label>
                 <input id="rn" maxLength={120} placeholder="Reason, e.g. family function" value={reqNote} onChange={(e) => setReqNote(e.target.value)} /></div>

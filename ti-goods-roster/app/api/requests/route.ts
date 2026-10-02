@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   if ("error" in u) return u.error;
   const me = u.me;
   if (!isAdmin(me)) return Response.json({ error: `Only ${ADMIN_NAME} can decide requests` }, { status: 403 });
-  const { id, date, action } = (await req.json()) as { id?: string; date?: string; action?: string };
+  const { id, date, action, remark } = (await req.json()) as { id?: string; date?: string; action?: string; remark?: string };
   if (!id || !date || (action !== "approve" && action !== "reject")) {
     return Response.json({ error: "Bad request" }, { status: 400 });
   }
@@ -19,6 +19,7 @@ export async function POST(req: Request) {
   const r = data.requests.find((x) => x.id === id);
   if (!r) return Response.json({ error: "Request not found" }, { status: 404 });
   data.requests = data.requests.filter((x) => x.id !== id);
+  if (typeof remark === "string" && remark.trim()) data.remarks[r.date] = remark.trim().slice(0, 200);
   if (action === "approve") {
     // A multi-day request can cross into the next month, so load each month it touches.
     const months = new Map<string, Month>([[month, data]]);
