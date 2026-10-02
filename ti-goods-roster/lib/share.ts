@@ -24,7 +24,7 @@ function rank(label: string) {
   return 1;
 }
 
-export function buildMessage(date: string, entries: Record<string, Record<string, string>>) {
+export function buildMessage(date: string, entries: Record<string, Record<string, string>>, remark = "") {
   const day = entries[date] ?? {};
   const section = (group: "team" | "lr") => {
     const g = new Map<string, string[]>();
@@ -40,7 +40,7 @@ export function buildMessage(date: string, entries: Record<string, Record<string
   const lr = section("lr");
   if (!team.length && !lr.length) return "";
   const [y, m, d] = date.split("-");
-  return [`Duties -${d}-${m}-${y.slice(2)}`, ...team, ...(lr.length ? ["", "LR", ...lr] : [])].join("\n");
+  return [`Duties -${d}-${m}-${y.slice(2)}`, ...team, ...(lr.length ? ["", "LR", ...lr] : []), ...(remark ? ["", `Remark: ${remark}`] : [])].join("\n");
 }
 
 export const whatsappLink = (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`;
