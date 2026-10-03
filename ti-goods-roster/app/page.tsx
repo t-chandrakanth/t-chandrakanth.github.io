@@ -4,13 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_ID, ADMIN_NAME, APP_TITLE, PEOPLE, SHIFTS } from "@/lib/config";
 import { suggest } from "@/lib/suggest";
 import { countDuties } from "@/lib/summary";
-import { crStatus } from "@/lib/cr";
+import type { CrLedger } from "@/lib/cr";
 import { rangeDates } from "@/lib/range";
 import { holidayName } from "@/lib/holidays";
 import { buildMessage, whatsappLink } from "@/lib/share";
 
 type Change = { id: string; date: string; person: string; value: string; requestedBy: string; note?: string; to?: string };
 type Data = { me: string; entries: Record<string, Record<string, string>>; remarks: Record<string, string>; requests: Change[] };
+type CrInfo = { from: string; balances: Record<string, number>; people: Record<string, CrLedger> };
 type Tab = "today" | "roster" | "sum" | "req" | "me";
 
 const TIMES: Record<string, string> = { "08/20": "08:00 to 20:00", "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 00:00", "00/07": "00:00 to 07:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 00:00", REST: "Weekly rest", CR: "Compensatory rest (for a week without rest)", LEAVE: "On leave" };
@@ -266,9 +267,13 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const stripRef = useRef<HTMLDivElement>(null);
   const inst = useInstall();
 
+  const [cr, setCr] = useState<CrInfo | null>(null);
+  const [crForm, setCrForm] = useState<{ from: string; balances: Record<string, string> } | null>(null);
   const load = useCallback(async () => {
     const r = await fetch(`/api/roster?month=${month}`, { cache: "no-store" });
     if (r.ok) setData((await r.json()) as Data);
+    const c = await fetch("/api/cr", { cache: "no-store" });
+    if (c.ok) setCr((await c.json()) as CrInfo);
   }, [month]);
   useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, [load]);
   const tomorrow = iso(new Date(dd(today).getTime() + 86400000));
@@ -391,7 +396,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           ["Day / General", c.day, "day"], ["Afternoon", c.afternoon, "aft"], ["Night", c.night, "night"],
           ["Night off", c.nightOff, "off"], ["Rest", c.rest, "rest"], ["CR", c.cr, "rest"], ["Leave", c.leave, "leave"],
         ];
-        const cr = crStatus(month, (d) => entry(d, p.id), today);
+        const L = cr?.people[p.id];
         const keyOf = (t: string, k: string) => (t === "CR" ? "cr" : k);
         const sel = sumSel?.p === p.id ? sumSel.k : null;
         const test = (v: string, k: string) => {
@@ -408,10 +413,12 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
                 <button type="button" key={t} className={sel === keyOf(t, k) ? "sel" : ""} onClick={() => setSumSel(sel === keyOf(t, k) ? null : { p: p.id, k: keyOf(t, k) })} style={{ background: `var(--${k})`, color: `var(--${k}-ink)` }}><b>{n}</b><span>{t}</span></button>
               ))}
             </div>
-            <div className={"note" + (cr.due > 0 ? " crdue" : "")}>
-              <b>CR</b> · earned {cr.earned.length} · taken {cr.taken} · <b>due {cr.due}</b>
-              {cr.earned.length > 0 && <small> — no rest in week of {cr.earned.map((d) => long(d)).join(", ")}</small>}
-            </div>
+            {L && (
+              <div className={"note" + (L.due > 0 ? " crdue" : "")}>
+                <b>CR due: {L.due}</b> <small>(opening {L.opening} + earned {L.earned.length} − taken {L.taken}, since {long(cr!.from)})</small>
+                {L.earned.length > 0 && <small><br />No rest in week of {L.earned.slice(-4).map((d) => long(d)).join(", ")}{L.earned.length > 4 ? ` and ${L.earned.length - 4} more` : ""}</small>}
+              </div>
+            )}
             {sel && (
               <div className="sumlist">
                 <div className="slh"><b>{cells.find((c2) => keyOf(c2[0], c2[2]) === sel)?.[0]} days ({rows.length})</b><button type="button" className="hide" aria-label="Hide list" onClick={() => setSumSel(null)}>✕ Hide</button></div>
@@ -460,7 +467,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="big">{myV || "No duty"}</div>
             <div className="lbl">{myV ? label(myV) : "Nothing assigned yet"}</div>
           </div>
-          {(() => { const cr = crStatus(day.slice(0, 7), (d) => entry(d, me), today); return cr.due > 0 ? <div className="note crdue">⏱ You are due <b>{cr.due} CR</b> (no rest in the week of {cr.earned.map((d) => long(d)).join(", ")}). Ask {ADMIN_NAME} with the Rest / Leave button.</div> : null; })()}
+          {(cr?.people[me]?.due ?? 0) > 0 && <div className="note crdue">⏱ You are due <b>{cr!.people[me].due} CR</b>. Ask {ADMIN_NAME} with the Rest / Leave button.</div>}
           {data?.remarks[day] && <div className="note remark">📝 Remark: {data.remarks[day]}</div>}
           {day !== tomorrow && (
             <button className="card" style={{ textAlign: "left" }} onClick={() => setDay(tomorrow)}>
@@ -569,6 +576,29 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             </div>
           )}
           <SetPassword onDone={() => say("Password changed.")} />
+          {admin && cr && (
+            <div className="card">
+              <h2>CR pending (opening balance)</h2>
+              <div className="note">Enter how many CR each person is owed as of the start date. From that date the app counts weeks without rest and CR days taken by itself.</div>
+              {!crForm
+                ? <>
+                    <div className="row first" style={{ padding: 0 }}><div className="nm"><small>Counting from</small>{long(cr.from)} {cr.from.slice(0, 4)}</div></div>
+                    {PEOPLE.map((p) => <div key={p.id} className="row"><Av id={p.id} sm /><div className="nm">{p.name}<small>opening {cr.balances[p.id] ?? 0} · due now {cr.people[p.id]?.due ?? 0}</small></div></div>)}
+                    <button className="btn" onClick={() => setCrForm({ from: cr.from, balances: Object.fromEntries(PEOPLE.map((p) => [p.id, String(cr.balances[p.id] ?? 0)])) })}>Edit CR balances</button>
+                  </>
+                : <>
+                    <div className="field"><label htmlFor="crfrom">Counting from</label><input id="crfrom" type="date" value={crForm.from} onChange={(e) => setCrForm({ ...crForm, from: e.target.value })} /></div>
+                    {PEOPLE.map((p) => (
+                      <div key={p.id} className="row"><Av id={p.id} sm /><div className="nm">{p.name}</div>
+                        <input type="number" min={0} inputMode="numeric" style={{ width: 72, textAlign: "center" }} value={crForm.balances[p.id]} onChange={(e) => setCrForm({ ...crForm, balances: { ...crForm.balances, [p.id]: e.target.value } })} /></div>
+                    ))}
+                    <div className="btns">
+                      <button className="btn pri" disabled={busy} onClick={async () => { setBusy(true); const r = await api("/api/cr", { from: crForm.from, balances: crForm.balances }, "PUT"); setBusy(false); if (r.ok) { setCrForm(null); say("CR balances saved."); load(); } else say(String(r.j.error ?? "Could not save")); }}>Save</button>
+                      <button className="btn" onClick={() => setCrForm(null)}>Cancel</button>
+                    </div>
+                  </>}
+            </div>
+          )}
           {admin && (
             <div className="card">
               <h2>Reset a password to 1234</h2>
