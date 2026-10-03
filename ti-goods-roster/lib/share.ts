@@ -4,6 +4,7 @@ import { PEOPLE } from "./config";
 function wording(code: string) {
   const v = code.trim().toUpperCase();
   if (v === "REST") return "Rest";
+  if (v === "CR") return "CR";
   if (v === "LEAVE") return "Leave";
   if (v === "08/20") return "General";
   const starts = v.split(/\s+/).map((t) => +(t.match(/^(\d+)\//)?.[1] ?? -1)).filter((n) => n >= 0);
@@ -16,6 +17,7 @@ function rank(label: string) {
   if (label === "Day/Night") return 0;
   if (label === "General") return 1;
   if (label === "Rest") return 5;
+  if (label === "CR") return 5;
   if (label === "Leave") return 6;
   const s = +(label.match(/^(\d+)\//)?.[1] ?? 99);
   if (s === 0) return 4;

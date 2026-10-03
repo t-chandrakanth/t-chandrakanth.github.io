@@ -4,13 +4,14 @@ export type Counts = {
   night: number;
   nightOff: number;
   rest: number;
+  cr: number;
   leave: number;
   other: number;
   worked: number; // days with any duty
   marked: number; // days with any entry
 };
 
-export const emptyCounts = (): Counts => ({ day: 0, afternoon: 0, night: 0, nightOff: 0, rest: 0, leave: 0, other: 0, worked: 0, marked: 0 });
+export const emptyCounts = (): Counts => ({ day: 0, afternoon: 0, night: 0, nightOff: 0, rest: 0, cr: 0, leave: 0, other: 0, worked: 0, marked: 0 });
 
 // Counting rules (from the muster sheet's codes):
 //  Day        = a 07/13-type duty starting 05:00-12:59
@@ -25,6 +26,7 @@ export function countDuties(values: string[]): Counts {
     if (!v) continue;
     c.marked++;
     if (v === "REST") { c.rest++; continue; }
+    if (v === "CR") { c.cr++; continue; }
     if (v === "LEAVE") { c.leave++; continue; }
     let any = false;
     for (const t of v.split(/\s+/)) {
