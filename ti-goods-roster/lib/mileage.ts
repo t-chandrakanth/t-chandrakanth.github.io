@@ -63,8 +63,12 @@ export async function buildMileage(month: string, personId: string, personName: 
     const [Y, M, D] = r.date.split("-").map(Number);
     ws.getCell(row, 2).value = new Date(Date.UTC(Y, M - 1, D));
     ws.getCell(row, 2).numFmt = "dd-mm-yyyy";
-    if (r.c) ws.getCell(row, 3).value = r.c;
-    if (r.d) ws.getCell(row, 4).value = r.d;
+    for (const [col, v] of [[3, r.c], [4, r.d]] as const) {
+      if (!v) continue;
+      const cell = ws.getCell(row, col);
+      cell.value = v;
+      cell.font = { ...cell.font, bold: true };
+    }
     if (r.kms) ws.getCell(row, 15).value = r.kms;
     if (r.nda) ws.getCell(row, 16).value = r.nda;
   });
@@ -76,8 +80,10 @@ export async function buildMileage(month: string, personId: string, personName: 
   ws.getCell("O39").value = totalKms;
   ws.getCell("P39").value = totalNda;
   ws.getCell("O40").value = `${totalKms} OR ${workDays} ALKS`;
+  ws.getCell("O40").font = { ...ws.getCell("O40").font, bold: true, size: 20 };
+  ws.getRow(40).height = 32;
   ws.getCell("O41").value = "-";
-  ws.getCell("O42").value = totalNda;
+  ws.getCell("O42").value = `${totalNda} HRS`;
   ws.getCell("O43").value = leave ? `${leave} LAP` : "-";
 
   return Buffer.from(await wb.xlsx.writeBuffer());
