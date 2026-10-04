@@ -42,6 +42,21 @@ export const TEAMS: Team[] = [
       { id: "aravind", name: "Aravind", group: "team", color: "#8a3fd0" },
     ],
   },
+  {
+    id: "coal",
+    title: "Coal Asst Muster",
+    short: "Coal Muster",
+    adminId: "vijay",
+    people: [
+      { id: "vijay", name: "Vijay", group: "team", color: "#2447d8" },
+      { id: "ravindra", name: "Ravindra", group: "team", color: "#0e8f6e" },
+      { id: "sunil", name: "Sunil", group: "team", color: "#c2571a" },
+      { id: "manisha", name: "Manisha", group: "team", color: "#8a3fd0" },
+      { id: "bindu", name: "Bindu", group: "lr", color: "#b0356b" },
+      { id: "adithya", name: "Adithya", group: "lr", color: "#0a7fa8" },
+      { id: "jyothi", name: "Jyothi", group: "lr", color: "#7a6a00" },
+    ],
+  },
 ];
 
 export const TEAM: Team = TEAMS.find((t) => t.id === process.env.NEXT_PUBLIC_TEAM) ?? TEAMS[0];

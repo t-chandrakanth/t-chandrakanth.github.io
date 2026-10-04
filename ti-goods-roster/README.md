@@ -6,6 +6,7 @@ Duty muster app. One codebase serves several teams; each deployment picks its te
 |---|---|---|---|---|
 | *(unset)* or `ti-goods` | TI Goods Muster | Raghav | Mahesh, Vishnu, Narendra | Subbareddy, Teja |
 | `victor` | MLA Muster | Victor Samuel | Murali, Naresh, Aravind | none |
+| `coal` | Coal Asst Muster | Vijay | Ravindra, Sunil, Manisha | Bindu, Adithya, Jyothi |
 
 Next.js, deploys on Vercel. "Raghav" below means the chief of whichever team is deployed.
 
@@ -32,7 +33,7 @@ Duty codes follow the muster sheet (`08/20` General, `CR` compensatory rest, `07
 4. Deploy. Without Redis the app only keeps data in memory, so it resets.
 
 ### Second team (another app)
-Create a **second Vercel project** from the same repo, Root Directory `ti-goods-roster`, and add the env var `NEXT_PUBLIC_TEAM=victor` plus its own `SESSION_SECRET`. It can share the same Upstash Redis (its keys are prefixed with the team id) or use its own. Each project gets its own URL, logins, duties and requests. To add another team, append it to `TEAMS` in `lib/config.ts`.
+Create a **second Vercel project** from the same repo, Root Directory `ti-goods-roster`, and add the env var `NEXT_PUBLIC_TEAM=victor` (or `coal`) plus its own `SESSION_SECRET`. It can share the same Upstash Redis (its keys are prefixed with the team id) or use its own. Each project gets its own URL, logins, duties and requests. To add another team, append it to `TEAMS` in `lib/config.ts`.
 
 ## Local
 ```
