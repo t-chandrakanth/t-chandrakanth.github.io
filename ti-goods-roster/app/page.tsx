@@ -315,7 +315,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   }, []);
   useEffect(() => { if (tab !== "today" || sheet || range) history.pushState({ tab }, ""); }, [tab, sheet, range]);
   const say = (t: string) => { setToast(t); setTimeout(() => setToast((x) => (x === t ? "" : x)), 2600); };
-  const canEdit = (id: string, d?: string) => admin || (id === me && (!d || d >= today));
+  const canEdit = (id: string) => admin || id === me;
   const entry = (d: string, id: string) => data?.entries[d]?.[id] ?? "";
   const days = (m: string) => {
     const [y, mo] = m.split("-").map(Number);
@@ -386,7 +386,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
         <Pill v={q ? q.value : v} pend={!!q} />
       </>
     );
-    return canEdit(id, d)
+    return canEdit(id)
       ? <button className={"row" + (first ? " first" : "")} onClick={() => { setRestOnly(!admin && group(id) === "lr"); setRemark(data?.remarks[d] ?? ""); setSheet({ d, p: id }); }}>{inner}</button>
       : <div className={"row" + (first ? " first" : "")}>{inner}</div>;
   };
@@ -474,15 +474,12 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {data?.remarks[day] && <div className="note remark">📝 Remark: {data.remarks[day]}</div>}
           {day !== tomorrow && (
             <button className="card" style={{ textAlign: "left" }} onClick={() => setDay(tomorrow)}>
-              <div className="dayhead tmhead"><h2>Tomorrow</h2><span>Tap to open</span></div>
-              <div className="tmdate">{full(tomorrow)}</div>
-              {PEOPLE.map((p, i) => (
-                <div key={p.id} className={"row tmrow" + (i === 0 ? " first" : "")}>
-                  <Av id={p.id} sm />
-                  <div className="nm">{p.name}{p.id === me && <span className="tag">You</span>}<small>{tmData?.entries[tomorrow]?.[p.id] ? label(tmData.entries[tomorrow][p.id]) : "No duty"}</small></div>
-                  <Pill v={tmData?.entries[tomorrow]?.[p.id] ?? ""} />
-                </div>
-              ))}
+              <div className="dayhead"><h2>Tomorrow duties · {full(tomorrow)}</h2><span>Tap to open</span></div>
+              <div className="row first" style={{ padding: 0 }}>
+                <div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>Your duty{tmData?.entries[tomorrow]?.[me] ? ` · ${label(tmData.entries[tomorrow][me])}` : ""}</div>
+                <Pill v={tmData?.entries[tomorrow]?.[me] ?? ""} />
+              </div>
+              <div className="mini names">{PEOPLE.filter((p) => p.id !== me).map((p) => <div key={p.id}><b style={{ color: PEOPLE.find((x) => x.id === p.id)?.color }}>{p.name}</b><Pill v={tmData?.entries[tomorrow]?.[p.id] ?? ""} /></div>)}</div>
             </button>
           )}
           <div className="card">
@@ -512,10 +509,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {!admin && day >= today && (
             <button className="btn reqbtn" onClick={() => { setReqNote(""); setRange({ from: day, to: day, type: "LEAVE" }); }}>✋ Request Rest / Leave (one or many days)</button>
           )}
-          {!admin && group(me) === "team" && day >= today && myV && (
-            <button className="btn chgbtn" onClick={() => { setReqNote(""); setRestOnly(false); setSheet({ d: day, p: me }); }}>🔁 Request change to my duty ({myV} on {long(day)})</button>
-          )}
-          {!admin && day < today && <div className="note">This day is over. Only {ADMIN_NAME} can change a completed day.</div>}
+          {!admin && day < today && <div className="note">Past day. If a duty was entered wrongly, tap your own row to send a correction to {ADMIN_NAME}.</div>}
           {!admin && <div className="note">{group(me) === "lr" ? `You can see all duties and ask for Rest / Leave. ${ADMIN_NAME} decides LR shifts.` : `Tap your own row to ask for a change. ${ADMIN_NAME} approves it.`}</div>}
         </>)}
 

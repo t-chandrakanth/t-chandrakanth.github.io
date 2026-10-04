@@ -2,7 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { ADMIN_NAME, isAdmin, personById } from "@/lib/config";
 import { loadMonth, saveMonth, type Month } from "@/lib/store";
 import { followWithNightOff, saveMonths } from "@/lib/nightoff";
-import { rangeDates, todayIST } from "@/lib/range";
+import { rangeDates } from "@/lib/range";
 
 const MONTH = /^\d{4}-\d{2}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -54,8 +54,7 @@ export async function PUT(req: Request) {
   if (person.group === "lr" && value !== "REST" && value !== "CR" && value !== "LEAVE") {
     return Response.json({ error: `LR candidates can only ask for Rest, CR or Leave. ${ADMIN_NAME} decides LR shifts.` }, { status: 403 });
   }
-  // Completed days are the record of what happened; only Raghav corrects them.
-  if (b.date < todayIST()) return Response.json({ error: `That day is over. Only ${ADMIN_NAME} can change a completed day.` }, { status: 403 });
+  // A past day can be corrected too (a wrongly entered duty), but like any change it waits for the chief's approval.
   const to = b.to && DATE.test(b.to) && b.to > b.date ? b.to : undefined;
   if (to && rangeDates(b.date, to).length > 31) return Response.json({ error: "Ask for at most 31 days at a time" }, { status: 400 });
   data.requests = data.requests.filter((r) => !(r.date === b.date && r.person === me));
