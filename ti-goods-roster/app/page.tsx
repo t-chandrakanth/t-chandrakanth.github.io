@@ -89,6 +89,68 @@ function useInstall() {
   return { evt, installed, ios, install };
 }
 
+type PushState = { ready: boolean; publicKey: string; subscribed: boolean; devices: number };
+function usePush(me: string) {
+  const [st, setSt] = useState<PushState | null>(null);
+  const [supported, setSupported] = useState(true);
+  const [perm, setPerm] = useState<NotificationPermission | "unknown">("unknown");
+  const [busy, setBusy] = useState(false);
+  const refresh = useCallback(async () => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) { setSupported(false); return; }
+    setPerm(Notification.permission);
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    const r = await fetch(`/api/push?endpoint=${encodeURIComponent(sub?.endpoint ?? "")}`, { cache: "no-store" });
+    if (r.ok) setSt((await r.json()) as PushState);
+  }, []);
+  useEffect(() => { refresh(); }, [refresh, me]);
+  const enable = async () => {
+    if (!st?.publicKey) return "Notifications are not set up on the server yet.";
+    setBusy(true);
+    try {
+      const p = await Notification.requestPermission();
+      setPerm(p);
+      if (p !== "granted") return "Allow notifications in the phone's settings for this app.";
+      const reg = await navigator.serviceWorker.ready;
+      const raw = atob(st.publicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(st.publicKey.length / 4) * 4, "="));
+      const key = Uint8Array.from(raw, (c) => c.charCodeAt(0));
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      const r = await api("/api/push", sub.toJSON());
+      await refresh();
+      return r.ok ? "Daily duty alerts are on for this phone." : String(r.j.error ?? "Could not save");
+    } catch { return "Could not turn on notifications on this phone."; } finally { setBusy(false); }
+  };
+  const disable = async () => {
+    setBusy(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) { await api("/api/push", { endpoint: sub.endpoint }, "DELETE"); await sub.unsubscribe(); }
+      await refresh();
+      return "Alerts are off for this phone.";
+    } finally { setBusy(false); }
+  };
+  return { st, supported, perm, busy, enable, disable };
+}
+
+function AlertsCard({ me, say }: { me: string; say: (t: string) => void }) {
+  const { st, supported, perm, busy, enable, disable } = usePush(me);
+  const ios = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone = typeof window !== "undefined" && (window.matchMedia("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true);
+  return (
+    <div className="card">
+      <h2>🔔 Daily duty alerts</h2>
+      <div className="note">06:00 — today&apos;s duty. 18:00 and 21:00 — tomorrow&apos;s duty. Sent to this phone even when the app is closed.</div>
+      {!supported || (ios && !standalone)
+        ? <div className="note">{ios ? "iPhone: first install the app (Share → Add to Home Screen), then open it from the home screen and turn alerts on here." : "This browser cannot receive notifications. Use Chrome."}</div>
+        : st?.subscribed
+          ? <button className="btn" disabled={busy} onClick={async () => say(await disable())}>Turn off alerts on this phone</button>
+          : <button className="btn pri" disabled={busy || !st?.ready} onClick={async () => say(await enable())}>{st && !st.ready ? "Not set up on the server yet" : perm === "denied" ? "Blocked — allow in phone settings" : "Turn on alerts on this phone"}</button>}
+      {st && st.devices > 0 && <div className="note">Alerts go to {st.devices} phone{st.devices > 1 ? "s" : ""} of yours.</div>}
+    </div>
+  );
+}
+
 function InstallBanner() {
   const { evt, installed, ios, install } = useInstall();
   const [hidden, setHidden] = useState(false);
@@ -577,6 +639,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="row first" style={{ padding: 0 }}><Av id={me} /><div className="nm">{nm(me)}<small>{admin ? "Admin" : group(me) === "lr" ? "LR candidate" : "Team member"}</small></div></div>
             <button className="btn" onClick={onLogout}>Logout</button>
           </div>
+          <AlertsCard me={me} say={say} />
           {!inst.installed && (
             <div className="card">
               <h2>Install on your phone</h2>
