@@ -493,6 +493,12 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <strong>{MON[+month.slice(5) - 1]} {month.slice(0, 4)}</strong>
             <button aria-label="Next month" onClick={() => { const d = dd(month + "-01"); d.setMonth(d.getMonth() + 1); setMonth(iso(d).slice(0, 7)); }}>›</button>
           </div>
+          {tab === "roster" && group(me) === "team" && (
+            <a className="xl-btn" href={`/api/mileage?month=${month}`} download>
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="4" fill="#1d6f42" /><path d="M7 7l10 10M17 7L7 17" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" /></svg>
+              <span>Download {MON[+month.slice(5) - 1]} mileage sheet (Excel)</span>
+            </a>
+          )}
           {tab === "roster" && <div className="seg">
             <button className={view === "mine" ? "on" : ""} onClick={() => setView("mine")}>My month</button>
             <button className={view === "all" ? "on" : ""} onClick={() => setView("all")}>Everyone</button>
