@@ -145,8 +145,5 @@ h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:v
 .note.remark{background:#fff4d6;color:#7a4d00;font-weight:600}
 .note.crdue{background:#e3f6ea;color:#0b5a32}
 .xl-btn{display:flex;align-items:center;gap:8px;margin:0 0 8px;padding:9px 12px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow);color:var(--ink);font-size:14px;font-weight:600;text-decoration:none}
-.tmhead h2{font-size:15px}
-.tmdate{font-size:18px;font-weight:800;color:var(--brand);letter-spacing:-.01em}
-.tmrow{padding:8px 0}
-.tmrow .nm{font-weight:700;font-size:16px}
-.chgbtn{background:#2447d8;color:#fff;font-weight:800;font-size:15px;box-shadow:0 4px 12px rgba(36,71,216,.3)}
+.mini.names div{justify-content:space-between}
+.mini.names b{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
