@@ -32,7 +32,7 @@ export function dayRow(date: string, raw: string): Day {
   const code = raw.trim().toUpperCase();
   const p = parts(code);
   const base = { date, code, kms: null, nda: null, leave: false };
-  if (code === "REST") return { ...base, c: "REST", d: "REST" };
+  if (code === "REST" || code === "CR") return { ...base, c: code, d: code };
   if (code === "LEAVE") return { ...base, c: "LAP", d: "LAP", leave: true };
   if (!p.length) return { ...base, c: "", d: "" };
   const two = (n: number) => String(n).padStart(2, "0");
