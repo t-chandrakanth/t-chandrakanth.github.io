@@ -40,9 +40,6 @@ export const TEAMS: Team[] = [
       { id: "murali", name: "Murali", group: "team", color: "#0e8f6e" },
       { id: "naresh", name: "Naresh", group: "team", color: "#c2571a" },
       { id: "aravind", name: "Aravind", group: "team", color: "#8a3fd0" },
-      { id: "hemanth", name: "Hemanth", group: "lr", color: "#b0356b" },
-      { id: "hanumanthu", name: "Hanumanthu", group: "lr", color: "#0a7fa8" },
-      { id: "rishi", name: "K. Rishi", group: "lr", color: "#7a6a00" },
     ],
   },
 ];

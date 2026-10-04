@@ -5,7 +5,7 @@ Duty muster app. One codebase serves several teams; each deployment picks its te
 | `NEXT_PUBLIC_TEAM` | App name | Chief (admin) | Team | LR candidates |
 |---|---|---|---|---|
 | *(unset)* or `ti-goods` | TI Goods Muster | Raghav | Mahesh, Vishnu, Narendra | Subbareddy, Teja |
-| `victor` | MLA Muster | Victor Samuel | Murali, Naresh, Aravind | Hemanth, Hanumanthu, K. Rishi |
+| `victor` | MLA Muster | Victor Samuel | Murali, Naresh, Aravind | none |
 
 Next.js, deploys on Vercel. "Raghav" below means the chief of whichever team is deployed.
 
@@ -39,3 +39,11 @@ Create a **second Vercel project** from the same repo, Root Directory `ti-goods-
 npm install
 npm run dev
 ```
+
+## Mileage sheet (Excel)
+
+Roster tab → "Download <month> mileage sheet (Excel)" gives each team member their own statement of work done and kilometerage, in the same layout as `assets/mileage-template.xlsx`. LR candidates do not get one.
+
+- A day with a duty = 120 admissible KMs; Rest/Leave days get none (Leave counts under "Running allowance on leave").
+- NDA = hours worked between 22:00 and 06:00 (21/24 → 2, 00/07 → 6).
+- ALKS = number of working days.
