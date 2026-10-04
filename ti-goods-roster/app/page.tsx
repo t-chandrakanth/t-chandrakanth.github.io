@@ -115,17 +115,18 @@ function InstallBanner() {
 }
 
 export default function Page() {
-  const [auth, setAuth] = useState<{ me: string | null; mustChange?: boolean } | undefined>();
+  const [auth, setAuth] = useState<{ me: string | null; mustChange?: boolean; storage?: boolean } | undefined>();
   const check = useCallback(async () => {
     const r = await fetch("/api/me", { cache: "no-store" });
-    setAuth((await r.json()) as { me: string | null; mustChange?: boolean });
+    setAuth((await r.json()) as { me: string | null; mustChange?: boolean; storage?: boolean });
   }, []);
   useEffect(() => { check(); }, [check]);
 
   if (!auth) return <div className="phone"><p className="empty">Loading…</p></div>;
-  if (!auth.me) return <Login onDone={check} />;
+  const warn = auth.storage === false && <div className="storewarn">⚠️ No database connected. Passwords and duties are not being saved and will keep disappearing. In Vercel open this project → Storage → Connect Store (Upstash Redis), then Redeploy.</div>;
+  if (!auth.me) return <>{warn}<Login onDone={check} /></>;
   if (auth.mustChange) return <SetPassword first onDone={check} onBack={async () => { await api("/api/logout"); check(); }} />;
-  return <App me={auth.me} onLogout={async () => { await api("/api/logout"); check(); }} />;
+  return <>{warn}<App me={auth.me} onLogout={async () => { await api("/api/logout"); check(); }} /></>;
 }
 
 function Calendar({ selected, onPick, compact }: { selected?: string; onPick?: (d: string) => void; compact?: boolean }) {

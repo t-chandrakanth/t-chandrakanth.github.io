@@ -147,3 +147,4 @@ h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:v
 .xl-btn{display:flex;align-items:center;gap:8px;margin:0 0 8px;padding:9px 12px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow);color:var(--ink);font-size:14px;font-weight:600;text-decoration:none}
 .mini.names div{justify-content:space-between}
 .mini.names b{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.storewarn{position:fixed;top:0;left:0;right:0;z-index:50;background:#b71c1c;color:#fff;font-weight:700;font-size:13px;padding:10px 14px;text-align:center}
