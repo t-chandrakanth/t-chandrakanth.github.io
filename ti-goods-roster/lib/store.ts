@@ -45,9 +45,19 @@ export async function setRaw(k: string, value: string) {
   if (!r.ok) throw new Error(`store set failed: ${r.status}`);
 }
 
+// 21/04 and 21/00 were typed by mistake for the night duty 21/24.
+const fixNight = (v: string) => v.replace(/\b21\/(04|00)\b/g, "21/24");
+
 export async function loadMonth(month: string): Promise<Month> {
   const raw = await getRaw(`roster:${month}`);
-  if (raw) return JSON.parse(raw) as Month;
+  if (raw) {
+    const m = JSON.parse(raw) as Month;
+    for (const day of Object.values(m.entries)) for (const p of Object.keys(day)) day[p] = fixNight(day[p]);
+    for (const r of m.requests) r.value = fixNight(r.value);
+    const fixed = JSON.stringify(m);
+    if (fixed !== raw) await setRaw(`roster:${month}`, fixed); // save the corrected data
+    return m;
+  }
   // First open of September 2026 loads the duties from the muster sheet.
   return month === "2026-09" && !STORE_PREFIX ? seedSep2026() : { entries: {}, remarks: {}, requests: [] };
 }
