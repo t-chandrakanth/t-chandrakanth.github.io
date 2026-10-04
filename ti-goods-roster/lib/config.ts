@@ -61,6 +61,7 @@ export const SHIFTS = [
   { code: "00/07", label: "Night off 00-07" },
   { code: "07/13 21/24", label: "Day + Night" },
   { code: "REST", label: "Rest" },
+  { code: "CR", label: "Compensatory rest" },
   { code: "LEAVE", label: "Leave" },
 ];
 

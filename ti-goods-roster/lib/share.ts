@@ -4,6 +4,7 @@ import { PEOPLE } from "./config";
 function wording(code: string) {
   const v = code.trim().toUpperCase();
   if (v === "REST") return "Rest";
+  if (v === "CR") return "CR";
   if (v === "LEAVE") return "Leave";
   if (v === "08/20") return "General";
   const starts = v.split(/\s+/).map((t) => +(t.match(/^(\d+)\//)?.[1] ?? -1)).filter((n) => n >= 0);
@@ -16,6 +17,7 @@ function rank(label: string) {
   if (label === "Day/Night") return 0;
   if (label === "General") return 1;
   if (label === "Rest") return 5;
+  if (label === "CR") return 5;
   if (label === "Leave") return 6;
   const s = +(label.match(/^(\d+)\//)?.[1] ?? 99);
   if (s === 0) return 4;
@@ -24,7 +26,7 @@ function rank(label: string) {
   return 1;
 }
 
-export function buildMessage(date: string, entries: Record<string, Record<string, string>>) {
+export function buildMessage(date: string, entries: Record<string, Record<string, string>>, remark = "") {
   const day = entries[date] ?? {};
   const section = (group: "team" | "lr") => {
     const g = new Map<string, string[]>();
@@ -40,7 +42,7 @@ export function buildMessage(date: string, entries: Record<string, Record<string
   const lr = section("lr");
   if (!team.length && !lr.length) return "";
   const [y, m, d] = date.split("-");
-  return [`Duties -${d}-${m}-${y.slice(2)}`, ...team, ...(lr.length ? ["", "LR", ...lr] : [])].join("\n");
+  return [`Duties -${d}-${m}-${y.slice(2)}`, ...team, ...(lr.length ? ["", "LR", ...lr] : []), ...(remark ? ["", `Remark: ${remark}`] : [])].join("\n");
 }
 
 export const whatsappLink = (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`;

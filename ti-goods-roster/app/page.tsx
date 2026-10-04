@@ -4,16 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_ID, ADMIN_NAME, APP_TITLE, PEOPLE, SHIFTS } from "@/lib/config";
 import { suggest } from "@/lib/suggest";
 import { countDuties } from "@/lib/summary";
+import type { CrLedger } from "@/lib/cr";
 import { rangeDates } from "@/lib/range";
 import { holidayName } from "@/lib/holidays";
 import { buildMessage, whatsappLink } from "@/lib/share";
 
 type Change = { id: string; date: string; person: string; value: string; requestedBy: string; note?: string; to?: string };
 type Data = { me: string; entries: Record<string, Record<string, string>>; remarks: Record<string, string>; requests: Change[] };
+type CrInfo = { from: string; balances: Record<string, number>; people: Record<string, CrLedger> };
 type Tab = "today" | "roster" | "sum" | "req" | "me";
 
-const TIMES: Record<string, string> = { "08/20": "08:00 to 20:00", "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 00:00", "00/07": "00:00 to 07:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 00:00", REST: "Weekly rest", LEAVE: "On leave" };
-const NAMES: Record<string, string> = { "08/20": "General", "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", LEAVE: "Leave" };
+const TIMES: Record<string, string> = { "08/20": "08:00 to 20:00", "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 00:00", "00/07": "00:00 to 07:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 00:00", REST: "Weekly rest", CR: "Compensatory rest (for a week without rest)", LEAVE: "On leave" };
+const NAMES: Record<string, string> = { "08/20": "General", "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", CR: "CR", LEAVE: "Leave" };
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -28,7 +30,7 @@ const group = (id: string) => PEOPLE.find((p) => p.id === id)?.group;
 
 function kind(v: string) {
   if (!v) return "rest";
-  if (v === "REST") return "rest";
+  if (v === "REST" || v === "CR") return "rest";
   if (v === "LEAVE") return "leave";
   if (v === "00/07") return "off";
   if (v.includes("21/") || v.startsWith("20/") || v.startsWith("18/")) return "night";
@@ -256,6 +258,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const [reqNote, setReqNote] = useState("");
   const [range, setRange] = useState<{ id?: string; from: string; to: string; type: string } | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [remark, setRemark] = useState("");          // admin: remark typed in the duty picker
+  const [reqRemark, setReqRemark] = useState<Record<string, string>>({}); // admin: remark per request card
   const [sumSel, setSumSel] = useState<{ p: string; k: string } | null>(null);
   const [restOnly, setRestOnly] = useState(false);
   const [ticker, setTicker] = useState<Change[]>([]);
@@ -263,9 +267,13 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const stripRef = useRef<HTMLDivElement>(null);
   const inst = useInstall();
 
+  const [cr, setCr] = useState<CrInfo | null>(null);
+  const [crForm, setCrForm] = useState<{ from: string; balances: Record<string, string> } | null>(null);
   const load = useCallback(async () => {
     const r = await fetch(`/api/roster?month=${month}`, { cache: "no-store" });
     if (r.ok) setData((await r.json()) as Data);
+    const c = await fetch("/api/cr", { cache: "no-store" });
+    if (c.ok) setCr((await c.json()) as CrInfo);
   }, [month]);
   useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, [load]);
   const tomorrow = iso(new Date(dd(today).getTime() + 86400000));
@@ -311,16 +319,22 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     return Array.from({ length: new Date(y, mo, 0).getDate() }, (_, i) => `${m}-${pad(i + 1)}`);
   };
 
+  async function saveRemark(d: string, text: string) {
+    const r = await api("/api/roster", { date: d, remark: text.trim() }, "PUT");
+    if (!r.ok) say(String(r.j.error ?? "Could not save remark"));
+  }
   async function save(d: string, p: string, v: string) {
     setBusy(true);
     const r = await api("/api/roster", { date: d, person: p, value: v, note: reqNote }, "PUT");
+    if (r.ok && admin && remark.trim() !== (data?.remarks[d] ?? "")) await saveRemark(d, remark);
     setBusy(false); setSheet(null); setReqNote("");
     if (!r.ok) return say(String(r.j.error ?? "Could not save"));
     say(r.j.pending ? `Request sent to ${ADMIN_NAME}.` : r.j.nightOff ? "Saved. Next day set to Night off 00/07." : "Saved.");
     load();
   }
   async function decide(c: Change, action: "approve" | "reject") {
-    await api("/api/requests", { id: c.id, date: c.date, action });
+    await api("/api/requests", { id: c.id, date: c.date, action, remark: reqRemark[c.id] ?? "" });
+    setReqRemark((m) => { const n = { ...m }; delete n[c.id]; return n; });
     say(action === "approve" ? `Approved. ${nm(c.person)} is updated.` : "Request rejected.");
     load();
   }
@@ -370,7 +384,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
       </>
     );
     return canEdit(id, d)
-      ? <button className={"row" + (first ? " first" : "")} onClick={() => { setRestOnly(!admin && group(id) === "lr"); setSheet({ d, p: id }); }}>{inner}</button>
+      ? <button className={"row" + (first ? " first" : "")} onClick={() => { setRestOnly(!admin && group(id) === "lr"); setRemark(data?.remarks[d] ?? ""); setSheet({ d, p: id }); }}>{inner}</button>
       : <div className={"row" + (first ? " first" : "")}>{inner}</div>;
   };
 
@@ -380,12 +394,14 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
         const c = countDuties(days(month).map((d) => entry(d, p.id)));
         const cells: [string, number, string][] = [
           ["Day / General", c.day, "day"], ["Afternoon", c.afternoon, "aft"], ["Night", c.night, "night"],
-          ["Night off", c.nightOff, "off"], ["Rest", c.rest, "rest"], ["Leave", c.leave, "leave"],
+          ["Night off", c.nightOff, "off"], ["Rest", c.rest, "rest"], ["CR", c.cr, "rest"], ["Leave", c.leave, "leave"],
         ];
+        const L = cr?.people[p.id];
+        const keyOf = (t: string, k: string) => (t === "CR" ? "cr" : k);
         const sel = sumSel?.p === p.id ? sumSel.k : null;
         const test = (v: string, k: string) => {
           const x = countDuties([v]);
-          return k === "day" ? x.day > 0 : k === "aft" ? x.afternoon > 0 : k === "night" ? x.night > 0 : k === "off" ? x.nightOff > 0 : k === "rest" ? x.rest > 0 : x.leave > 0;
+          return k === "day" ? x.day > 0 : k === "aft" ? x.afternoon > 0 : k === "night" ? x.night > 0 : k === "off" ? x.nightOff > 0 : k === "rest" ? x.rest > 0 : k === "cr" ? x.cr > 0 : x.leave > 0;
         };
         const listFor = (fn: (v: string) => boolean) => days(month).map((d) => [d, entry(d, p.id)] as const).filter(([, v]) => v && fn(v));
         const rows = sel ? listFor((v) => test(v, sel)) : [];
@@ -394,12 +410,18 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="row first" style={{ padding: 0 }}><Av id={p.id} /><div className="nm">{p.name}{p.id === me && <span className="tag">You</span>}<small>{c.worked} duty days · {c.marked} days marked{c.other ? ` · ${c.other} other` : ""}</small></div></div>
             <div className="sumgrid">
               {cells.map(([t, n, k]) => (
-                <button type="button" key={t} className={sel === k ? "sel" : ""} onClick={() => setSumSel(sel === k ? null : { p: p.id, k })} style={{ background: `var(--${k})`, color: `var(--${k}-ink)` }}><b>{n}</b><span>{t}</span></button>
+                <button type="button" key={t} className={sel === keyOf(t, k) ? "sel" : ""} onClick={() => setSumSel(sel === keyOf(t, k) ? null : { p: p.id, k: keyOf(t, k) })} style={{ background: `var(--${k})`, color: `var(--${k}-ink)` }}><b>{n}</b><span>{t}</span></button>
               ))}
             </div>
+            {L && (
+              <div className={"note" + (L.due > 0 ? " crdue" : "")}>
+                <b>CR due: {L.due}</b> <small>(opening {L.opening} + earned {L.earned.length} − taken {L.taken}, since {long(cr!.from)})</small>
+                {L.earned.length > 0 && <small><br />No rest in week of {L.earned.slice(-4).map((d) => long(d)).join(", ")}{L.earned.length > 4 ? ` and ${L.earned.length - 4} more` : ""}</small>}
+              </div>
+            )}
             {sel && (
               <div className="sumlist">
-                <div className="slh"><b>{cells.find((c2) => c2[2] === sel)?.[0]} days ({rows.length})</b><button type="button" className="hide" aria-label="Hide list" onClick={() => setSumSel(null)}>✕ Hide</button></div>
+                <div className="slh"><b>{cells.find((c2) => keyOf(c2[0], c2[2]) === sel)?.[0]} days ({rows.length})</b><button type="button" className="hide" aria-label="Hide list" onClick={() => setSumSel(null)}>✕ Hide</button></div>
                 {rows.length === 0 && <span className="none">None this month</span>}
                 {rows.map(([d, v]) => <div key={d} className="sl"><span className={isRed(d) ? "redt" : ""}>{long(d)}</span><Pill v={v} /></div>)}
               </div>
@@ -445,7 +467,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="big">{myV || "No duty"}</div>
             <div className="lbl">{myV ? label(myV) : "Nothing assigned yet"}</div>
           </div>
-          {data?.remarks[day] && <div className="note">Remark: {data.remarks[day]}</div>}
+          {(cr?.people[me]?.due ?? 0) > 0 && <div className="note crdue">⏱ You are due <b>{cr!.people[me].due} CR</b>. Ask {ADMIN_NAME} with the Rest / Leave button.</div>}
+          {data?.remarks[day] && <div className="note remark">📝 Remark: {data.remarks[day]}</div>}
           {day !== tomorrow && (
             <button className="card" style={{ textAlign: "left" }} onClick={() => setDay(tomorrow)}>
               <div className="dayhead"><h2>Tomorrow · {long(tomorrow)}</h2><span>Tap to open</span></div>
@@ -464,7 +487,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             {showAll && PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
           </div>
           {(() => {
-            const msg = data && admin ? buildMessage(day, data.entries) : "";
+            const msg = data && admin ? buildMessage(day, data.entries, data.remarks[day] ?? "") : "";
             if (!msg) return null;
             return (
               <div className="card">
@@ -506,7 +529,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {tab === "sum" && <SummaryCards />}
           {tab === "roster" && days(month).map((d) => (
             <button key={d} className="card" style={{ textAlign: "left" }} onClick={() => { setDay(d); setTab("today"); }}>
-              <div className="dayhead"><b className={isRed(d) ? "redt" : ""}>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{holidayName(d) ?? data?.remarks[d] ?? ""}</span></div>
+              <div className="dayhead"><b className={isRed(d) ? "redt" : ""}>{long(d)}{d === today && <span className="tag">Today</span>}</b><span>{holidayName(d) ?? ""}</span></div>
+              {data?.remarks[d] && <div className="note remark">📝 {data.remarks[d]}</div>}
               {view === "mine" ? (
                 <div className="row first" style={{ padding: 0 }}><div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>{entry(d, me) ? label(entry(d, me)) : "No duty"}</div><Pill v={entry(d, me)} /></div>
               ) : (
@@ -524,16 +548,20 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               <div className="row first" style={{ padding: 0 }}><Av id={c.person} /><div className="nm">{nm(c.person)}<small>{when(c)}</small></div></div>
               {c.note && <div className="note">Note: {c.note}</div>}
               <div className="row first" style={{ padding: 0 }}>{!c.to && <><div className="nm"><small>Now</small></div><Pill v={data?.entries[c.date]?.[c.person] ?? ""} /><span>→</span></>}<Pill v={c.value} /></div>
+              {admin && (
+                <div className="field"><label htmlFor={"rr" + c.id}>Remark (optional, visible to all)</label>
+                  <input id={"rr" + c.id} maxLength={200} placeholder="e.g. Adjustment for Vishnu" value={reqRemark[c.id] ?? ""} onChange={(e) => setReqRemark((m) => ({ ...m, [c.id]: e.target.value }))} /></div>
+              )}
               {admin
                 ? <div className="btns">
                     <button className="btn pri" onClick={() => decide(c, "approve")}>Approve</button>
                     <button className="btn" onClick={() => decide(c, "reject")}>Reject</button>
-                    <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(group(c.person) === "lr"); if (c.requestedBy === me && (c.value === "REST" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
+                    <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(group(c.person) === "lr"); if (c.requestedBy === me && (c.value === "REST" || c.value === "CR" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
                     <button className="btn" onClick={() => removeReq(c)}>Delete</button>
                   </div>
                 : c.requestedBy === me
                   ? <div className="btns">
-                      <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(group(c.person) === "lr"); if (c.requestedBy === me && (c.value === "REST" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
+                      <button className="btn" onClick={() => { setReqNote(c.note ?? ""); setRestOnly(group(c.person) === "lr"); if (c.requestedBy === me && (c.value === "REST" || c.value === "CR" || c.value === "LEAVE")) setRange({ id: c.id, from: c.date, to: c.to ?? c.date, type: c.value }); else setSheet({ d: c.date, p: c.person }); }}>Edit</button>
                       <button className="btn" onClick={() => removeReq(c)}>Delete</button>
                     </div>
                   : <div className="note">Waiting for {ADMIN_NAME} to approve.</div>}
@@ -554,6 +582,29 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             </div>
           )}
           <SetPassword onDone={() => say("Password changed.")} />
+          {admin && cr && (
+            <div className="card">
+              <h2>CR pending (opening balance)</h2>
+              <div className="note">Enter how many CR each person is owed as of the start date. From that date the app counts weeks without rest and CR days taken by itself.</div>
+              {!crForm
+                ? <>
+                    <div className="row first" style={{ padding: 0 }}><div className="nm"><small>Counting from</small>{long(cr.from)} {cr.from.slice(0, 4)}</div></div>
+                    {PEOPLE.map((p) => <div key={p.id} className="row"><Av id={p.id} sm /><div className="nm">{p.name}<small>opening {cr.balances[p.id] ?? 0} · due now {cr.people[p.id]?.due ?? 0}</small></div></div>)}
+                    <button className="btn" onClick={() => setCrForm({ from: cr.from, balances: Object.fromEntries(PEOPLE.map((p) => [p.id, String(cr.balances[p.id] ?? 0)])) })}>Edit CR balances</button>
+                  </>
+                : <>
+                    <div className="field"><label htmlFor="crfrom">Counting from</label><input id="crfrom" type="date" value={crForm.from} onChange={(e) => setCrForm({ ...crForm, from: e.target.value })} /></div>
+                    {PEOPLE.map((p) => (
+                      <div key={p.id} className="row"><Av id={p.id} sm /><div className="nm">{p.name}</div>
+                        <input type="number" min={0} inputMode="numeric" style={{ width: 72, textAlign: "center" }} value={crForm.balances[p.id]} onChange={(e) => setCrForm({ ...crForm, balances: { ...crForm.balances, [p.id]: e.target.value } })} /></div>
+                    ))}
+                    <div className="btns">
+                      <button className="btn pri" disabled={busy} onClick={async () => { setBusy(true); const r = await api("/api/cr", { from: crForm.from, balances: crForm.balances }, "PUT"); setBusy(false); if (r.ok) { setCrForm(null); say("CR balances saved."); load(); } else say(String(r.j.error ?? "Could not save")); }}>Save</button>
+                      <button className="btn" onClick={() => setCrForm(null)}>Cancel</button>
+                    </div>
+                  </>}
+            </div>
+          )}
           {admin && (
             <div className="card">
               <h2>Reset a password to 1234</h2>
@@ -581,7 +632,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="grab" />
             <h2>{range.id ? "Edit request" : `Ask ${ADMIN_NAME} for Rest / Leave`}</h2>
             <div className="seg">
-              {["LEAVE", "REST"].map((t) => <button type="button" key={t} className={range.type === t ? "on" : ""} onClick={() => setRange({ ...range, type: t })}>{NAMES[t]}</button>)}
+              {["LEAVE", "REST", "CR"].map((t) => <button type="button" key={t} className={range.type === t ? "on" : ""} onClick={() => setRange({ ...range, type: t })}>{NAMES[t]}</button>)}
             </div>
             <div className="field"><label htmlFor="rf">First day</label><input id="rf" type="date" min={today} value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value, to: range.to < e.target.value ? e.target.value : range.to })} /></div>
             <div className="field"><label htmlFor="rt">Last day</label><input id="rt" type="date" min={range.from < today ? today : range.from} value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} /></div>
@@ -597,11 +648,17 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
             <div className="grab" />
             <div className="row first" style={{ padding: 0 }}><Av id={sheet.p} /><div className="nm">{nm(sheet.p)}<small>{long(sheet.d)}</small></div></div>
             <div className="note">{admin ? "Pick a duty. It saves straight away." : `Pick the duty you want. ${ADMIN_NAME} will approve it.`}</div>
+            {admin && (
+              <div className="field"><label htmlFor="rk">Remark for {long(sheet.d)} (visible to all)</label>
+                <input id="rk" maxLength={200} placeholder="e.g. Adjustment for Vishnu" value={remark} onChange={(e) => setRemark(e.target.value)} />
+                <button type="button" className="btn" disabled={busy} onClick={async () => { await saveRemark(sheet.d, remark); setSheet(null); say("Remark saved."); load(); }}>Save remark only</button>
+              </div>
+            )}
             {!admin && (
               <div className="field"><label htmlFor="rn">Note for {ADMIN_NAME} (optional)</label>
                 <input id="rn" maxLength={120} placeholder="Reason, e.g. family function" value={reqNote} onChange={(e) => setReqNote(e.target.value)} /></div>
             )}
-            {[...SHIFTS.map((s) => s.code), ""].filter((c) => !restOnly || c === "REST" || c === "LEAVE").map((code) => (
+            {[...SHIFTS.map((s) => s.code), ""].filter((c) => !restOnly || c === "REST" || c === "CR" || c === "LEAVE").map((code) => (
               <button key={code || "clear"} className="opt" disabled={busy} onClick={async () => { await save(sheet.d, sheet.p, code); setRestOnly(false); }}>
                 <span>{code ? NAMES[code] ?? code : "Clear duty"}<br /><small>{code ? TIMES[code] : "Leave the day empty"}</small></span>
                 {code && <Pill v={code} />}
