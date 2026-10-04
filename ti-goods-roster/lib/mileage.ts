@@ -9,10 +9,13 @@ export const KMS_PER_DUTY_DAY = 120;
 type Part = { from: number; to: number };
 
 // "07/13 21/24" -> [{7,13},{21,24}]. Anything that is not a time pair (REST, LEAVE, blank) -> [].
+// A duty that runs past midnight (21/04, 21/00) is the night duty 21/24; the 00/07 that follows is its own entry.
 function parts(code: string): Part[] {
   return code.trim().split(/\s+/).flatMap((t) => {
     const m = t.match(/^(\d{1,2})\/(\d{1,2})$/);
-    return m ? [{ from: +m[1], to: +m[2] }] : [];
+    if (!m) return [];
+    const from = +m[1], to = +m[2];
+    return [{ from, to: to <= from && from >= 18 ? 24 : to }];
   });
 }
 
@@ -32,14 +35,12 @@ export function dayRow(date: string, raw: string): Day {
   if (code === "REST") return { ...base, c: "REST", d: "REST" };
   if (code === "LEAVE") return { ...base, c: "LAP", d: "LAP", leave: true };
   if (!p.length) return { ...base, c: "", d: "" };
-  const t = code.split(/\s+/);
   const two = (n: number) => String(n).padStart(2, "0");
+  const t = p.map((x) => `${two(x.from)}/${two(x.to)}`);
   const [c, d] = t.length > 1 ? [t[0], t[1]] : [two(p[0].from), two(p[0].to)];
   const nda = p.reduce((s, x) => s + nightHours(x), 0);
   return { ...base, c, d, kms: KMS_PER_DUTY_DAY, nda: nda || null };
 }
-
-const dmy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
 // Fills the blank statement of work done / kilometerage sheet for one person and month.
 export async function buildMileage(month: string, personId: string, personName: string): Promise<Buffer> {
@@ -56,18 +57,12 @@ export async function buildMileage(month: string, personId: string, personName: 
   const ws = wb.worksheets[0];
   ws.name = `${personName} ${month}`.slice(0, 31);
 
-  const head = String(ws.getCell("B1").value ?? "")
-    .replace(/(EARNED BY)\s+/, `$1  ${personName}   `)
-    .replace(/START\s*:\s*\S+/, `START :${dmy(`${month}-01`)}`)
-    .replace(/ENDING:\s*\S+/, `ENDING:  ${dmy(`${month}-${count}`)}`);
-  ws.getCell("B1").value = head;
-
   // 22 days in the first block (rows 5-26), the rest in the second block from row 30.
   rows.forEach((r, i) => {
     const row = i < 22 ? 5 + i : 30 + (i - 22);
     const [Y, M, D] = r.date.split("-").map(Number);
     ws.getCell(row, 2).value = new Date(Date.UTC(Y, M - 1, D));
-    ws.getCell(row, 2).numFmt = "dd-mm-yy";
+    ws.getCell(row, 2).numFmt = "dd-mm-yyyy";
     if (r.c) ws.getCell(row, 3).value = r.c;
     if (r.d) ws.getCell(row, 4).value = r.d;
     if (r.kms) ws.getCell(row, 15).value = r.kms;
@@ -84,7 +79,6 @@ export async function buildMileage(month: string, personId: string, personName: 
   ws.getCell("O41").value = "-";
   ws.getCell("O42").value = totalNda;
   ws.getCell("O43").value = leave ? `${leave} LAP` : "-";
-  ws.getCell("F47").value = `NAME-: ${personName}`;
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
