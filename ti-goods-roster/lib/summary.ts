@@ -16,7 +16,7 @@ export const emptyCounts = (): Counts => ({ day: 0, afternoon: 0, night: 0, nigh
 // Counting rules (from the muster sheet's codes):
 //  Day        = a 07/13-type duty starting 05:00-12:59
 //  Afternoon  = 13/21 (start 13:00-17:59)
-//  Night      = a duty starting 18:00 or later (21/24, 21/04, 20/24, 18/24 ...)
+//  Night      = a duty starting 18:00 or later (21/24, 20/24, 18/24 ...)
 //  Night off  = 00/07 (second half of a night duty, starts at midnight)
 // A Day+Night entry counts once as Day and once as Night.
 export function countDuties(values: string[]): Counts {

@@ -9,7 +9,7 @@ export const KMS_PER_DUTY_DAY = 120;
 type Part = { from: number; to: number };
 
 // "07/13 21/24" -> [{7,13},{21,24}]. Anything that is not a time pair (REST, LEAVE, blank) -> [].
-// A duty that runs past midnight (21/04, 21/00) is the night duty 21/24; the 00/07 that follows is its own entry.
+// A duty that runs past midnight is the night duty 21/24; the 00/07 that follows is its own entry.
 function parts(code: string): Part[] {
   return code.trim().split(/\s+/).flatMap((t) => {
     const m = t.match(/^(\d{1,2})\/(\d{1,2})$/);
