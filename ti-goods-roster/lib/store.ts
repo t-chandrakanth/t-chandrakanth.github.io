@@ -54,6 +54,8 @@ export async function loadMonth(month: string): Promise<Month> {
     const m = JSON.parse(raw) as Month;
     for (const day of Object.values(m.entries)) for (const p of Object.keys(day)) day[p] = fixNight(day[p]);
     for (const r of m.requests) r.value = fixNight(r.value);
+    const fixed = JSON.stringify(m);
+    if (fixed !== raw) await setRaw(`roster:${month}`, fixed); // save the corrected data
     return m;
   }
   // First open of September 2026 loads the duties from the muster sheet.
