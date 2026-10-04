@@ -5,7 +5,7 @@ Duty muster app. One codebase serves several teams; each deployment picks its te
 | `NEXT_PUBLIC_TEAM` | App name | Chief (admin) | Team | LR candidates |
 |---|---|---|---|---|
 | *(unset)* or `ti-goods` | TI Goods Muster | Raghav | Mahesh, Vishnu, Narendra | Subbareddy, Teja |
-| `victor` | MLA Muster | Victor Samuel | Murali, Naresh, Aravind | Hemanth, Hanumanthu, K. Rishi |
+| `victor` | MLA Muster | Victor Samuel | Murali, Naresh, Aravind | none |
 
 Next.js, deploys on Vercel. "Raghav" below means the chief of whichever team is deployed.
 
