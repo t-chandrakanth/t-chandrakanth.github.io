@@ -35,6 +35,13 @@ Duty codes follow the muster sheet (`08/20` General, `CR` compensatory rest, `07
 ### Second team (another app)
 Create a **second Vercel project** from the same repo, Root Directory `ti-goods-roster`, and add the env var `NEXT_PUBLIC_TEAM=victor` (or `coal`) plus its own `SESSION_SECRET`. It can share the same Upstash Redis (its keys are prefixed with the team id) or use its own. Each project gets its own URL, logins, duties and requests. To add another team, append it to `TEAMS` in `lib/config.ts`.
 
+## Daily duty alerts (push notifications)
+Each person turns alerts on from **Me → Daily duty alerts** (Android: Chrome; iPhone: only after installing to the home screen). The server sends **06:00** today's duty and **18:00 / 21:00** tomorrow's duty (IST) through `/api/push/send`.
+
+Setup per Vercel project:
+1. Env vars: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (from `npx web-push generate-vapid-keys`, same pair for all apps) and `CRON_SECRET` (any random text). Redeploy after adding them.
+2. `vercel.json` already schedules 06:00 and 18:00 IST through Vercel Cron (the free Hobby plan allows two daily crons, fired within the hour). For the 21:00 run — or exact-minute timing — add jobs on a free scheduler such as cron-job.org that call `https://<app-url>/api/push/send?key=<CRON_SECRET>` at 06:00, 18:00 and 21:00 IST (then remove the crons from `vercel.json` to avoid duplicates).
+
 ## Local
 ```
 npm install
