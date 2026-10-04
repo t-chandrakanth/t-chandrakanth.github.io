@@ -24,6 +24,9 @@ const days_ = (a: string, b: string) => rangeDates(a, b).length;
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dd = (d: string) => new Date(d + "T00:00:00");
+const DOWF = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONF = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const full = (d: string) => `${DOWF[dd(d).getDay()]}, ${+d.slice(8)} ${MONF[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`;
 const long = (d: string) => `${DOW[dd(d).getDay()]} ${+d.slice(8)} ${MON[+d.slice(5, 7) - 1]}`;
 const nm = (id: string) => PEOPLE.find((p) => p.id === id)?.name ?? id;
 const group = (id: string) => PEOPLE.find((p) => p.id === id)?.group;
@@ -471,12 +474,15 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {data?.remarks[day] && <div className="note remark">📝 Remark: {data.remarks[day]}</div>}
           {day !== tomorrow && (
             <button className="card" style={{ textAlign: "left" }} onClick={() => setDay(tomorrow)}>
-              <div className="dayhead"><h2>Tomorrow · {long(tomorrow)}</h2><span>Tap to open</span></div>
-              <div className="row first" style={{ padding: 0 }}>
-                <div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>Your duty{tmData?.entries[tomorrow]?.[me] ? ` · ${label(tmData.entries[tomorrow][me])}` : ""}</div>
-                <Pill v={tmData?.entries[tomorrow]?.[me] ?? ""} />
-              </div>
-              <div className="mini">{PEOPLE.filter((p) => p.id !== me).map((p) => <div key={p.id}><Av id={p.id} sm /><Pill v={tmData?.entries[tomorrow]?.[p.id] ?? ""} /></div>)}</div>
+              <div className="dayhead tmhead"><h2>Tomorrow</h2><span>Tap to open</span></div>
+              <div className="tmdate">{full(tomorrow)}</div>
+              {PEOPLE.map((p, i) => (
+                <div key={p.id} className={"row tmrow" + (i === 0 ? " first" : "")}>
+                  <Av id={p.id} sm />
+                  <div className="nm">{p.name}{p.id === me && <span className="tag">You</span>}<small>{tmData?.entries[tomorrow]?.[p.id] ? label(tmData.entries[tomorrow][p.id]) : "No duty"}</small></div>
+                  <Pill v={tmData?.entries[tomorrow]?.[p.id] ?? ""} />
+                </div>
+              ))}
             </button>
           )}
           <div className="card">
@@ -505,6 +511,9 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           })()}
           {!admin && day >= today && (
             <button className="btn reqbtn" onClick={() => { setReqNote(""); setRange({ from: day, to: day, type: "LEAVE" }); }}>✋ Request Rest / Leave (one or many days)</button>
+          )}
+          {!admin && group(me) === "team" && day >= today && myV && (
+            <button className="btn chgbtn" onClick={() => { setReqNote(""); setRestOnly(false); setSheet({ d: day, p: me }); }}>🔁 Request change to my duty ({myV} on {long(day)})</button>
           )}
           {!admin && day < today && <div className="note">This day is over. Only {ADMIN_NAME} can change a completed day.</div>}
           {!admin && <div className="note">{group(me) === "lr" ? `You can see all duties and ask for Rest / Leave. ${ADMIN_NAME} decides LR shifts.` : `Tap your own row to ask for a change. ${ADMIN_NAME} approves it.`}</div>}
