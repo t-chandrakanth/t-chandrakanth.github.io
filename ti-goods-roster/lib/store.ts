@@ -16,6 +16,8 @@ export type Change = {
 export type Month = { entries: Entries; remarks: Record<string, string>; requests: Change[] };
 
 const URL_ = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+// False on Vercel means nothing is saved: each server keeps its own memory and logins/duties vanish at random.
+export const hasStore = () => !!(URL_ && (process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN));
 const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
 const mem = ((globalThis as unknown as { __roster?: Map<string, string> }).__roster ??= new Map());
