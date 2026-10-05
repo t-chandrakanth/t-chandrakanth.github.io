@@ -527,8 +527,8 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {day !== tomorrow && (
             <button className="card" style={{ textAlign: "left" }} onClick={() => setDay(tomorrow)}>
               <div className="dayhead"><h2>Tomorrow duties · {full(tomorrow)}</h2><span>Tap to open</span></div>
-              <div className="row first" style={{ padding: 0 }}>
-                <div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>Your duty{tmData?.entries[tomorrow]?.[me] ? ` · ${label(tmData.entries[tomorrow][me])}` : ""}</div>
+              <div className="tmyou">
+                <div className="nm">Your duty<small>{tmData?.entries[tomorrow]?.[me] ? label(tmData.entries[tomorrow][me]) : "Nothing assigned yet"}</small></div>
                 <Pill v={tmData?.entries[tomorrow]?.[me] ?? ""} />
               </div>
               <div className="mini names">{PEOPLE.filter((p) => p.id !== me).map((p) => <div key={p.id}><b style={{ color: PEOPLE.find((x) => x.id === p.id)?.color }}>{p.name}</b><Pill v={tmData?.entries[tomorrow]?.[p.id] ?? ""} /></div>)}</div>
