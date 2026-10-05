@@ -80,8 +80,6 @@ export const SHIFTS = [
   { code: "LEAVE", label: "Leave" },
 ];
 
-// Usual rotation for the four team members: General 08-20 -> direct Night 21-00 -> Night off 00-07 -> Rest -> General
-export const CYCLE = ["08/20", "21/24", "00/07", "REST"];
 
 export const isAdmin = (id?: string | null) => id === ADMIN_ID;
 export const personById = (id: string) => PEOPLE.find((p) => p.id === id);

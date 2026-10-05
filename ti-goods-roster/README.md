@@ -18,7 +18,7 @@ The home page is the login: choose your **name**, enter your **password**.
 
 ## Rules built in
 - Everyone can **see all duties**.
-- **Raghav** (admin) sets any duty directly, approves or rejects requests, and can press ✨ Auto-fill to fill a day from yesterday's rotation (General 08-20 → Night 21-00 → Night off 00-07 → Rest).
+- **Raghav** (admin) sets any duty directly, approves or rejects requests.
 - Team members can only **request** a change to **their own** duty; it stays pending until Raghav approves.
 - LR candidates (Subbareddy, Teja) are view-only; Raghav decides their shifts.
 - **CR (compensatory rest):** a finished Monday–Sunday week with duties but no REST earns one CR. CR carries forward until a CR day is taken. The chief enters each person's pending CR as of a start date (Me → CR pending); from then on the app counts weeks and CR days itself. Summary shows due = opening + earned − taken; team members can request CR like Rest or Leave.

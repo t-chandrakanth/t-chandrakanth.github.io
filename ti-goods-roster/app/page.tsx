@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_ID, ADMIN_NAME, APP_TITLE, PEOPLE, SHIFTS } from "@/lib/config";
-import { suggest } from "@/lib/suggest";
 import { countDuties } from "@/lib/summary";
 import type { CrLedger } from "@/lib/cr";
 import { rangeDates } from "@/lib/range";
@@ -423,16 +422,6 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
     say(r.ok ? "Request deleted." : String(r.j.error ?? "Could not delete"));
     load();
   }
-  async function autoFill(d: string) {
-    const prev = iso(new Date(dd(d).getTime() - 86400000));
-    let y = data?.entries[prev];
-    if (!y && prev.slice(0, 7) !== month) {
-      const r = await fetch(`/api/roster?month=${prev.slice(0, 7)}`);
-      if (r.ok) y = ((await r.json()) as Data).entries[prev];
-    }
-    for (const [p, v] of Object.entries(suggest(y))) await api("/api/roster", { date: d, person: p, value: v }, "PUT");
-    say("Filled from yesterday's rotation. Check and adjust."); load();
-  }
 
   // Requests from last month to two months ahead, so a leave asked for next month still shows.
   const reqs = ticker;
@@ -548,7 +537,6 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           <div className="card">
             <div className="dayhead">
               <button type="button" className="fold" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}><span className="chev">{showAll ? "▲" : "▼"}</span><h2>👥 Everyone on {long(day)}</h2><span className="chev">{showAll ? "Hide" : "Show"}</span></button>
-              {admin && showAll && <button className="tag" disabled={busy} onClick={() => autoFill(day)}>✨ Auto-fill</button>}
             </div>
             {showAll && PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
           </div>
