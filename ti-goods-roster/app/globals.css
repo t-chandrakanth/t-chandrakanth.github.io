@@ -179,3 +179,8 @@ button.row:hover{background:var(--surface2)}
 .sumlist .hide{font-size:12px;color:var(--brand);font-weight:700;padding:4px 8px}
 .sumlist .none{color:var(--muted)}
 .wamsg{margin:0;padding:12px 14px;border-radius:14px;background:var(--surface2);border:1px solid var(--line);font:inherit;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+/* Tomorrow card: the reader's own duty stands out from the rest of the team */
+.tmyou{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:16px;background:var(--brand-soft);border:1px solid color-mix(in srgb,var(--brand) 25%,transparent)}
+.tmyou .nm{font-weight:800;font-size:17px;color:var(--brand);letter-spacing:-.01em}
+.tmyou .nm small{display:block;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0}
+.tmyou .pill{font-size:16px;font-weight:600;padding:8px 14px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
