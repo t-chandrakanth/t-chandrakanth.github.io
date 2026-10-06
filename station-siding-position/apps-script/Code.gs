@@ -1,5 +1,5 @@
 /**
- * SCR Out Reports - Google Sheet backend (Apps Script).
+ * Station Siding Position - Google Sheet backend (Apps Script).
  * Bind this script to the Google Sheet that should hold the data (Extensions > Apps Script),
  * run `setup` once, then Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).
  */

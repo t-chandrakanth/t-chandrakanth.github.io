@@ -1,4 +1,4 @@
-# SCR Out Reports
+# Station Siding Position
 
 Installable web app (PWA) with a Google Sheet as its database.
 
@@ -10,11 +10,11 @@ Installable web app (PWA) with a Google Sheet as its database.
   Saved rakes are listed above the form (Edit / Delete). **Spare locos** (loco no, base, due) are listed under it for the station.
 * Stabled Loco/Train: loco or train no, stock and type, location, stabled since, base, due, remarks.
 
-App files: `public/scr-out-reports/` (served at `/scr-out-reports/` by the existing GitHub Pages / Vercel deployment).
-Backend: `scr-out-reports/apps-script/Code.gs`.
+App files: `public/station-siding-position/` (served at `/station-siding-position/` by the existing GitHub Pages / Vercel deployment).
+Backend: `station-siding-position/apps-script/Code.gs`.
 
 ## 1. Create the Google Sheet backend
-1. Create a new Google Sheet (e.g. "SCR OUT REPORTS DATA").
+1. Create a new Google Sheet (e.g. "STATION SIDING POSITION DATA").
 2. **Extensions → Apps Script**. Replace the code with `apps-script/Code.gs`.
    (Project Settings → tick "Show appsscript.json" and paste `apps-script/appsscript.json` to get the IST timezone.)
 3. Optional: set `ACCESS_CODE` at the top of `Code.gs` (recommended - the data is operational).
@@ -26,13 +26,13 @@ Tabs: `CONFIG` = which stations/sidings each board has (`board | station | sidin
 You can edit it in the sheet, or use **＋ Station / ＋ Siding** in the app. The other tabs are the saved data - you can read them, filter and chart them like any sheet.
 
 ## 2. Point the app at the sheet
-Either open the app → ⚙ → paste the Web app URL (and the access code), or put them in `public/scr-out-reports/config.js`
+Either open the app → ⚙ → paste the Web app URL (and the access code), or put them in `public/station-siding-position/config.js`
 (note: this repo is public, so prefer the ⚙ screen or an access code).
 With no URL the app runs in **demo mode** (data only on that phone).
 
 ## 3. Open / install
 After the branch is merged to `main` the Pages workflow publishes it at
-`https://t-chandrakanth.github.io/scr-out-reports/` (or `…/scr-out-reports/index.html`).
+`https://t-chandrakanth.github.io/station-siding-position/` (or `…/station-siding-position/index.html`).
 On Android Chrome: menu → **Install app**.
 
 ## 4. Play Store (optional)

@@ -1,6 +1,6 @@
 {
-  "name": "SCR Out Reports",
-  "short_name": "SCR Out",
+  "name": "Station Siding Position",
+  "short_name": "Siding Pos",
   "description": "Board-wise siding position, stabled loco/train position and spare locos",
   "start_url": "./index.html",
   "scope": "./",

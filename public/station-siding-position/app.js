@@ -157,7 +157,7 @@
   }
 
   function viewHome() {
-    var h = header("SCR OUT REPORTS", false) + '<div class="grid">';
+    var h = header("STATION SIDING POSITION", false) + '<div class="grid">';
     BOARDS.forEach(function (b) { h += '<button class="board" data-act="board" data-b="' + b + '">' + b + "<small>Siding · Stabled</small></button>"; });
     return h + "</div>";
   }
