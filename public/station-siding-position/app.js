@@ -116,7 +116,7 @@
         LS.set("ssp_demo_db", db);
         return Promise.resolve();
       }
-      return remote("POST", { action: "delete", table: table, id: id });
+      return remote("POST", { action: "delete", table: table, id: id, board: S.board });
     },
     addConfig: function (row) {
       if (isDemo()) {
