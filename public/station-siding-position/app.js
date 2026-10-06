@@ -130,7 +130,7 @@
   };
 
   /* ---------- state ---------- */
-  var S = { board: null, tab: "siding", data: null, station: "", siding: "", editing: null, busy: false };
+  var S = { board: null, tab: "siding", data: null, station: "", siding: "", editing: null, busy: false, kind: "TRAIN" };
 
   function boardSidings(station) {
     var seen = {}, out = [];
@@ -177,19 +177,21 @@
   }
 
   /* --- siding position --- */
-  function viewSiding() {
+  function stationPicker() {
     var stations = boardStations();
-    var h = '<section class="card"><h2>Select station &amp; siding</h2>';
-    h += '<label for="st">Station</label><div class="row"><select id="st">' +
+    return '<label for="st">Station name</label><div class="row"><select id="st">' +
       '<option value="">— select station —</option>' +
       stations.map(function (s) { return '<option value="' + esc(s) + '"' + (s === S.station ? " selected" : "") + ">" + esc(s) + "</option>"; }).join("") +
-      '</select><button class="btn sec fit" data-act="addStation">＋ Station</button></div>';
+      '</select><button class="btn sec fit" data-act="addStation">＋ Station</button></div>' +
+      (!stations.length ? '<p class="empty">No stations yet for ' + esc(S.board) + ". Tap ＋ Station to add one.</p>" : "");
+  }
+
+  function viewSiding() {
+    var h = '<section class="card"><h2>Select station &amp; siding</h2>' + stationPicker();
     if (S.station) {
       h += "<label>Siding (tap name)</label><div class=\"chips\">" +
         boardSidings(S.station).map(function (g) { return '<button class="chip' + (g === S.siding ? " on" : "") + '" data-act="siding" data-s="' + esc(g) + '">' + esc(g) + "</button>"; }).join("") +
         '<button class="chip add" data-act="addSiding">＋ Siding</button></div>';
-    } else if (!stations.length) {
-      h += '<p class="empty">No stations yet for ' + esc(S.board) + ". Tap ＋ Station to add one.</p>";
     }
     h += "</section>";
     if (S.station && S.siding) h += viewRakes() + viewSpare();
@@ -252,33 +254,44 @@
 
   /* --- stabled loco/train position --- */
   function viewStabled() {
-    var list = S.data.STABLED.slice().sort(byCreated);
+    var h = '<section class="card"><h2>Stabled loco / train position</h2>' + stationPicker();
+    if (!S.station) return h + "</section>";
+    var all = S.data.STABLED.filter(function (x) { return x.station === S.station; });
+    var nTrain = all.filter(function (x) { return x.kind === "TRAIN"; }).length;
+    var nLoco = all.length - nTrain;
+    h += '<label>Stabled</label><div class="tabs" style="margin:0">' +
+      '<button data-act="kind" data-k="TRAIN" class="' + (S.kind === "TRAIN" ? "on" : "") + '">TRAIN (' + nTrain + ")</button>" +
+      '<button data-act="kind" data-k="LOCO" class="' + (S.kind === "LOCO" ? "on" : "") + '">LOCO (' + nLoco + ")</button></div></section>";
+
+    var list = all.filter(function (x) { return x.kind === S.kind; }).sort(byCreated);
     var ed = S.editing ? list.filter(function (x) { return x.id === S.editing; })[0] : null;
     var r = ed || {};
-    var h = '<section class="card"><h2>Stabled loco / train position (' + list.length + ")</h2>";
-    if (!list.length) h += '<p class="empty">Nothing stabled yet.</p>';
+    var isTrain = S.kind === "TRAIN";
+
+    h += '<section class="card"><h2>' + esc(S.station) + " — stabled " + (isTrain ? "trains" : "locos") + " (" + list.length + ")</h2>";
+    if (!list.length) h += '<p class="empty">Nothing stabled here.</p>';
     list.forEach(function (x, n) {
-      h += '<div class="rake' + (x.id === S.editing ? " sel" : "") + '"><div class="t"><span>' + (n + 1) + ". " + esc(x.kind || "") + " " + esc(x.number || "—") +
-        "</span><span>" + esc(fmtFull(x.created)) + "</span></div><dl>" +
-        "<dt>Stock/type</dt><dd>" + esc(x.stock || "—") + "</dd>" +
-        "<dt>Location</dt><dd>" + esc(x.location || "—") + "</dd>" +
-        "<dt>Stabled since</dt><dd>" + esc(fmtDT(x.since)) + "</dd>" +
-        (x.base || x.due ? "<dt>Base / Due</dt><dd>" + esc(x.base || "—") + " · " + esc(fmtDue(x.due)) + "</dd>" : "") +
-        (x.remarks ? "<dt>Remarks</dt><dd>" + esc(x.remarks) + "</dd>" : "") + "</dl>" +
-        '<div class="btns"><button class="btn sec small" data-act="editStabled" data-id="' + esc(x.id) + '">Edit</button>' +
+      h += '<div class="rake' + (x.id === S.editing ? " sel" : "") + '"><div class="t"><span>' + (n + 1) + ". " + esc(x.number || "—") + "</span><span>" + esc(fmtFull(x.created)) + "</span></div><dl>" +
+        "<dt>Stabled line</dt><dd>" + esc(x.line || "—") + "</dd>" +
+        (isTrain ? "<dt>Stabled from</dt><dd>" + esc(fmtDT(x.since)) + "</dd>"
+                 : "<dt>Base</dt><dd>" + esc(x.base || "—") + "</dd><dt>Due</dt><dd>" + esc(fmtDue(x.due)) + "</dd>") +
+        '</dl><div class="btns"><button class="btn sec small" data-act="editStabled" data-id="' + esc(x.id) + '">Edit</button>' +
         '<button class="btn danger small" data-act="delStabled" data-id="' + esc(x.id) + '">Delete</button></div></div>';
     });
     h += "</section>";
-    h += '<section class="card"><h2>' + (ed ? "Edit entry" : "New entry") + "</h2>" +
-      '<label for="g_kind">Loco or train</label><select id="g_kind"><option' + (r.kind === "LOCO" || !r.kind ? " selected" : "") + ">LOCO</option><option" + (r.kind === "TRAIN" ? " selected" : "") + ">TRAIN</option></select>" +
-      '<label for="g_number">Loco no / train name</label><input id="g_number" autocapitalize="characters" value="' + esc(r.number) + '">' +
-      '<label for="g_stock">Stock and type (e.g. BCNHL 58+1)</label><input id="g_stock" autocapitalize="characters" value="' + esc(r.stock) + '">' +
-      '<label for="g_loc">Location (station / siding)</label><input id="g_loc" autocapitalize="characters" value="' + esc(r.location) + '">' +
-      dtField("g_since", "Stabled since", r.since) +
-      '<div class="row"><div><label for="g_base">Base</label><input id="g_base" autocapitalize="characters" value="' + esc(r.base) + '"></div>' +
-      '<div><label for="g_due">Due (MM/YY)</label><input id="g_due" type="month" value="' + esc(r.due) + '"></div></div>' +
-      '<label for="g_rem">Remarks</label><input id="g_rem" value="' + esc(r.remarks) + '">' +
-      '<div class="actions"><button class="btn" data-act="stAdd">ADD</button><button class="btn sec" data-act="stSave">SAVE</button><button class="btn sec" data-act="stClear">CLEAR</button></div></section>';
+
+    h += '<section class="card"><h2>' + (ed ? "Edit " : "New ") + (isTrain ? "train" : "loco") + "</h2>";
+    if (isTrain) {
+      h += '<label for="g_number">Train no (e.g. KPCC)</label><input id="g_number" autocapitalize="characters" value="' + esc(r.number) + '">' +
+        '<label for="g_line">Stabled line (e.g. R-04)</label><input id="g_line" autocapitalize="characters" value="' + esc(r.line) + '">' +
+        dtField("g_since", "Stabled from (e.g. 06-10 05:30)", r.since);
+    } else {
+      h += '<label for="g_number">Loco no</label><input id="g_number" inputmode="text" value="' + esc(r.number) + '">' +
+        '<div class="row"><div><label for="g_base">Base</label><input id="g_base" autocapitalize="characters" value="' + esc(r.base) + '"></div>' +
+        '<div><label for="g_due">Due (MM/YY)</label><input id="g_due" type="month" value="' + esc(r.due) + '"></div></div>' +
+        '<label for="g_line">Stabled line</label><input id="g_line" autocapitalize="characters" value="' + esc(r.line) + '">';
+    }
+    h += '<div class="actions"><button class="btn" data-act="stAdd">ADD</button><button class="btn sec" data-act="stSave">SAVE</button><button class="btn sec" data-act="stClear">CLEAR</button></div></section>';
     return h;
   }
 
@@ -328,9 +341,10 @@
     };
   }
   function readStabled() {
+    var train = S.kind === "TRAIN";
     return {
-      board: S.board, kind: v("g_kind"), number: upper(v("g_number")), stock: upper(v("g_stock")),
-      location: upper(v("g_loc")), since: v("g_since"), base: upper(v("g_base")), due: v("g_due"), remarks: v("g_rem")
+      board: S.board, station: S.station, kind: S.kind, number: train ? upper(v("g_number")) : v("g_number"), line: upper(v("g_line")),
+      since: train ? v("g_since") : "", base: train ? "" : upper(v("g_base")), due: train ? "" : v("g_due")
     };
   }
   function nonEmpty(row, keys) { return keys.some(function (k) { return row[k]; }); }
@@ -354,12 +368,13 @@
   }
   function saveStabled(keepOpen) {
     var row = readStabled();
-    if (!nonEmpty(row, ["number", "stock", "location"])) { toast("Enter loco/train details first", true); return Promise.resolve(); }
+    if (!S.station) { toast("Select station first", true); return Promise.resolve(); }
+    if (!row.number) { toast(S.kind === "TRAIN" ? "Enter train no" : "Enter loco no", true); return Promise.resolve(); }
     if (S.editing) row.id = S.editing;
     return Api.upsert("STABLED", row).then(function (saved) {
       S.editing = keepOpen ? saved.id : null;
       return reload();
-    }).then(function () { render(); toast(keepOpen ? "Saved" : "Saved – new entry ready"); });
+    }).then(function () { render(); toast(keepOpen ? "Saved" : "Saved – new " + (S.kind === "TRAIN" ? "train" : "loco") + " ready"); });
   }
 
   document.addEventListener("click", function (ev) {
@@ -385,6 +400,7 @@
         break;
       case "useDemo": LS.del("scr_url"); LS.del("scr_code"); toast("Demo mode"); route = "home"; S.board = null; render(); break;
       case "tab": S.tab = el.getAttribute("data-t"); S.editing = null; render(); break;
+      case "kind": S.kind = el.getAttribute("data-k"); S.editing = null; render(); break;
 
       case "addStation":
         var st = (prompt("Station name (e.g. KPCC)") || "").trim().toUpperCase();

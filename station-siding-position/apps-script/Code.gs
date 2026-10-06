@@ -10,7 +10,7 @@ var ACCESS_CODE = '';
 var HEADERS = {
   CONFIG:  ['board', 'station', 'siding'],
   RAKES:   ['id', 'board', 'station', 'siding', 'created', 'load', 'inward', 'stock', 'placement', 'release', 'loco', 'base', 'due', 'eot', 'sdg_dep', 'updated'],
-  STABLED: ['id', 'board', 'kind', 'number', 'stock', 'location', 'since', 'base', 'due', 'remarks', 'created', 'updated'],
+  STABLED: ['id', 'board', 'station', 'kind', 'number', 'line', 'since', 'base', 'due', 'created', 'updated'],
   SPARE:   ['id', 'board', 'station', 'siding', 'loco', 'base', 'due', 'created', 'updated']
 };
 

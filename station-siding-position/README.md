@@ -8,7 +8,9 @@ Installable web app (PWA) with a Google Sheet as its database.
   (date is automatic · load name + inward "EX" · stock and type · placement · release · loco no + base + due · EOT · SDG dep)
   with **ADD** (saves and opens a new blank rake), **SAVE** (saves, stays on the rake) and **CLEAR**.
   Saved rakes are listed above the form (Edit / Delete). **Spare locos** (loco no, base, due) are listed under it for the station.
-* Stabled Loco/Train: loco or train no, stock and type, location, stabled since, base, due, remarks.
+* Stabled Loco/Train: pick the **station**, then **TRAIN | LOCO**.
+  Train: train no (e.g. KPCC), stabled line (e.g. R-04), stabled from (e.g. 06-10 05:30).
+  Loco: loco no, base, due (MM/YY), stabled line. ADD / SAVE / CLEAR work as above; saved entries are listed with Edit / Delete.
 
 App files: `public/station-siding-position/` (served at `/station-siding-position/` by the existing GitHub Pages / Vercel deployment).
 Backend: `station-siding-position/apps-script/Code.gs`.
@@ -21,6 +23,8 @@ Backend: `station-siding-position/apps-script/Code.gs`.
 4. Run the function `setup` once (authorise). It creates the tabs `CONFIG`, `RAKES`, `STABLED`, `SPARE`.
 5. **Deploy → New deployment → Web app** · Execute as **Me** · Who has access **Anyone** → copy the **Web app URL** (ends with `/exec`).
    After changing the script later: Deploy → Manage deployments → edit → New version.
+
+If you created the sheet with an earlier version of the script, delete the `STABLED` tab and run `setup` again (its columns changed).
 
 Tabs: `CONFIG` = which stations/sidings each board has (`board | station | siding`, e.g. `BOARD-01 | KPCC | SDG-1`).
 You can edit it in the sheet, or use **＋ Station / ＋ Siding** in the app. The other tabs are the saved data - you can read them, filter and chart them like any sheet.
