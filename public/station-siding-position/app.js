@@ -48,8 +48,8 @@
 
   /* ---------- backend: Google Sheet (Apps Script) or local demo ---------- */
   function settings() {
-    var c = window.SCR_CONFIG || {};
-    return { url: LS.get("scr_url", "") || c.APP_SCRIPT_URL || "", code: LS.get("scr_code", "") || c.ACCESS_CODE || "" };
+    var c = window.SSP_CONFIG || {};
+    return { url: LS.get("ssp_url", "") || c.APP_SCRIPT_URL || "", code: LS.get("ssp_code", "") || c.ACCESS_CODE || "" };
   }
   function isDemo() { return !settings().url; }
 
@@ -71,7 +71,7 @@
   }
 
   function demoDb() {
-    var db = LS.get("scr_demo_db", null);
+    var db = LS.get("ssp_demo_db", null);
     if (!db) {
       db = {
         config: [
@@ -81,7 +81,7 @@
         ],
         RAKES: [], STABLED: [], SPARE: []
       };
-      LS.set("scr_demo_db", db);
+      LS.set("ssp_demo_db", db);
     }
     return db;
   }
@@ -104,7 +104,7 @@
         for (var k = 0; k < list.length; k++) if (list[k].id === row.id) i = k;
         if (i < 0) { row.id = row.id || uid(); row.created = row.created || now; row.updated = now; list.push(row); }
         else { row.updated = now; list[i] = Object.assign({}, list[i], row); row = list[i]; }
-        LS.set("scr_demo_db", db);
+        LS.set("ssp_demo_db", db);
         return Promise.resolve(row);
       }
       return remote("POST", { action: "upsert", table: table, row: row }).then(function (j) { return j.row; });
@@ -113,7 +113,7 @@
       if (isDemo()) {
         var db = demoDb();
         db[table] = db[table].filter(function (r) { return r.id !== id; });
-        LS.set("scr_demo_db", db);
+        LS.set("ssp_demo_db", db);
         return Promise.resolve();
       }
       return remote("POST", { action: "delete", table: table, id: id });
@@ -122,7 +122,7 @@
       if (isDemo()) {
         var db = demoDb();
         db.config.push(row);
-        LS.set("scr_demo_db", db);
+        LS.set("ssp_demo_db", db);
         return Promise.resolve();
       }
       return remote("POST", { action: "addConfig", row: row });
@@ -299,8 +299,8 @@
     var s = settings();
     return header("Settings", true) +
       '<section class="card"><h2>Google Sheet connection</h2>' +
-      '<label for="set_url">Apps Script Web App URL</label><input id="set_url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" value="' + esc(LS.get("scr_url", "") || s.url) + '">' +
-      '<label for="set_code">Access code (if you set one)</label><input id="set_code" type="password" value="' + esc(LS.get("scr_code", "") || s.code) + '">' +
+      '<label for="set_url">Apps Script Web App URL</label><input id="set_url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" value="' + esc(LS.get("ssp_url", "") || s.url) + '">' +
+      '<label for="set_code">Access code (if you set one)</label><input id="set_code" type="password" value="' + esc(LS.get("ssp_code", "") || s.code) + '">' +
       '<div class="actions"><button class="btn" data-act="saveSettings">Save</button><button class="btn sec" data-act="useDemo">Use demo</button></div>' +
       '<p class="empty">Leave the URL empty to use demo mode (data stored only on this phone).</p></section>';
   }
@@ -394,11 +394,11 @@
       case "refresh": guard(function () { return reload().then(function () { keepScroll(render); toast("Refreshed"); }); }); break;
       case "settings": route = "settings"; render(); break;
       case "saveSettings":
-        LS.set("scr_url", v("set_url")); LS.set("scr_code", v("set_code"));
+        LS.set("ssp_url", v("set_url")); LS.set("ssp_code", v("set_code"));
         toast(v("set_url") ? "Saved – connected to Google Sheet" : "Saved – demo mode");
         route = S.board ? "board" : "home"; if (S.board) loadBoard(S.board); else render();
         break;
-      case "useDemo": LS.del("scr_url"); LS.del("scr_code"); toast("Demo mode"); route = "home"; S.board = null; render(); break;
+      case "useDemo": LS.del("ssp_url"); LS.del("ssp_code"); toast("Demo mode"); route = "home"; S.board = null; render(); break;
       case "tab": S.tab = el.getAttribute("data-t"); S.editing = null; render(); break;
       case "kind": S.kind = el.getAttribute("data-k"); S.editing = null; render(); break;
 
