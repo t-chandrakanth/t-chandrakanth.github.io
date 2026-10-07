@@ -24,7 +24,7 @@ export async function needsPasswordChange(id: string) {
 }
 
 export async function checkPassword(id: string, pw: string) {
-  if (!PEOPLE.some((p) => p.id === id)) return false;
+  if (!PEOPLE.some((p) => p.id === id && !p.until)) return false; // people who left can no longer log in
   const c = await cred(id);
   return c ? eq(hash(pw, c.salt), c.hash) : eq(pw, INITIAL_PASSWORD);
 }

@@ -1,4 +1,4 @@
-import { PEOPLE } from "./config";
+import { PEOPLE, activeOn } from "./config";
 
 // Turn a duty code into the wording used in the WhatsApp group.
 function wording(code: string) {
@@ -30,7 +30,7 @@ export function buildMessage(date: string, entries: Record<string, Record<string
   const day = entries[date] ?? {};
   const section = (group: "team" | "lr") => {
     const g = new Map<string, string[]>();
-    for (const p of PEOPLE.filter((p) => p.group === group)) {
+    for (const p of PEOPLE.filter((p) => p.group === group && activeOn(p, date))) {
       const code = (day[p.id] ?? "").trim();
       if (!code) continue;
       const label = wording(code);

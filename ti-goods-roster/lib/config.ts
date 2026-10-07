@@ -3,6 +3,7 @@ export type Person = {
   name: string;
   group: "team" | "lr";
   color: string;
+  until?: string; // last day on this muster (YYYY-MM-DD). History stays; the person is hidden after it.
 };
 
 export type Team = {
@@ -25,7 +26,7 @@ export const TEAMS: Team[] = [
       { id: "raghav", name: "Raghav", group: "team", color: "#2447d8" },
       { id: "mahesh", name: "Mahesh", group: "team", color: "#0e8f6e" },
       { id: "vishnu", name: "Vishnu", group: "team", color: "#c2571a" },
-      { id: "narendra", name: "Narendra", group: "team", color: "#8a3fd0" },
+      { id: "narendra", name: "Narendra", group: "team", color: "#8a3fd0", until: "2026-10-06" }, // moved to other duties; Ravinder Goud took over
       { id: "ravinder", name: "Ravinder Goud", group: "team", color: "#00838f" },
       { id: "subbareddy", name: "Subbareddy", group: "lr", color: "#b0356b" },
       { id: "teja", name: "Teja", group: "lr", color: "#0a7fa8" },
@@ -61,7 +62,9 @@ export const TEAMS: Team[] = [
 ];
 
 export const TEAM: Team = TEAMS.find((t) => t.id === process.env.NEXT_PUBLIC_TEAM) ?? TEAMS[0];
-export const PEOPLE = TEAM.people;
+export const PEOPLE = TEAM.people;                                   // everyone ever on the muster (for history)
+export const ACTIVE = PEOPLE.filter((p) => !p.until);               // on the muster today
+export const activeOn = (p: Person, date: string) => !p.until || date <= p.until;
 export const ADMIN_ID = TEAM.adminId;
 export const ADMIN_NAME = PEOPLE.find((p) => p.id === ADMIN_ID)?.name ?? "the chief";
 export const APP_TITLE = TEAM.title;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ADMIN_ID, ADMIN_NAME, APP_TITLE, PEOPLE, SHIFTS } from "@/lib/config";
+import { ACTIVE, ADMIN_ID, ADMIN_NAME, APP_TITLE, PEOPLE, SHIFTS, activeOn } from "@/lib/config";
 import { countDuties } from "@/lib/summary";
 import type { CrLedger } from "@/lib/cr";
 import { rangeDates } from "@/lib/range";
@@ -243,7 +243,7 @@ function Brand({ sub }: { sub: string }) {
 }
 
 function Login({ onDone }: { onDone: () => void }) {
-  const [user, setUser] = useState(PEOPLE[0].id);
+  const [user, setUser] = useState(ACTIVE[0].id);
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -262,7 +262,7 @@ function Login({ onDone }: { onDone: () => void }) {
         <div className="field">
           <label htmlFor="name">User</label>
           <select id="name" value={user} onChange={(e) => setUser(e.target.value)}>
-            {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name}{p.group === "lr" ? " (LR)" : ""}</option>)}
+            {ACTIVE.map((p) => <option key={p.id} value={p.id}>{p.name}{p.group === "lr" ? " (LR)" : ""}</option>)}
           </select>
         </div>
         <div className="field">
@@ -445,7 +445,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
 
   const SummaryCards = () => (
     <>
-      {PEOPLE.map((p) => {
+      {PEOPLE.filter((p) => !p.until || p.until >= month + "-01" || days(month).some((d) => entry(d, p.id))).map((p) => {
         const c = countDuties(days(month).map((d) => entry(d, p.id)));
         const cells: [string, number, string][] = [
           ["Day / General", c.day, "day"], ["Afternoon", c.afternoon, "aft"], ["Night", c.night, "night"],
@@ -531,14 +531,14 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
                 <div className="nm">Your duty<small>{tmData?.entries[tomorrow]?.[me] ? label(tmData.entries[tomorrow][me]) : "Nothing assigned yet"}</small></div>
                 <Pill v={tmData?.entries[tomorrow]?.[me] ?? ""} />
               </div>
-              <div className="mini names">{PEOPLE.filter((p) => p.id !== me).map((p) => <div key={p.id}><b style={{ color: PEOPLE.find((x) => x.id === p.id)?.color }}>{p.name}</b><Pill v={tmData?.entries[tomorrow]?.[p.id] ?? ""} /></div>)}</div>
+              <div className="mini names">{PEOPLE.filter((p) => p.id !== me && activeOn(p, tomorrow)).map((p) => <div key={p.id}><b style={{ color: PEOPLE.find((x) => x.id === p.id)?.color }}>{p.name}</b><Pill v={tmData?.entries[tomorrow]?.[p.id] ?? ""} /></div>)}</div>
             </button>
           )}
           <div className="card">
             <div className="dayhead">
               <button type="button" className="fold" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}><span className="chev">{showAll ? "▲" : "▼"}</span><h2>👥 Everyone on {long(day)}</h2><span className="chev">{showAll ? "Hide" : "Show"}</span></button>
             </div>
-            {showAll && PEOPLE.map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
+            {showAll && PEOPLE.filter((p) => activeOn(p, day)).map((p, i) => <PersonRow key={p.id} d={day} id={p.id} first={i === 0} />)}
           </div>
           {(() => {
             const msg = data && admin ? buildMessage(day, data.entries, data.remarks[day] ?? "") : "";
@@ -588,7 +588,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               {view === "mine" ? (
                 <div className="row first" style={{ padding: 0 }}><div className="nm" style={{ color: "var(--muted)", fontWeight: 400 }}>{entry(d, me) ? label(entry(d, me)) : "No duty"}</div><Pill v={entry(d, me)} /></div>
               ) : (
-                <div className="mini">{PEOPLE.map((p) => <div key={p.id}><Av id={p.id} sm /><Pill v={entry(d, p.id)} /></div>)}</div>
+                <div className="mini">{PEOPLE.filter((p) => activeOn(p, d)).map((p) => <div key={p.id}><Av id={p.id} sm /><Pill v={entry(d, p.id)} /></div>)}</div>
               )}
             </button>
           ))}
@@ -644,12 +644,12 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
               {!crForm
                 ? <>
                     <div className="row first" style={{ padding: 0 }}><div className="nm"><small>Counting from</small>{long(cr.from)} {cr.from.slice(0, 4)}</div></div>
-                    {PEOPLE.map((p) => <div key={p.id} className="row"><Av id={p.id} sm /><div className="nm">{p.name}<small>opening {cr.balances[p.id] ?? 0} · due now {cr.people[p.id]?.due ?? 0}</small></div></div>)}
-                    <button className="btn" onClick={() => setCrForm({ from: cr.from, balances: Object.fromEntries(PEOPLE.map((p) => [p.id, String(cr.balances[p.id] ?? 0)])) })}>Edit CR balances</button>
+                    {ACTIVE.map((p) => <div key={p.id} className="row"><Av id={p.id} sm /><div className="nm">{p.name}<small>opening {cr.balances[p.id] ?? 0} · due now {cr.people[p.id]?.due ?? 0}</small></div></div>)}
+                    <button className="btn" onClick={() => setCrForm({ from: cr.from, balances: Object.fromEntries(ACTIVE.map((p) => [p.id, String(cr.balances[p.id] ?? 0)])) })}>Edit CR balances</button>
                   </>
                 : <>
                     <div className="field"><label htmlFor="crfrom">Counting from</label><input id="crfrom" type="date" value={crForm.from} onChange={(e) => setCrForm({ ...crForm, from: e.target.value })} /></div>
-                    {PEOPLE.map((p) => (
+                    {ACTIVE.map((p) => (
                       <div key={p.id} className="row"><Av id={p.id} sm /><div className="nm">{p.name}</div>
                         <input type="number" min={0} inputMode="numeric" style={{ width: 72, textAlign: "center" }} value={crForm.balances[p.id]} onChange={(e) => setCrForm({ ...crForm, balances: { ...crForm.balances, [p.id]: e.target.value } })} /></div>
                     ))}
@@ -663,7 +663,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           {admin && (
             <div className="card">
               <h2>Reset a password to 1234</h2>
-              {PEOPLE.filter((p) => p.id !== me).map((p) => (
+              {ACTIVE.filter((p) => p.id !== me).map((p) => (
                 <div key={p.id} className="row"><Av id={p.id} /><div className="nm">{p.name}</div>
                   <button className="btn" onClick={async () => { await api("/api/password", { reset: p.id }); say(`${p.name} can log in with 1234 and set a new password.`); }}>Reset</button>
                 </div>
