@@ -85,7 +85,7 @@ function run_(preview) {
 
   var text = log.join('\n');
   Logger.log(text);
-  try { ss.toast('Done - details in Executions/Logs', preview ? 'Preview' : 'Daily run', 8); } catch (e) { /* trigger: no UI */ }
+  try { SpreadsheetApp.getUi().alert(text); } catch (e) { /* run by the daily trigger: no screen, the log is enough */ }
   if (NOTIFY_EMAIL && !preview) MailApp.sendEmail(NOTIFY_EMAIL, 'Daily position blocks ' + dayLabel, text);
 }
 
