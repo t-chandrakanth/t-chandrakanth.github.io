@@ -1,12 +1,11 @@
 /**
- * Put this script INSIDE the master sheet "DAILY 2026_27_Daily Position"
+ * FINAL SCRIPT - put it INSIDE the master sheet "DAILY 2026_27_Daily Position"
  * (open that sheet > Extensions > Apps Script > paste > Save > reload the sheet).
  *
- * A menu "DAILY POSITION" appears. One click on "Create today's blocks (all tabs)" adds, at the bottom of EVERY
- * report tab of this sheet, a new empty block with the new date - copied from the empty form tabs of the
- * "DAILY POSITION" sheet (same tab names). Each tab can start in its own column (see TAB_SETTINGS).
- * Tabs that have no form there (MIXED SPL DATA, TXR POSITION, ...) are not touched.
- * Nothing existing is changed or deleted; blocks are only added below the last row.
+ * A menu "DAILY POSITION" appears. One click on "Create today's blocks" adds, at the bottom of each of the
+ * tabs listed in TAB_SETTINGS below, a new full empty block with the new date - copied (all rows, columns,
+ * merges, borders, formulas) from the same-named tab of the "DAILY POSITION" sheet - starting in the column
+ * given for that tab. Every other tab of the master is NOT touched. Existing rows are never changed or deleted.
  */
 
 // The sheet that holds the EMPTY forms (from its link: /d/<THIS PART>/edit)
@@ -14,32 +13,30 @@ var TEMPLATE_ID = '1QcVso_XejCeQolF__9fg_Pmx3maZGFjm_UEo6p3dzkA';
 
 var DAY_OFFSET = 0;         // date in the new blocks: 0 = today, 1 = tomorrow  (a tab can override it below)
 var GAP_ROWS = 2;           // blank rows left between two days
-var ONLY_TABS = [];         // [] = every tab that has a form in DAILY POSITION. Or e.g. ['ALL TRAINS', 'CC']
-var SKIP_TABS = [];         // tabs never touched
 
-// Per tab: col = column where the new block starts (default A), dayOffset = date of the block (default DAY_OFFSET),
-// create = make the tab in this sheet if it does not exist yet.  Names ignore spaces and capital letters.
+// ONLY these tabs change. col = column where the new block starts, dayOffset = date of the block
+// (default DAY_OFFSET), create = make the tab in this sheet if it does not exist yet.
+// Names ignore spaces and capital letters.
 var TAB_SETTINGS = {
-  'HQ IVVALID': { col: 'B' },
-  'HQ INVALID': { col: 'B' },
-  'NUT SHELL':  { col: 'B' },
+  'HQ IVVALID': { col: 'B' },                                  // "HQ INVALID" is accepted too
   'CC':         { col: 'B' },
-  'SPL TRAINS': { col: 'D' },
+  'SPL Trains': { col: 'D' },
   'HQ CRACK..': { col: 'B' },
-  'BREAK VAN':  { col: 'C', dayOffset: 1, create: true }     // starts in column C, carries TOMORROW's date
+  'BREAK VAN':  { col: 'C', dayOffset: 1, create: true }       // column C, TOMORROW's date
 };
+var ALIASES = { 'HQINVALID': 'HQIVVALID' };                     // other spellings of a tab name
 
 /* ---------- menu ---------- */
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('DAILY POSITION')
-    .addItem("Create today's blocks (all tabs)", 'menuCreateToday')
+    .addItem("Create today's blocks", 'menuCreateToday')
     .addToUi();
 }
 
 function menuCreateToday() {
   var ui = SpreadsheetApp.getUi();
   var r = ui.alert('Create new dated blocks',
-    'Add the new empty blocks (with the new date) at the bottom of every report tab?',
+    'Add the new empty blocks (with the new date) at the bottom of: ' + Object.keys(TAB_SETTINGS).join(', ') + ' ?',
     ui.ButtonSet.YES_NO);
   if (r === ui.Button.YES) createToday();
 }
@@ -51,34 +48,28 @@ function createToday() {
   var tz = master.getSpreadsheetTimeZone();
   var props = PropertiesService.getScriptProperties();
   var log = ['New blocks'];
-  var settings = {};
-  Object.keys(TAB_SETTINGS).forEach(function (k) { settings[key_(k)] = TAB_SETTINGS[k]; });
 
-  tplBook.getSheets().forEach(function (tpl) {
-    if (tpl.isSheetHidden()) return;
-    var name = tpl.getName();
+  Object.keys(TAB_SETTINGS).forEach(function (name) {
+    var st = TAB_SETTINGS[name];
     var key = key_(name);
-    if (ONLY_TABS.length && !inList_(ONLY_TABS, name)) return;
-    if (inList_(SKIP_TABS, name)) return;
-    var st = settings[key] || {};
-
     var day = new Date();
     day.setDate(day.getDate() + (st.dayOffset === undefined ? DAY_OFFSET : st.dayOffset));
     var dayLabel = Utilities.formatDate(day, tz, 'dd-MM-yyyy');
     var dayKey = Utilities.formatDate(day, tz, 'yyyy-MM-dd');
-    var col = colIndex_(st.col || 'A');
-
     try {
+      var tpl = findTab_(tplBook, name);
+      if (!tpl) { log.push('- ' + name + ': no form tab with this name in DAILY POSITION - skipped'); return; }
       var mt = findTab_(master, name);
-      if (!mt && st.create) mt = master.insertSheet(name.trim());
-      if (!mt) return;                                   // not a report tab of this sheet - leave it alone
-      if (props.getProperty('DONE_' + key) === dayKey) { log.push('- ' + name.trim() + ': already added for ' + dayLabel + ' - skipped'); return; }
+      if (!mt && st.create) mt = master.insertSheet(name);
+      if (!mt) { log.push('- ' + name + ': no tab with this name in this sheet - skipped'); return; }
+      if (props.getProperty('DONE_' + key) === dayKey) { log.push('- ' + name + ': already added for ' + dayLabel + ' - skipped'); return; }
+
       var startRow = mt.getLastRow() === 0 ? 1 : mt.getLastRow() + 1 + GAP_ROWS;
-      var rows = paste_(tpl, mt, startRow, col, master, day);
+      var rows = paste_(tpl, mt, startRow, colIndex_(st.col || 'A'), master, day);
       props.setProperty('DONE_' + key, dayKey);
-      log.push('- ' + name.trim() + ': block added (' + rows + ' rows, from row ' + startRow + ', column ' + (st.col || 'A') + ', date ' + dayLabel + ')');
+      log.push('- ' + name + ': block added (' + rows + ' rows, from row ' + startRow + ', column ' + (st.col || 'A') + ', date ' + dayLabel + ')');
     } catch (err) {
-      log.push('- ' + name.trim() + ': ERROR ' + err.message);
+      log.push('- ' + name + ': ERROR ' + err.message);
     }
   });
 
@@ -88,12 +79,9 @@ function createToday() {
 }
 
 /* ---------- helpers ---------- */
-function key_(name) { return String(name).replace(/\s+/g, '').toUpperCase(); }
-
-function inList_(list, name) {
-  var k = key_(name);
-  for (var i = 0; i < list.length; i++) if (key_(list[i]) === k) return true;
-  return false;
+function key_(name) {
+  var k = String(name).replace(/\s+/g, '').toUpperCase();
+  return ALIASES[k] || k;
 }
 
 function colIndex_(letters) {
@@ -147,7 +135,7 @@ function setDates_(sh, day) {
 function p2_(n) { return (n < 10 ? '0' : '') + n; }
 
 // "NUMBERS OF TRAINS RUN-07-10-2026" -> same text with the new date
-// "NUT SHELL POSITION ON DATE-  07-08/10/2026" (two days) -> day-nextday/MM/yyyy
+// "TITLE ON DATE-  07-08/10/2026" (two days) -> day-nextday/MM/yyyy
 function newTitle_(s, day) {
   var tom = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
   var range = /(\d{1,2})\s*-\s*(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/;
