@@ -1,137 +1,188 @@
 /**
- * Daily refresh - copies YESTERDAY's block of every tab from the master sheet
- * ("DAILY 2026_27_Daily Position") into the same-named tab of THIS (daily work) sheet.
+ * DAILY POSITION - daily archive + reset.
  *
- * Install: open the DAILY WORK sheet > Extensions > Apps Script > paste this > Save.
- * 1) Run `previewYesterday` first (shows what would be copied, changes nothing).
- * 2) Run `refreshYesterday` once (authorise) and check the tabs.
- * 3) Run `installDailyTrigger` once - it then runs by itself every morning.
+ * Every morning, for each daily tab of THIS sheet (HQ IVVALID, ALL TRAINS, NUT SHELL, ...):
+ *   1. the tab as filled yesterday is pasted BELOW the existing rows of the same-named tab in the master sheet
+ *      ("DAILY 2026_27_Daily Position");
+ *   2. the daily tab is emptied (restored from its hidden template copy TPL_<name>);
+ *   3. the date in the titles is changed to today.
+ * Nothing is cleared unless the paste into the master worked. A tab nobody filled is not archived.
+ *
+ * Install (open the DAILY POSITION sheet > Extensions > Apps Script > paste > Save):
+ *   a) while the daily tabs are EMPTY run `setupTemplates` once (authorise)  - it stores the empty layout
+ *   b) run `previewDaily`  - shows what would happen, changes nothing (View > Logs / Executions)
+ *   c) run `installDailyTrigger` once  - then it runs every morning by itself
  */
 
-// Master sheet that holds the daily blocks (taken from its link: /d/<THIS PART>/edit)
-var SOURCE_ID = '1MyG9mvgcofrB5hxKB409qj89qMm4CY4q_56faGrUpjg';
+// Master / archive sheet (from its link: /d/<THIS PART>/edit)
+var MASTER_ID = '1MyG9mvgcofrB5hxKB409qj89qMm4CY4q_56faGrUpjg';
 
-var DAY_OFFSET = -1;        // -1 = yesterday's block, 0 = today's block
-var TRIGGER_HOUR = 5;       // trigger runs at about 05:00 (script time zone - set IST in Project Settings)
-var ONLY_TABS = [];         // [] = every tab of this sheet that also exists in the master. Or e.g. ['TXR POSITION', 'MIXED SPL DATA']
-var SKIP_TABS = [];         // tabs never touched, e.g. ['NOTES']
-var NOTIFY_EMAIL = '';      // optional: e-mail address that gets the result summary
+var TRIGGER_HOUR = 5;       // runs at about 05:00 (set the time zone to IST in Project Settings)
+var GAP_ROWS = 2;           // blank rows left between two days in the master tab
+var ONLY_TABS = [];         // [] = all tabs. Or e.g. ['ALL TRAINS', 'CC']
+var SKIP_TABS = [];         // tabs never touched
+var CREATE_MISSING_MASTER_TAB = false;   // true = create the tab in the master if it does not exist
+var NOTIFY_EMAIL = '';      // optional: e-mail that receives the result
+var TPL_PREFIX = 'TPL_';
 
 /* ---------- entry points ---------- */
-function previewYesterday() { run_(true); }
-function refreshYesterday() { run_(false); }
+function setupTemplates() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var n = 0;
+  tabs_(ss).forEach(function (sh) {
+    var old = ss.getSheetByName(TPL_PREFIX + sh.getName());
+    if (old) ss.deleteSheet(old);
+    var tpl = sh.copyTo(ss);
+    tpl.setName((TPL_PREFIX + sh.getName()).slice(0, 100));
+    tpl.hideSheet();
+    n++;
+  });
+  ss.toast(n + ' template(s) saved (hidden TPL_ tabs). Keep them.', 'Done', 6);
+}
+function previewDaily() { run_(true); }
+function runDaily() { run_(false); }
 
 function installDailyTrigger() {
   removeDailyTrigger();
-  ScriptApp.newTrigger('refreshYesterday').timeBased().everyDays(1).atHour(TRIGGER_HOUR).create();
-  SpreadsheetApp.getActive().toast('Daily refresh set for about ' + TRIGGER_HOUR + ':00', 'Done', 5);
+  ScriptApp.newTrigger('runDaily').timeBased().everyDays(1).atHour(TRIGGER_HOUR).create();
+  SpreadsheetApp.getActive().toast('Daily run set for about ' + TRIGGER_HOUR + ':00', 'Done', 5);
 }
 function removeDailyTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'refreshYesterday') ScriptApp.deleteTrigger(t);
+    if (t.getHandlerFunction() === 'runDaily') ScriptApp.deleteTrigger(t);
   });
 }
 
 /* ---------- main ---------- */
-function run_(preview) {
-  var dst = SpreadsheetApp.getActiveSpreadsheet();
-  var src = SpreadsheetApp.openById(SOURCE_ID);
-  var tz = dst.getSpreadsheetTimeZone();
-  var target = new Date();
-  target.setDate(target.getDate() + DAY_OFFSET);
-  var label = Utilities.formatDate(target, tz, 'dd-MM-yyyy');
-  var log = [(preview ? 'PREVIEW for ' : 'Refreshed for ') + label];
+function tabs_(ss) {
+  return ss.getSheets().filter(function (sh) {
+    var n = sh.getName();
+    if (n.indexOf(TPL_PREFIX) === 0) return false;
+    if (ONLY_TABS.length && ONLY_TABS.indexOf(n) < 0) return false;
+    return SKIP_TABS.indexOf(n) < 0;
+  });
+}
 
-  dst.getSheets().forEach(function (dsh) {
+function run_(preview) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var master = SpreadsheetApp.openById(MASTER_ID);
+  var tz = ss.getSpreadsheetTimeZone();
+  var today = new Date();
+  var todayLabel = Utilities.formatDate(today, tz, 'dd-MM-yyyy');
+  var props = PropertiesService.getScriptProperties();
+  var runKey = Utilities.formatDate(today, tz, 'yyyy-MM-dd');
+  var log = [(preview ? 'PREVIEW ' : 'RUN ') + todayLabel];
+
+  if (!preview && props.getProperty('LAST_RUN') === runKey) {
+    Logger.log('Already ran today (' + todayLabel + ') - nothing done.');
+    return;
+  }
+
+  tabs_(ss).forEach(function (dsh) {
     var name = dsh.getName();
-    if (ONLY_TABS.length && ONLY_TABS.indexOf(name) < 0) return;
-    if (SKIP_TABS.indexOf(name) > -1) return;
-    var ssh = src.getSheetByName(name);
-    if (!ssh) { log.push('- ' + name + ': no tab with this name in the master - skipped'); return; }
     try {
-      var vals = ssh.getDataRange().getValues();
-      var b = findBlock_(vals, target.getFullYear(), target.getMonth() + 1, target.getDate());
-      if (!b) { log.push('- ' + name + ': no block dated ' + label + ' found - left unchanged'); return; }
-      var nRows = b.end - b.start + 1;
-      if (preview) { log.push('- ' + name + ': would copy master rows ' + (b.start + 1) + '-' + (b.end + 1) + ' (' + nRows + ' rows)'); return; }
-      copyBlock_(ssh, b.start + 1, b.end + 1, dsh);
-      log.push('- ' + name + ': copied ' + nRows + ' rows (master rows ' + (b.start + 1) + '-' + (b.end + 1) + ')');
+      var tpl = ss.getSheetByName((TPL_PREFIX + name).slice(0, 100));
+      if (!tpl) { log.push('- ' + name + ': no template - run setupTemplates first - skipped'); return; }
+
+      var changed = norm_(dsh.getDataRange().getValues()) !== norm_(tpl.getDataRange().getValues());
+      if (changed) {
+        var mt = findMasterTab_(master, name);
+        if (!mt && CREATE_MISSING_MASTER_TAB && !preview) mt = master.insertSheet(name);
+        if (!mt) { log.push('- ' + name + ': filled, but no tab "' + name.trim() + '" in the master - NOT cleared'); return; }
+        var startRow = mt.getLastRow() === 0 ? 1 : mt.getLastRow() + 1 + GAP_ROWS;
+        var rng = dsh.getDataRange();
+        if (preview) {
+          log.push('- ' + name + ': filled -> would paste ' + rng.getNumRows() + ' rows into master tab "' + mt.getName() + '" at row ' + startRow + ', then empty the tab');
+          return;
+        }
+        archive_(dsh, mt, startRow, master);
+        log.push('- ' + name + ': pasted ' + rng.getNumRows() + ' rows into master "' + mt.getName() + '" at row ' + startRow);
+      } else {
+        log.push('- ' + name + ': nothing filled - not archived' + (preview ? '' : ', date refreshed'));
+      }
+      if (!preview) reset_(dsh, tpl, today);
     } catch (err) {
-      log.push('- ' + name + ': ERROR ' + err.message);
+      log.push('- ' + name + ': ERROR ' + err.message + ' (tab left as it was)');
     }
   });
 
+  if (!preview) props.setProperty('LAST_RUN', runKey);
   var text = log.join('\n');
   Logger.log(text);
-  try { dst.toast(log.length - 1 + ' tab(s) checked - see View > Logs', preview ? 'Preview' : 'Refreshed', 8); } catch (e) { /* trigger run: no UI */ }
-  if (NOTIFY_EMAIL && !preview) MailApp.sendEmail(NOTIFY_EMAIL, 'Daily refresh ' + label, text);
+  try { ss.toast('Done - details in Executions/Logs', preview ? 'Preview' : 'Daily run', 8); } catch (e) { /* trigger: no UI */ }
+  if (NOTIFY_EMAIL && !preview) MailApp.sendEmail(NOTIFY_EMAIL, 'Daily position run ' + todayLabel, text);
 }
 
-/* ---------- block finding (pure) ---------- */
-// all dd-mm-yyyy / dd/mm/yyyy / dd.mm.yyyy dates inside a text
-function datesIn_(text) {
-  var out = [], re = /(\d{1,2})\s*[-\/.]\s*(\d{1,2})\s*[-\/.]\s*(\d{4})/g, m;
-  while ((m = re.exec(String(text))) !== null) out.push({ d: +m[1], m: +m[2], y: +m[3] });
-  return out;
+/* ---------- archive: paste the filled tab below the existing rows of the master tab ---------- */
+function findMasterTab_(master, name) {
+  var want = name.trim().toUpperCase();
+  var all = master.getSheets();
+  for (var i = 0; i < all.length; i++) if (all[i].getName().trim().toUpperCase() === want) return all[i];
+  return null;
 }
 
-// A title row = text with a date in column A and nothing in the other columns,
-// e.g. "TXR EXAMINATION PARTICULARS AS ON-03-10-2026" or "MIXED SPL DATA OF-04/04/2026".
-function isTitleRow_(row) {
-  var a = row[0];
-  if (a === null || a === undefined || a === '' || a instanceof Date || typeof a === 'number') return false;
-  if (!datesIn_(a).length) return false;
-  for (var c = 1; c < row.length; c++) if (String(row[c]).trim() !== '') return false;
-  return true;
-}
-
-function rowEmpty_(row) {
-  for (var c = 0; c < row.length; c++) if (String(row[c]).trim() !== '') return false;
-  return true;
-}
-
-// Returns {start, end} (0-based, inclusive) of the LAST block whose title carries the date, or null.
-function findBlock_(values, y, mo, d) {
-  var titles = [];
-  for (var r = 0; r < values.length; r++) if (isTitleRow_(values[r])) titles.push(r);
-  var pick = -1;
-  for (var i = 0; i < titles.length; i++) {
-    var ds = datesIn_(values[titles[i]][0]);
-    for (var k = 0; k < ds.length; k++) if (ds[k].y === y && ds[k].m === mo && ds[k].d === d) pick = i;
+function archive_(dsh, mt, startRow, master) {
+  var rng = dsh.getDataRange();
+  var nR = rng.getNumRows(), nC = rng.getNumColumns();
+  var tmp = dsh.copyTo(master);                       // exact copy (formats, merges, borders) inside the master
+  try {
+    var needRows = startRow + nR - 1;
+    if (mt.getMaxRows() < needRows) mt.insertRowsAfter(mt.getMaxRows(), needRows - mt.getMaxRows());
+    if (mt.getMaxColumns() < rng.getColumn() + nC - 1) mt.insertColumnsAfter(mt.getMaxColumns(), rng.getColumn() + nC - 1 - mt.getMaxColumns());
+    var from = tmp.getRange(rng.getRow(), rng.getColumn(), nR, nC);
+    var to = mt.getRange(startRow, rng.getColumn(), nR, nC);
+    from.copyTo(to);
+    to.setValues(to.getValues());                     // freeze formulas as values in the archive
+  } finally {
+    master.deleteSheet(tmp);
   }
-  if (pick < 0) return null;
-  var start = titles[pick];
-  var end = (pick + 1 < titles.length ? titles[pick + 1] : values.length) - 1;
-  while (end > start && rowEmpty_(values[end])) end--;
-  return { start: start, end: end };
 }
 
-/* ---------- copy ---------- */
-function copyBlock_(ssh, r1, r2, dsh) {
-  var nRows = r2 - r1 + 1, nCols = Math.max(ssh.getLastColumn(), 1);
-  var rng = ssh.getRange(r1, 1, nRows, nCols);
+/* ---------- reset: empty the daily tab and set today's date ---------- */
+function reset_(dsh, tpl, today) {
+  dsh.getRange(1, 1, dsh.getMaxRows(), dsh.getMaxColumns()).breakApart();
+  dsh.clear();
+  tpl.getDataRange().copyTo(dsh.getRange(1, 1));
 
-  dsh.clear();                                            // contents + formats
-  var merged = dsh.getRange(1, 1, dsh.getMaxRows(), dsh.getMaxColumns()).getMergedRanges();
-  merged.forEach(function (m) { m.breakApart(); });
-  if (dsh.getMaxRows() < nRows) dsh.insertRowsAfter(dsh.getMaxRows(), nRows - dsh.getMaxRows());
-  if (dsh.getMaxColumns() < nCols) dsh.insertColumnsAfter(dsh.getMaxColumns(), nCols - dsh.getMaxColumns());
+  var rng = dsh.getDataRange();
+  var vals = rng.getValues();
+  for (var r = 0; r < vals.length; r++) {
+    for (var c = 0; c < vals[r].length; c++) {
+      var v = vals[r][c];
+      var cell = dsh.getRange(rng.getRow() + r, rng.getColumn() + c);
+      if (v instanceof Date) {
+        cell.setValue(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
+      } else if (typeof v === 'string') {
+        var nv = newTitle_(v, today);
+        if (nv !== v) cell.setValue(nv);
+      }
+    }
+  }
+}
 
-  var t = dsh.getRange(1, 1, nRows, nCols);
-  t.setNumberFormats(rng.getNumberFormats());             // formats first, so text such as 03/27 stays text
-  t.setValues(rng.getValues());
-  t.setBackgrounds(rng.getBackgrounds());
-  t.setFontColors(rng.getFontColors());
-  t.setFontWeights(rng.getFontWeights());
-  t.setFontStyles(rng.getFontStyles());
-  t.setFontSizes(rng.getFontSizes());
-  t.setHorizontalAlignments(rng.getHorizontalAlignments());
-  t.setVerticalAlignments(rng.getVerticalAlignments());
-  t.setWrapStrategies(rng.getWrapStrategies());
+/* ---------- pure helpers ---------- */
+function p2_(n) { return (n < 10 ? '0' : '') + n; }
 
-  rng.getMergedRanges().forEach(function (m) {
-    dsh.getRange(m.getRow() - r1 + 1, m.getColumn(), m.getNumRows(), m.getNumColumns()).merge();
-  });
-  for (var c = 1; c <= nCols; c++) dsh.setColumnWidth(c, ssh.getColumnWidth(c));
-  if (nRows <= 300) for (var r = 0; r < nRows; r++) dsh.setRowHeight(r + 1, ssh.getRowHeight(r1 + r));
+// "NUMBERS OF TRAINS RUN-07-10-2026" -> same text with today's date
+// "NUT SHELL POSITION ON DATE-  07-08/10/2026" (two days) -> today-tomorrow/MM/yyyy
+function newTitle_(s, today) {
+  var tom = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  var range = /(\d{1,2})\s*-\s*(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/;
+  if (range.test(s)) return s.replace(range, p2_(today.getDate()) + '-' + p2_(tom.getDate()) + '/' + p2_(tom.getMonth() + 1) + '/' + tom.getFullYear());
+  var dash = /(\d{1,2})-(\d{1,2})-(\d{4})/;
+  if (dash.test(s)) return s.replace(dash, p2_(today.getDate()) + '-' + p2_(today.getMonth() + 1) + '-' + today.getFullYear());
+  var slash = /(\d{1,2})\/(\d{1,2})\/(\d{4})/;
+  if (slash.test(s)) return s.replace(slash, p2_(today.getDate()) + '/' + p2_(today.getMonth() + 1) + '/' + today.getFullYear());
+  return s;
+}
+
+// Comparable text of a tab with every date removed, so a changed title date alone does not count as "filled".
+function norm_(values) {
+  return JSON.stringify(values.map(function (row) {
+    return row.map(function (v) {
+      if (v instanceof Date) return '';
+      if (typeof v === 'string') return v.replace(/\d{1,2}\s*-\s*\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/g, '').trim();
+      return v;
+    });
+  }));
 }
