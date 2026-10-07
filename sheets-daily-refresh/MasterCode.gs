@@ -22,6 +22,7 @@ var SKIP_TABS = [];         // tabs never touched
 var TAB_SETTINGS = {
   'HQ IVVALID': { col: 'B' },
   'HQ INVALID': { col: 'B' },
+  'NUT SHELL':  { col: 'B' },
   'CC':         { col: 'B' },
   'SPL TRAINS': { col: 'D' },
   'HQ CRACK..': { col: 'B' },
