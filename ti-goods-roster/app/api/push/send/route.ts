@@ -1,4 +1,4 @@
-import { PEOPLE } from "@/lib/config";
+import { ACTIVE as PEOPLE } from "@/lib/config";
 import { loadMonth } from "@/lib/store";
 import { nextDay, todayIST } from "@/lib/range";
 import { notify, pushReady } from "@/lib/push";

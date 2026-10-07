@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/auth";
-import { ADMIN_NAME, PEOPLE, isAdmin } from "@/lib/config";
+import { ACTIVE as PEOPLE, ADMIN_NAME, isAdmin } from "@/lib/config";
 import { getRaw, loadMonth, setRaw } from "@/lib/store";
 import { crLedger, type CrLedger } from "@/lib/cr";
 import { todayIST } from "@/lib/range";
