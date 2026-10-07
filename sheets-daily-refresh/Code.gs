@@ -26,6 +26,19 @@ var CREATE_MISSING_MASTER_TAB = false;   // true = create the tab in the master 
 var NOTIFY_EMAIL = '';      // optional: e-mail that receives the result
 
 /* ---------- entry points ---------- */
+// Menu "DAILY POSITION" in the sheet: one click changes every tab
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('DAILY POSITION')
+    .addItem("Create today's blocks (all tabs)", 'menuCreateToday')
+    .addToUi();
+}
+function menuCreateToday() {
+  var ui = SpreadsheetApp.getUi();
+  var r = ui.alert('Create new dated blocks',
+    "Paste today's empty blocks (with the new date) below the existing rows of every tab in the master sheet?",
+    ui.ButtonSet.YES_NO);
+  if (r === ui.Button.YES) createToday();
+}
 function previewToday() { run_(true); }
 function createToday() { run_(false); }
 
