@@ -2,10 +2,11 @@
  * FINAL SCRIPT - put it INSIDE the master sheet "DAILY 2026_27_Daily Position"
  * (open that sheet > Extensions > Apps Script > paste > Save > reload the sheet).
  *
- * A menu "DAILY POSITION" appears. One click on "Create today's blocks" adds, at the bottom of each of the
- * tabs listed in TAB_SETTINGS below, a new full empty block with the new date - copied (all rows, columns,
- * merges, borders, formulas) from the same-named tab of the "DAILY POSITION" sheet - starting in the column
- * given for that tab. Every other tab of the master is NOT touched. Existing rows are never changed or deleted.
+ * A menu "DAILY POSITION" appears. One click on "Create today's blocks" takes EVERY tab of the "DAILY POSITION"
+ * sheet and adds, at the bottom of the same-named tab of this sheet, a new full empty block with the new date
+ * (all rows, columns, merges, borders, formulas). Tabs of this sheet that have no form in DAILY POSITION
+ * (MIXED SPL DATA, TXR POSITION, ...) are not touched. Existing rows are never changed or deleted.
+ * A few tabs start in another column or carry another date - see TAB_SETTINGS.
  */
 
 // The sheet that holds the EMPTY forms (from its link: /d/<THIS PART>/edit)
@@ -14,15 +15,17 @@ var TEMPLATE_ID = '1QcVso_XejCeQolF__9fg_Pmx3maZGFjm_UEo6p3dzkA';
 var DAY_OFFSET = 0;         // date in the new blocks: 0 = today, 1 = tomorrow  (a tab can override it below)
 var GAP_ROWS = 2;           // blank rows left between two days
 
-// ONLY these tabs change. col = column where the new block starts, dayOffset = date of the block
-// (default DAY_OFFSET), create = make the tab in this sheet if it does not exist yet.
-// Names ignore spaces and capital letters.
+var CREATE_MISSING_TAB = true;   // a form tab with no same-named tab in this sheet gets a new tab here
+
+// Special cases only - every other tab starts in column A with DAY_OFFSET's date.
+// col = column where the new block starts, dayOffset = date of the block. Names ignore spaces and capital letters.
 var TAB_SETTINGS = {
   'HQ IVVALID': { col: 'B' },                                  // "HQ INVALID" is accepted too
+  'NUT SHELL':  { col: 'B' },
   'CC':         { col: 'B' },
   'SPL Trains': { col: 'D' },
   'HQ CRACK..': { col: 'B' },
-  'BREAK VAN':  { col: 'C', dayOffset: 1, create: true }       // column C, TOMORROW's date
+  'BREAK VAN':  { col: 'C', dayOffset: 1 }                     // column C, TOMORROW's date
 };
 var ALIASES = { 'HQINVALID': 'HQIVVALID' };                     // other spellings of a tab name
 
@@ -36,7 +39,7 @@ function onOpen() {
 function menuCreateToday() {
   var ui = SpreadsheetApp.getUi();
   var r = ui.alert('Create new dated blocks',
-    'Add the new empty blocks (with the new date) at the bottom of: ' + Object.keys(TAB_SETTINGS).join(', ') + ' ?',
+    'Add the new empty blocks (with the new date) at the bottom of every tab?',
     ui.ButtonSet.YES_NO);
   if (r === ui.Button.YES) createToday();
 }
@@ -48,19 +51,21 @@ function createToday() {
   var tz = master.getSpreadsheetTimeZone();
   var props = PropertiesService.getScriptProperties();
   var log = ['New blocks'];
+  var special = {};
+  Object.keys(TAB_SETTINGS).forEach(function (k) { special[key_(k)] = TAB_SETTINGS[k]; });
 
-  Object.keys(TAB_SETTINGS).forEach(function (name) {
-    var st = TAB_SETTINGS[name];
+  tplBook.getSheets().forEach(function (tpl) {           // EVERY visible tab of DAILY POSITION
+    if (tpl.isSheetHidden()) return;
+    var name = tpl.getName().trim();
     var key = key_(name);
+    var st = special[key] || {};
     var day = new Date();
     day.setDate(day.getDate() + (st.dayOffset === undefined ? DAY_OFFSET : st.dayOffset));
     var dayLabel = Utilities.formatDate(day, tz, 'dd-MM-yyyy');
     var dayKey = Utilities.formatDate(day, tz, 'yyyy-MM-dd');
     try {
-      var tpl = findTab_(tplBook, name);
-      if (!tpl) { log.push('- ' + name + ': no form tab with this name in DAILY POSITION - skipped'); return; }
       var mt = findTab_(master, name);
-      if (!mt && st.create) mt = master.insertSheet(name);
+      if (!mt && CREATE_MISSING_TAB) mt = master.insertSheet(name);
       if (!mt) { log.push('- ' + name + ': no tab with this name in this sheet - skipped'); return; }
       if (props.getProperty('DONE_' + key) === dayKey) { log.push('- ' + name + ': already added for ' + dayLabel + ' - skipped'); return; }
 
