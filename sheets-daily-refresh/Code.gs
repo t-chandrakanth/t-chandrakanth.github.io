@@ -44,7 +44,7 @@ function removeDailyTrigger() {
 function tabs_(ss) {
   return ss.getSheets().filter(function (sh) {
     var n = sh.getName();
-    if (sh.isSheetHidden()) return false;
+    if (sh.isSheetHidden() || n === 'RUN LOG') return false;
     if (ONLY_TABS.length && ONLY_TABS.indexOf(n) < 0) return false;
     return SKIP_TABS.indexOf(n) < 0;
   });
@@ -85,8 +85,19 @@ function run_(preview) {
 
   var text = log.join('\n');
   Logger.log(text);
-  try { SpreadsheetApp.getUi().alert(text); } catch (e) { /* run by the daily trigger: no screen, the log is enough */ }
+  writeLog_(ss, log);                                 // visible in the sheet: tab RUN LOG
+  try { SpreadsheetApp.getUi().alert(text); } catch (e) { /* run by the daily trigger: no screen */ }
   if (NOTIFY_EMAIL && !preview) MailApp.sendEmail(NOTIFY_EMAIL, 'Daily position blocks ' + dayLabel, text);
+}
+
+// Writes the result into a tab called RUN LOG, so it can always be read inside the sheet.
+function writeLog_(ss, lines) {
+  var sh = ss.getSheetByName('RUN LOG') || ss.insertSheet('RUN LOG');
+  sh.clear();
+  var stamp = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'dd-MM-yyyy HH:mm:ss');
+  var rows = [['Run at ' + stamp]].concat(lines.map(function (l) { return [l]; }));
+  sh.getRange(1, 1, rows.length, 1).setValues(rows);
+  sh.setColumnWidth(1, 700);
 }
 
 /* ---------- paste a dated copy of the empty tab below the master tab's rows ---------- */
