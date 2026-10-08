@@ -37,6 +37,7 @@ function onOpen() {
     .addItem('Create TXR POSITION block', 'menuCreateTxr')
     .addItem('Create TXR SUMMARY block', 'menuCreateSummary')
     .addItem('Create TXR POSITION + TXR SUMMARY', 'menuCreateBothTxr')
+    .addItem('Create SR.IV DATA + SICK POH ROH blocks', 'menuCreateCopyTabs')
     .addToUi();
 }
 
@@ -161,4 +162,131 @@ function menuCreateBothTxr() {
   var ui = SpreadsheetApp.getUi();
   var r = ui.alert('TXR POSITION + TXR SUMMARY', 'Add the new day block in both tabs?', ui.ButtonSet.YES_NO);
   if (r === ui.Button.YES) { createTxrBlock(); createSummaryBlock(); }
+}
+
+/* ================= SR.IV DATA and SICK POH ROH: next day = same block with the new date ================= */
+// carry = true : OPENING (columns 1,2) = yesterday's CLOSING (the two columns after column 12), columns 3-12 emptied
+// carry = false: everything stays exactly the same, only the date changes
+var COPY_DAY_OFFSET = 0;          // 0 = today, 1 = tomorrow
+var COPY_GAP_ROWS = 2;
+var COPY_TABS = [
+  { tab: 'SR.IV DATA',    carry: true },
+  { tab: 'SICK POH ROH',  carry: false }
+];
+
+function menuCreateCopyTabs() {
+  var ui = SpreadsheetApp.getUi();
+  var r = ui.alert('SR.IV DATA + SICK POH ROH', 'Add the new day block (new date) at the bottom of both tabs?', ui.ButtonSet.YES_NO);
+  if (r === ui.Button.YES) createCopyTabs();
+}
+
+function createCopyTabs() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var day = new Date();
+  day.setDate(day.getDate() + COPY_DAY_OFFSET);
+  var log = ['New blocks'];
+  COPY_TABS.forEach(function (cfg) {
+    var sh = findTab_(ss, cfg.tab);
+    if (!sh) {
+      log.push('- ' + cfg.tab + ': tab not found. Tabs here: ' + ss.getSheets().map(function (x) { return x.getName(); }).join(' | '));
+      return;
+    }
+    try { log.push('- ' + sh.getName() + ': ' + addCopyBlock_(sh, cfg, day)); }
+    catch (err) { log.push('- ' + cfg.tab + ': ERROR ' + err.message); }
+  });
+  var text = log.join('\n');
+  Logger.log(text);
+  try { SpreadsheetApp.getUi().alert(text); } catch (e) { }
+}
+
+function addCopyBlock_(sh, cfg, day) {
+  var lastRow = sh.getLastRow(), nCols = Math.max(sh.getLastColumn(), 1);
+  var all = sh.getRange(1, 1, lastRow, nCols);
+  var plan = planCopy_(all.getValues(), all.getFormulas(), day, cfg.carry);
+  if (plan.error) return plan.error;
+
+  var start = lastRow + 1 + COPY_GAP_ROWS;
+  var need = start + plan.nRows - 1;
+  if (sh.getMaxRows() < need) sh.insertRowsAfter(sh.getMaxRows(), need - sh.getMaxRows());
+  sh.getRange(plan.startRow + 1, 1, plan.nRows, nCols).copyTo(sh.getRange(start, 1, plan.nRows, nCols));
+
+  function cell(r, c) { return sh.getRange(start + r, c + 1); }
+  if (plan.clears.length) sh.getRangeList(plan.clears.map(function (x) { return cell(x[0], x[1]).getA1Notation(); })).clearContent();
+  plan.sets.forEach(function (x) { cell(x[0], x[1]).setValue(x[2]); });
+  return plan.nRows + ' rows added from row ' + start + ' (' + plan.newTitle + ')' + (plan.note ? ' - ' + plan.note : '');
+}
+
+// "07-08/10/2026" / "07-10-2026" / "07/10/2026" found in a text, or null
+function titleKey_(s) {
+  var m = String(s).match(/(\d{1,2})\s*-\s*(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/) ||
+          String(s).match(/(\d{1,2})-(\d{1,2})-(\d{4})/) || String(s).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m ? m[0] : null;
+}
+
+// pure: works on the values/formulas arrays
+function planCopy_(values, formulas, day, carry) {
+  function up(v) { return String(v === null || v === undefined ? '' : v).trim().toUpperCase(); }
+  var nCols = values[0].length, titles = [];
+  for (var r = 0; r < values.length; r++) {
+    for (var c = 0; c < Math.min(nCols, 4); c++) {
+      if (typeof values[r][c] === 'string' && titleKey_(values[r][c])) { titles.push({ r: r, c: c, text: values[r][c], key: titleKey_(values[r][c]) }); break; }
+    }
+  }
+  if (!titles.length) return { error: 'no title with a date (like INVALID DATA- 07-08/10/2026) found' };
+  var last = titles[titles.length - 1];
+  var newText = newTitle_(last.text, day);
+  if (titles.some(function (t) { return t.text === newText; })) return { error: 'a block with this date already exists - nothing added' };
+
+  var first = titles.length - 1;                                   // a block may have several titled rows with the same date
+  while (first > 0 && titles[first - 1].key === last.key) first--;
+  var startRow = titles[first].r, nRows = values.length - startRow;
+  var B = values.slice(startRow), F = formulas.slice(startRow);
+  var plan = { startRow: startRow, nRows: nRows, sets: [], clears: [], newTitle: newText, note: '' };
+
+  // new date everywhere in the block
+  for (var i = 0; i < nRows; i++) for (var j = 0; j < nCols; j++) {
+    var v = B[i][j];
+    if (typeof v === 'string') {
+      var nv = newTitle_(v, day);
+      if (nv === v && j < 3 && /^\d{1,2}-\d{1,2}$/.test(v.trim())) nv = p2_(day.getDate()) + '-' + p2_(day.getMonth() + 1);
+      if (nv !== v) plan.sets.push([i, j, nv]);
+    } else if (v instanceof Date && j < 3) {
+      plan.sets.push([i, j, new Date(day.getFullYear(), day.getMonth(), day.getDate())]);
+    }
+  }
+  if (!carry) return plan;
+
+  // find the numbering row 1,2,...,12
+  var nr = -1, c1 = -1;
+  for (var a = 0; a < nRows && nr < 0; a++) for (var b = 0; b + 13 < nCols; b++) {
+    var ok = true;
+    for (var k = 0; k < 12; k++) if (Number(B[a][b + k]) !== k + 1 || B[a][b + k] === '') { ok = false; break; }
+    if (ok) { nr = a; c1 = b; break; }
+  }
+  if (nr < 0 || c1 < 1) { plan.note = 'numbering row 1..12 not found - only the date was changed'; return plan; }
+  var label = c1 - 1, cl = c1 + 12;                                 // label column, first CLOSING column
+  var rowsT = [], totalR = -1;
+  for (var q = nr + 1; q < nRows; q++) {
+    var lb = B[q][label];
+    var t = up(lb);
+    if (t === '' || lb instanceof Date || /^\d{1,2}-\d{1,2}$/.test(t)) continue;
+    if (t === 'TOTAL') { totalR = q; continue; }
+    rowsT.push(q);
+  }
+  var sums = [];
+  for (var z = 0; z < 14; z++) sums.push(0);
+  rowsT.forEach(function (q) {
+    for (var o = 0; o < 2; o++) {
+      var cv = B[q][cl + o];
+      plan.sets.push([q, c1 + o, cv === '' ? '' : cv]);              // opening = yesterday's closing
+      sums[o] += Number(cv) || 0;
+      sums[12 + o] += Number(cv) || 0;
+    }
+    for (var m = 2; m < 12; m++) if (!F[q][c1 + m] && up(B[q][c1 + m]) !== '') plan.clears.push([q, c1 + m]);
+  });
+  if (totalR > -1) for (var w = 0; w < 14; w++) {
+    if (!F[totalR][c1 + w]) plan.sets.push([totalR, c1 + w, sums[w]]);
+  }
+  plan.note = 'opening = yesterday\'s closing, columns 3-12 emptied';
+  return plan;
 }
