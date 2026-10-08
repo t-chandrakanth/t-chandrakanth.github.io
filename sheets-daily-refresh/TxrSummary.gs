@@ -104,7 +104,7 @@ function planSummary_(values, formulas, day) {
     if (t.indexOf('CUMM') > -1 || /^TOTAL CU/.test(t)) { k = cummN < 4 ? 'left' : 'right'; cummN++; }
     else if (t.indexOf('CHECKED') > -1) k = 'daily';
     else if (t.indexOf('WAGON') > -1 || t.indexOf('REMARK') > -1) k = 'clear';
-    else if (cummN === 0 && (t === 'CC' || t === 'PREM' || t === 'INTEN')) k = 'daily';
+    else if (cummN === 0 && (t === 'CC' || t === 'PREM' || t === 'INTEN' || t === 'TOTAL')) k = 'daily';   // 'TOTAL' = the depot total column (4, 3, 2 ... and the grand total 14)
     cls.push(k);
     if (k) names[k].push(colLetter_(c + 1) + '(' + t + ')');
   }
