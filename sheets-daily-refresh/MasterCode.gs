@@ -25,7 +25,8 @@ var TAB_SETTINGS = {
   'CC':         { col: 'B' },
   'SPL Trains': { col: 'D' },
   'HQ CRACK..': { col: 'B' },
-  'BREAK VAN':  { col: 'C', dayOffset: 1 }                     // column C, TOMORROW's date
+  'BREAK VAN':  { col: 'C', dayOffset: 1 },                    // column C, TOMORROW's date
+  'UNUSUAL':    { col: 'A', dayOffset: 0 }                     // column A, TODAY's date
 };
 var ALIASES = { 'HQINVALID': 'HQIVVALID' };                     // other spellings of a tab name
 
