@@ -35,6 +35,8 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('DAILY POSITION')
     .addItem("Create today's blocks", 'menuCreateToday')
     .addItem('Create TXR POSITION block', 'menuCreateTxr')
+    .addItem('Create TXR SUMMARY block', 'menuCreateSummary')
+    .addItem('Create TXR POSITION + TXR SUMMARY', 'menuCreateBothTxr')
     .addToUi();
 }
 
@@ -152,4 +154,11 @@ function newTitle_(s, day) {
   var slash = /(\d{1,2})\/(\d{1,2})\/(\d{4})/;
   if (slash.test(s)) return s.replace(slash, p2_(day.getDate()) + '/' + p2_(day.getMonth() + 1) + '/' + day.getFullYear());
   return s;
+}
+
+// one click: TXR POSITION and TXR SUMMARY together
+function menuCreateBothTxr() {
+  var ui = SpreadsheetApp.getUi();
+  var r = ui.alert('TXR POSITION + TXR SUMMARY', 'Add the new day block in both tabs?', ui.ButtonSet.YES_NO);
+  if (r === ui.Button.YES) { createTxrBlock(); createSummaryBlock(); }
 }
