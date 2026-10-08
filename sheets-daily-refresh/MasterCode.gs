@@ -34,6 +34,7 @@ var ALIASES = { 'HQINVALID': 'HQIVVALID' };                     // other spellin
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('DAILY POSITION')
     .addItem("Create today's blocks", 'menuCreateToday')
+    .addItem('Create TXR POSITION block', 'menuCreateTxr')
     .addToUi();
 }
 
