@@ -63,7 +63,7 @@ export async function buildMileage(month: string, personId: string, personName: 
     const [Y, M, D] = r.date.split("-").map(Number);
     ws.getCell(row, 2).value = new Date(Date.UTC(Y, M - 1, D));
     ws.getCell(row, 2).numFmt = "dd-mm-yyyy";
-    for (const [col, v] of [[3, r.c], [4, r.d]] as const) {
+    for (const [col, v] of [[4, r.c], [5, r.d]] as const) {
       if (!v) continue;
       const cell = ws.getCell(row, col);
       cell.value = v;
