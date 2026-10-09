@@ -1,5 +1,5 @@
 // Offline shell. Data requests (Google Apps Script) are cross-origin and never cached here.
-const CACHE = "station-siding-v1";
+const CACHE = "station-siding-v2";
 const SHELL = ["./", "./index.html", "./app.js", "./style.css", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {

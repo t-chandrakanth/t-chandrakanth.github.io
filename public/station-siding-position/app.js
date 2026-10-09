@@ -146,19 +146,35 @@
   }
   function byCreated(a, b) { return String(a.created).localeCompare(String(b.created)); }
 
+  var ICON = {
+    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 10-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>',
+    chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+    train: '<svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="4" width="18" height="18" rx="5"/><path d="M7 14h18"/><circle cx="12" cy="18" r="1.3" fill="#fff"/><circle cx="20" cy="18" r="1.3" fill="#fff"/><path d="M11 4.5h10M10 27l3-5M22 27l-3-5M8 27h16"/></svg>'
+  };
+
   /* ---------- views ---------- */
+  function demoBanner() {
+    return isDemo() ? '<div class="banner"><span>DEMO MODE – data stays on this phone only. Tap the gear to connect your Google Sheet.</span></div>' : "";
+  }
   function header(title, back) {
     return '<header class="top">' +
-      (back ? '<button data-act="back" aria-label="Back">←</button>' : "") +
+      (back ? '<button data-act="back" aria-label="Back">' + ICON.back + "</button>" : "") +
       "<h1>" + esc(title) + "</h1>" +
-      (S.board ? '<button data-act="refresh" aria-label="Refresh">⟳</button>' : "") +
-      '<button data-act="settings" aria-label="Settings">⚙</button></header>' +
-      (isDemo() ? '<div class="banner">DEMO MODE – data stays on this phone only. Tap ⚙ to connect your Google Sheet.</div>' : "");
+      (S.board ? '<button data-act="refresh" aria-label="Refresh">' + ICON.refresh + "</button>" : "") +
+      '<button data-act="settings" aria-label="Settings">' + ICON.gear + "</button></header>" + demoBanner();
   }
 
   function viewHome() {
-    var h = header("STATION SIDING POSITION", false) + '<div class="grid">';
-    BOARDS.forEach(function (b) { h += '<button class="board" data-act="board" data-b="' + b + '">' + b + "<small>Siding · Stabled</small></button>"; });
+    var h = '<div class="hero"><div class="row1"><div class="logo"><div class="mark">' + ICON.train + '</div><div><h1>Station Siding<br>Position</h1><p>Sidings · Stabled · Spare locos</p></div></div>' +
+      '<button class="gear" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></div>' +
+      '<div class="stats"><div class="stat"><b>8</b><span>Boards</span></div><div class="stat"><b>' + (isDemo() ? "Demo" : "Live") + '</b><span>' + (isDemo() ? "On this phone" : "Google Sheet") + '</span></div></div>' +
+      '<div class="track"><i></i><i></i></div></div>' + demoBanner() +
+      '<div class="sectitle">Select board</div><div class="grid">';
+    BOARDS.forEach(function (b) {
+      h += '<button class="board" data-act="board" data-b="' + b + '"><span class="go">' + ICON.chev + '</span><span class="no">' + b.slice(-2) + '</span><span><b>' + b.replace("-", " ") + '</b><small>Siding · Stabled</small></span></button>';
+    });
     return h + "</div>";
   }
 
@@ -203,7 +219,7 @@
     var ed = S.editing ? rakes.filter(function (r) { return r.id === S.editing; })[0] : null;
     var r = ed || {};
     var h = '<section class="card"><h2>' + esc(S.station) + " · " + esc(S.siding) + " — rakes (" + rakes.length + ")</h2>";
-    if (!rakes.length) h += '<p class="empty">No rake saved here yet.</p>';
+    if (!rakes.length) h += '<p class="empty blank">No rake saved here yet.</p>';
     rakes.forEach(function (x, n) {
       h += '<div class="rake' + (x.id === S.editing ? " sel" : "") + '"><div class="t"><span>' + (n + 1) + ". " + esc(x.load || "—") +
         (x.inward ? '<span class="badge">EX ' + esc(x.inward) + "</span>" : "") + "</span><span>" + esc(fmtFull(x.created)) + "</span></div><dl>" +
@@ -240,7 +256,7 @@
     var list = S.data.SPARE.filter(function (x) { return x.station === S.station; }).sort(byCreated);
     var h = '<section class="card"><h2>Spare locos (siding/station) — ' + esc(S.station) + "</h2>" +
       '<div class="spare h"><span>#</span><span>LOCO NO</span><span>BASE</span><span>DUE</span><span></span></div>';
-    if (!list.length) h += '<p class="empty">No spare loco listed.</p>';
+    if (!list.length) h += '<p class="empty blank">No spare loco listed.</p>';
     list.forEach(function (x, n) {
       h += '<div class="spare"><span>' + (n + 1) + ".</span><span>" + esc(x.loco) + (x.siding ? '<br><small style="color:var(--muted)">' + esc(x.siding) + "</small>" : "") +
         "</span><span>" + esc(x.base || "—") + "</span><span>" + esc(fmtDue(x.due)) + '</span><button data-act="delSpare" data-id="' + esc(x.id) + '" aria-label="Delete">✕</button></div>';
@@ -269,7 +285,7 @@
     var isTrain = S.kind === "TRAIN";
 
     h += '<section class="card"><h2>' + esc(S.station) + " — stabled " + (isTrain ? "trains" : "locos") + " (" + list.length + ")</h2>";
-    if (!list.length) h += '<p class="empty">Nothing stabled here.</p>';
+    if (!list.length) h += '<p class="empty blank">Nothing stabled here.</p>';
     list.forEach(function (x, n) {
       h += '<div class="rake' + (x.id === S.editing ? " sel" : "") + '"><div class="t"><span>' + (n + 1) + ". " + esc(x.number || "—") + "</span><span>" + esc(fmtFull(x.created)) + "</span></div><dl>" +
         "<dt>Stabled line</dt><dd>" + esc(x.line || "—") + "</dd>" +
