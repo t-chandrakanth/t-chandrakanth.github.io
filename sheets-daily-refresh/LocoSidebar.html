@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:14px;color:#1a202c;font-size:14px}
+  #drop{border:2px dashed #2c7a7b;border-radius:12px;padding:22px 12px;text-align:center;background:#f2fafa;outline:none}
+  #drop.hot{background:#d9f2f2}
+  #drop b{display:block;font-size:16px;margin-bottom:4px}
+  button{border:0;border-radius:8px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;background:#2c7a7b;color:#fff}
+  button.sec{background:#e2e8f0;color:#1a202c}
+  button:disabled{opacity:.5;cursor:default}
+  #msg{margin:10px 0;min-height:20px;color:#4a5568}
+  #msg.err{color:#c53030;font-weight:700}
+  table{border-collapse:collapse;width:100%;margin-top:6px}
+  th,td{border:1px solid #cbd5e0;padding:5px 7px;text-align:left}
+  th{background:#e6ecef}
+  td input[type=text]{width:100%;box-sizing:border-box;padding:5px;border:1px solid #cbd5e0;border-radius:5px;font:inherit}
+  tr.check td{background:#fff7e0}
+  tr.none td{background:#fdecec}
+  .old{color:#718096;font-size:12px}
+  #prev{max-height:300px;overflow:auto}
+  #foot{margin-top:12px;display:none;gap:8px}
+  small{color:#718096}
+</style>
+</head>
+<body>
+  <div id="drop" tabindex="0">
+    <b>Paste a picture here (Ctrl+V)</b>
+    or <input type="file" id="file" accept=".jpg,.jpeg,.png,.pdf,.xlsx,.xls,.csv,image/*,application/pdf"> (JPG / PNG / PDF / Excel / CSV)
+  </div>
+  <div id="msg"></div>
+  <div id="prev"></div>
+  <div id="foot">
+    <button id="apply">APPLY to sheet</button>
+    <button class="sec" id="close">Close</button>
+    <small id="note"></small>
+  </div>
+
+<script>
+var drop=document.getElementById('drop'), msg=document.getElementById('msg'), prev=document.getElementById('prev'), foot=document.getElementById('foot');
+var rows=[];
+function say(t,err){msg.textContent=t;msg.className=err?'err':'';}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+function send(file){
+  if(!file){return;}
+  say('Reading "'+(file.name||'pasted picture')+'" ... (a picture or PDF can take 10-20 seconds)');
+  prev.innerHTML='';foot.style.display='none';
+  var rd=new FileReader();
+  rd.onload=function(){
+    var b64=String(rd.result).split(',')[1];
+    google.script.run.withSuccessHandler(show).withFailureHandler(function(e){say(e.message||String(e),true);})
+      .parseReport(file.name||'pasted.png', file.type||'image/png', b64);
+  };
+  rd.readAsDataURL(file);
+}
+
+document.getElementById('file').addEventListener('change',function(e){send(e.target.files[0]);});
+document.addEventListener('paste',function(e){
+  var items=(e.clipboardData||{}).items||[];
+  for(var i=0;i<items.length;i++){ if(items[i].kind==='file'){ send(items[i].getAsFile()); e.preventDefault(); return; } }
+  say('Nothing to paste - copy a picture / take a screenshot first, then press Ctrl+V.',true);
+});
+['dragenter','dragover'].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();drop.classList.add('hot');});});
+['dragleave','drop'].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();drop.classList.remove('hot');});});
+drop.addEventListener('drop',function(e){ if(e.dataTransfer.files.length) send(e.dataTransfer.files[0]); });
+
+function show(res){
+  rows=res.matches;
+  if(!rows.length){ say('No loco number of your sheet was found in the file. Text read: '+(res.sample||'(nothing)'),true); return; }
+  var h='<table><tr><th></th><th>Loco</th><th>TR.NO</th><th>CURRENT LOCATION</th></tr>';
+  rows.forEach(function(r,i){
+    h+='<tr class="'+(r.conf==='ok'?'':r.conf)+'"><td><input type="checkbox" data-i="'+i+'" '+(r.conf==='none'?'':'checked')+'></td><td>'+esc(r.loco)+'</td>'+
+       '<td><input type="text" data-t="'+i+'" value="'+esc(r.train)+'"><div class="old">now: '+esc(r.oldTrain)+'</div></td>'+
+       '<td><input type="text" data-l="'+i+'" value="'+esc(r.loc)+'"><div class="old">now: '+esc(r.oldLoc)+'</div></td></tr>';
+  });
+  prev.innerHTML=h+'</table>';
+  foot.style.display='flex';
+  document.getElementById('note').textContent=res.notFound.length?('Not found in the file: '+res.notFound.join(', ')):'';
+  say(rows.length+' loco(s) found. Yellow = please check. Correct anything, then press APPLY.');
+}
+
+document.getElementById('apply').addEventListener('click',function(){
+  var items=[];
+  rows.forEach(function(r,i){
+    if(!prev.querySelector('[data-i="'+i+'"]').checked) return;
+    items.push({row:r.row, train:prev.querySelector('[data-t="'+i+'"]').value, loc:prev.querySelector('[data-l="'+i+'"]').value});
+  });
+  if(!items.length){say('Nothing selected.',true);return;}
+  document.getElementById('apply').disabled=true;
+  google.script.run.withSuccessHandler(function(n){say('Done - '+n+' row(s) updated in the sheet.');document.getElementById('apply').disabled=false;})
+    .withFailureHandler(function(e){say(e.message||String(e),true);document.getElementById('apply').disabled=false;}).applyMatches(items);
+});
+document.getElementById('close').addEventListener('click',function(){google.script.host.close();});
+drop.focus();
+</script>
+</body>
+</html>
