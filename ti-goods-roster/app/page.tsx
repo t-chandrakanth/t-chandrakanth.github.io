@@ -13,8 +13,8 @@ type Data = { me: string; entries: Record<string, Record<string, string>>; remar
 type CrInfo = { from: string; balances: Record<string, number>; people: Record<string, CrLedger> };
 type Tab = "today" | "roster" | "sum" | "req" | "me";
 
-const TIMES: Record<string, string> = { "08/20": "08:00 to 20:00", "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 00:00", "00/07": "00:00 to 07:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 00:00", REST: "Weekly rest", CR: "Compensatory rest (for a week without rest)", LEAVE: "On leave" };
-const NAMES: Record<string, string> = { "08/20": "General", "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", CR: "CR", LEAVE: "Leave" };
+const TIMES: Record<string, string> = { "08/20": "08:00 to 20:00", "07/13": "07:00 to 13:00", "13/21": "13:00 to 21:00", "21/24": "21:00 to 00:00", "00/07": "00:00 to 07:00", "00/08": "00:00 to 08:00", "07/13 21/24": "07:00 to 13:00, 21:00 to 00:00", REST: "Weekly rest", CR: "Compensatory rest (for a week without rest)", LEAVE: "On leave" };
+const NAMES: Record<string, string> = { "08/20": "General", "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "00/08": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", CR: "CR", LEAVE: "Leave" };
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -34,7 +34,7 @@ function kind(v: string) {
   if (!v) return "rest";
   if (v === "REST" || v === "CR") return "rest";
   if (v === "LEAVE") return "leave";
-  if (v === "00/07") return "off";
+  if (v.startsWith("00/")) return "off";
   if (v.includes("21/") || v.startsWith("20/") || v.startsWith("18/")) return "night";
   if (v.startsWith("13/")) return "aft";
   return "day";
