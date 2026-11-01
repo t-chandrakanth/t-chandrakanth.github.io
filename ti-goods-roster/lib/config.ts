@@ -11,7 +11,7 @@ export type Team = {
   title: string;     // app name shown on the login screen and in the header
   short: string;     // home-screen name
   adminId: string;   // the one person who sets duties and approves requests
-  nightOff?: string; // code for the morning after a night duty; "00/07" unless the team says otherwise
+  nightOff?: string; // code for the morning after a night duty; "00/08" unless the team says otherwise
   people: Person[];
 };
 
@@ -23,7 +23,6 @@ export const TEAMS: Team[] = [
     title: "TI Goods Muster",
     short: "TI Muster",
     adminId: "raghav",
-    nightOff: "00/08", // TI Goods: night off runs to 08:00 (from Nov 2026; earlier 00/07 days stay as entered)
     people: [
       { id: "raghav", name: "Raghav", group: "team", color: "#2447d8" },
       { id: "mahesh", name: "Mahesh", group: "team", color: "#0e8f6e" },
@@ -71,7 +70,7 @@ export const ADMIN_ID = TEAM.adminId;
 export const ADMIN_NAME = PEOPLE.find((p) => p.id === ADMIN_ID)?.name ?? "the chief";
 export const APP_TITLE = TEAM.title;
 // The first team's data was stored before teams existed, so its keys stay unprefixed.
-export const NIGHT_OFF = TEAM.nightOff ?? "00/07";
+export const NIGHT_OFF = TEAM.nightOff ?? "00/08"; // from Nov 2026 every muster uses 00/08; earlier 00/07 days stay as entered
 export const NIGHT_OFF_CODES = ["00/07", "00/08"]; // both read as Night off everywhere
 export const STORE_PREFIX = TEAM === TEAMS[0] ? "" : `${TEAM.id}:`;
 
