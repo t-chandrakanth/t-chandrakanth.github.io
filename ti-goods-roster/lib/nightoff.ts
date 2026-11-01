@@ -1,6 +1,7 @@
 import "server-only";
 import { loadMonth, saveMonth, type Month } from "./store";
 import { endsAtNight, nextDay } from "./range";
+import { NIGHT_OFF, NIGHT_OFF_CODES } from "./config";
 
 // After a night duty is saved for `date`, put 00/07 on the next day for that person,
 // replacing any other duty there (a Rest or Leave already planned stays). Returns true if it wrote.
@@ -12,8 +13,8 @@ export async function followWithNightOff(date: string, person: string, value: st
   const md = months.get(m)!;
   const cur = (md.entries[d]?.[person] ?? "").trim();
   // A planned Rest or Leave stays; any other duty clashes with the night off, so it is replaced.
-  if (cur === "REST" || cur === "LEAVE" || cur === "00/07") return false;
-  (md.entries[d] ??= {})[person] = "00/07";
+  if (cur === "REST" || cur === "LEAVE" || NIGHT_OFF_CODES.includes(cur)) return false;
+  (md.entries[d] ??= {})[person] = NIGHT_OFF;
   return true;
 }
 

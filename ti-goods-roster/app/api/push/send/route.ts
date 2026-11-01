@@ -6,7 +6,7 @@ import { holidayName } from "@/lib/holidays";
 
 export const dynamic = "force-dynamic";
 
-const NAMES: Record<string, string> = { "08/20": "General", "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", CR: "CR", LEAVE: "Leave" };
+const NAMES: Record<string, string> = { "08/20": "General", "07/13": "Day", "13/21": "Afternoon", "21/24": "Night", "00/07": "Night off", "00/08": "Night off", "07/13 21/24": "Day + Night", REST: "Rest", CR: "CR", LEAVE: "Leave" };
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const long = (d: string) => `${DOW[new Date(d + "T00:00:00Z").getUTCDay()]} ${+d.slice(8)} ${MON[+d.slice(5, 7) - 1]}`;
