@@ -24,7 +24,7 @@ The home page is the login: choose your **name**, enter your **password**.
 - **CR (compensatory rest):** a finished Monday–Sunday week with duties but no REST earns one CR. CR carries forward until a CR day is taken. The chief enters each person's pending CR as of a start date (Me → CR pending); from then on the app counts weeks and CR days itself. Summary shows due = opening + earned − taken; team members can request CR like Rest or Leave.
 - September 2026 is pre-loaded from the muster sheet. Ravi is removed; Narendra is a team member.
 
-Duty codes follow the muster sheet (`08/20` General, `CR` compensatory rest, Night off `00/07` — `00/08` in TI Goods via `nightOff` in `lib/config.ts`, `07/13`, `13/21`, `21/24`, `00/07`, `07/13 21/24`, `REST`, `LEAVE`). Edit `lib/config.ts` to change people or codes.
+Duty codes follow the muster sheet (`08/20` General, `CR` compensatory rest, Night off `00/08` (older `00/07` entries still read as Night off), `07/13`, `13/21`, `21/24`, `00/07`, `07/13 21/24`, `REST`, `LEAVE`). Edit `lib/config.ts` to change people or codes.
 
 ## Deploy on Vercel
 1. Import the GitHub repo in Vercel and set **Root Directory** to `ti-goods-roster`.
