@@ -184,3 +184,4 @@ button.row:hover{background:var(--surface2)}
 .tmyou .nm{font-weight:800;font-size:17px;color:var(--brand);letter-spacing:-.01em}
 .tmyou .nm small{display:block;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0}
 .tmyou .pill{font-size:16px;font-weight:600;padding:8px 14px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.resetcard{border-color:#f5dfa6;background:#fffaf0}

@@ -248,6 +248,7 @@ function Login({ onDone }: { onDone: () => void }) {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [forgot, setForgot] = useState(false);
+  const [sent, setSent] = useState("");
   return (
     <div className="phone">
       <form className="login" onSubmit={async (e) => {
@@ -272,7 +273,16 @@ function Login({ onDone }: { onDone: () => void }) {
         {err && <div className="err" role="alert">{err}</div>}
         <button className="btn pri" disabled={busy || !pw}>{busy ? "Signing in…" : "Login"}</button>
         <button type="button" className="forgot" onClick={() => setForgot((f) => !f)}>Forgot password?</button>
-        {forgot && <p className="note">Ask {ADMIN_NAME} to reset your password. They open <b>Me → Reset a password to 1234</b>, then you log in with 1234 and set a new one.</p>}
+        {forgot && !sent && (
+          <div className="note" style={{ display: "grid", gap: 8 }}>
+            <span>Pick your name above, then send a reset request to {ADMIN_NAME}. Once it is approved, log in with <b>1234</b> and set a new password.</span>
+            <button type="button" className="btn pri" disabled={busy || user === ADMIN_ID} onClick={async () => {
+              setBusy(true); const r = await api("/api/reset", { user }); setBusy(false);
+              setSent(r.ok ? (r.j.already ? `Already sent. Waiting for ${ADMIN_NAME}.` : `Sent to ${ADMIN_NAME}. Try logging in with 1234 once they approve it.`) : String(r.j.error ?? "Could not send"));
+            }}>Send reset request to {ADMIN_NAME}</button>
+          </div>
+        )}
+        {sent && <p className="note">{sent}</p>}
         <p className="note">First time? Your password is 1234. You will be asked to set your own.</p>
       </form>
     </div>
@@ -333,13 +343,15 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
   const inst = useInstall();
 
   const [cr, setCr] = useState<CrInfo | null>(null);
+  const [resets, setResets] = useState<{ id: string; user: string; at: number }[]>([]);
   const [crForm, setCrForm] = useState<{ from: string; balances: Record<string, string> } | null>(null);
   const load = useCallback(async () => {
     const r = await fetch(`/api/roster?month=${month}`, { cache: "no-store" });
     if (r.ok) setData((await r.json()) as Data);
     const c = await fetch("/api/cr", { cache: "no-store" });
     if (c.ok) setCr((await c.json()) as CrInfo);
-  }, [month]);
+    if (admin) { const x = await fetch("/api/reset", { cache: "no-store" }); if (x.ok) setResets(((await x.json()) as { resets: { id: string; user: string; at: number }[] }).resets); }
+  }, [month, admin]);
   useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, [load]);
   const tomorrow = iso(new Date(dd(today).getTime() + 86400000));
   const [tmData, setTmData] = useState<Data | null>(null);
@@ -425,7 +437,7 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
 
   // Requests from last month to two months ahead, so a leave asked for next month still shows.
   const reqs = ticker;
-  const pending = reqs.length;
+  const pending = reqs.length + resets.length;
   const title = tab === "today" ? `Hi ${nm(me)}` : tab === "roster" ? "Roster" : tab === "sum" ? "Summary" : tab === "req" ? "Requests" : "Me";
 
   const PersonRow = ({ d, id, first }: { d: string; id: string; first?: boolean }) => {
@@ -594,8 +606,17 @@ function App({ me, onLogout }: { me: string; onLogout: () => void }) {
           ))}
         </>)}
 
+        {tab === "req" && resets.map((r) => (
+          <div key={r.id} className="card resetcard">
+            <div className="row first" style={{ padding: 0 }}><Av id={r.user} /><div className="nm">{nm(r.user)}<small>🔑 Forgot password · asked {long(new Date(r.at).toISOString().slice(0, 10))}</small></div></div>
+            <div className="btns">
+              <button className="btn pri" onClick={async () => { const x = await api("/api/reset", { id: r.id, action: "reset" }, "DELETE"); say(x.ok ? `${nm(r.user)} can log in with 1234 and set a new password.` : String(x.j.error ?? "Could not reset")); load(); }}>Reset to 1234</button>
+              <button className="btn" onClick={async () => { await api("/api/reset", { id: r.id, action: "dismiss" }, "DELETE"); load(); }}>Dismiss</button>
+            </div>
+          </div>
+        ))}
         {tab === "req" && (reqs.length === 0
-          ? <div className="empty">No requests waiting. Rest and leave requests appear here for everyone.</div>
+          ? (resets.length === 0 && <div className="empty">No requests waiting. Rest and leave requests appear here for everyone.</div>)
           : reqs.map((c) => (
             <div key={c.id} className="card">
               {c.date.slice(0, 7) !== month && <small className="tag">{MON[+c.date.slice(5, 7) - 1]}</small>}

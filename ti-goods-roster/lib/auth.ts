@@ -53,7 +53,7 @@ export async function setSession(id: string) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 60 * 60 * 24 * 365, // a year: people should rarely have to type the password again
   });
 }
 
