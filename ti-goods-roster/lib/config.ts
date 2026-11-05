@@ -60,6 +60,19 @@ export const TEAMS: Team[] = [
       { id: "jyothi", name: "Jyothi", group: "lr", color: "#7a6a00" },
     ],
   },
+  {
+    id: "sc-chasers",
+    title: "SC Chasers Muster",
+    short: "SC Chasers",
+    adminId: "yamji",
+    people: [
+      { id: "yamji", name: "Yamji", group: "team", color: "#2447d8" },
+      { id: "sumanth", name: "Sumanth", group: "team", color: "#0e8f6e" },
+      { id: "rohan", name: "Rohan", group: "team", color: "#c2571a" },
+      { id: "saisanthosh", name: "Sai Santhosh", group: "team", color: "#8a3fd0" },
+      { id: "teja", name: "Teja", group: "lr", color: "#0a7fa8" },
+    ],
+  },
 ];
 
 export const TEAM: Team = TEAMS.find((t) => t.id === process.env.NEXT_PUBLIC_TEAM) ?? TEAMS[0];
