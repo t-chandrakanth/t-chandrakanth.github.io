@@ -4,7 +4,7 @@ Duty muster app. One codebase serves several teams; each deployment picks its te
 
 | `NEXT_PUBLIC_TEAM` | App name | Chief (admin) | Team | LR candidates |
 |---|---|---|---|---|
-| *(unset)* or `ti-goods` | TI Goods Muster | Raghav | Mahesh, Vishnu, Ravinder Goud (Narendra until 6 Oct 2026, history kept) | Subbareddy, Teja |
+| *(unset)* or `ti-goods` | TI Goods Muster | Raghav | Mahesh, Vishnu (Narendra until 6 Oct 2026, Ravinder Goud until 7 Nov 2026; history kept) | Subbareddy (Teja until 7 Nov 2026) |
 | `victor` | MLA Muster | Victor Samuel | Murali, Naresh, Aravind | none |
 | `coal` | Coal Asst Muster | Vijay | Ravindra, Sunil, Manisha | Bindu, Adithya, Jyothi |
 | `sc-chasers` | SC Chasers Muster | Yamji | Sumanth, Rohan, Sai Santhosh | Teja |
