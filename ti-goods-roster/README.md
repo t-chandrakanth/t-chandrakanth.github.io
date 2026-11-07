@@ -14,7 +14,8 @@ Next.js, deploys on Vercel. "Raghav" below means the chief of whichever team is 
 ## Login
 The home page is the login: choose your **name**, enter your **password**.
 - First password for everyone is **1234**. After the first login the app forces you to set your own (at least 4 characters, not 1234).
-- Forgot your password? Raghav opens **Me → Reset a password to 1234**.
+- Forgot your password? Tap **Forgot password?** on the login screen; the chief approves it on the Requests tab (or opens **Me → Reset a password to 1234**).
+- The chief forgot theirs? The app owner opens `https://<app-url>/api/reset/chief?key=<CRON_SECRET>` once; it resets the chief to 1234.
 - Passwords are stored hashed (scrypt), never in plain text.
 
 ## Rules built in
