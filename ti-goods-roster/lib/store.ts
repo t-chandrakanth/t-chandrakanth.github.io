@@ -37,10 +37,11 @@ export async function getRaw(k: string): Promise<string | null> {
 export async function setRaw(k: string, value: string) {
   const key = STORE_PREFIX + k;
   if (!URL_ || !TOKEN) {
-    mem.set(key, value);
+    if (value === "") mem.delete(key); else mem.set(key, value);
     return;
   }
-  const r = await fetch(`${URL_}/set/${encodeURIComponent(key)}`, {
+  // Upstash rejects SET with an empty body, so an empty value deletes the key instead (reads come back null either way).
+  const r = await fetch(value === "" ? `${URL_}/del/${encodeURIComponent(key)}` : `${URL_}/set/${encodeURIComponent(key)}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${TOKEN}` },
     body: value,
