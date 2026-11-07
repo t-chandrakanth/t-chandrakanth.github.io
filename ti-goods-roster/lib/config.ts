@@ -27,7 +27,7 @@ export const TEAMS: Team[] = [
       { id: "raghav", name: "Raghav", group: "team", color: "#2447d8" },
       { id: "mahesh", name: "Mahesh", group: "team", color: "#0e8f6e" },
       { id: "vishnu", name: "Vishnu", group: "team", color: "#c2571a" },
-      { id: "narendra", name: "Narendra", group: "team", color: "#8a3fd0", until: "2026-10-06" }, // moved to other duties; Ravinder Goud took over
+      { id: "narendra", name: "Narendra", group: "team", color: "#8a3fd0" }, // away 7 Oct – 7 Nov 2026 (Ravinder Goud covered), back from 8 Nov
       { id: "ravinder", name: "Ravinder Goud", group: "team", color: "#00838f", until: "2026-11-07" }, // left TI Goods; history kept
       { id: "subbareddy", name: "Subbareddy", group: "lr", color: "#b0356b" },
       { id: "teja", name: "Teja", group: "lr", color: "#0a7fa8", until: "2026-11-07" }, // left TI Goods; history kept
